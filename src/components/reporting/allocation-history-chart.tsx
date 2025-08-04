@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { AllocationRule, Transaction } from "@/lib/types";
