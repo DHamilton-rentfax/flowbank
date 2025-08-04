@@ -2,11 +2,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { getAllPosts, type Post } from "@/lib/blog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function PostCard({ post }: { post: Post }) {
   return (
@@ -82,17 +83,88 @@ function FeaturedPostCard({ post }: { post: Post }) {
     )
 }
 
+function PostSkeleton() {
+    return (
+        <div className="space-y-4">
+            <Skeleton className="h-52 w-full" />
+            <div className="space-y-2">
+                <Skeleton className="h-6 w-3/4" />
+                 <div className="flex items-center gap-2">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-4 w-1/4" />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+const POSTS_PER_PAGE = 3;
+
 export default function BlogIndexPage() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const loader = useRef(null);
 
   useEffect(() => {
-    const allPosts = getAllPosts();
-    setPosts(allPosts);
+    const posts = getAllPosts();
+    setAllPosts(posts);
   }, []);
-  
-  const featuredPost = posts[0];
-  const otherPosts = posts.slice(1);
 
+  // Set initial posts (featured, trending, initial set for infinite scroll)
+  useEffect(() => {
+    if (allPosts.length > 0) {
+        // The first post is featured, next 3 are trending
+        const remainingPosts = allPosts.slice(4); 
+        setDisplayedPosts(remainingPosts.slice(0, POSTS_PER_PAGE));
+        setHasMore(remainingPosts.length > POSTS_PER_PAGE);
+    }
+  }, [allPosts]);
+
+  const loadMore = useCallback(() => {
+    setIsLoading(true);
+    // Simulate a network request
+    setTimeout(() => {
+        const remainingPosts = allPosts.slice(4);
+        const nextPage = page + 1;
+        const newPosts = remainingPosts.slice(0, nextPage * POSTS_PER_PAGE);
+        
+        setDisplayedPosts(newPosts);
+        setPage(nextPage);
+        setHasMore(newPosts.length < remainingPosts.length);
+        setIsLoading(false);
+    }, 500); // Adjust delay as needed
+  }, [page, allPosts]);
+  
+  useEffect(() => {
+    const options = {
+      root: null,
+      rootMargin: "20px",
+      threshold: 1.0
+    };
+
+    const observer = new IntersectionObserver((entities) => {
+        const target = entities[0];
+        if (target.isIntersecting && hasMore && !isLoading) {
+            loadMore();
+        }
+    }, options);
+
+    if (loader.current) {
+      observer.observe(loader.current);
+    }
+
+    return () => {
+      if (loader.current) {
+        observer.unobserve(loader.current);
+      }
+    };
+  }, [loadMore, hasMore, isLoading]);
+
+  const featuredPost = allPosts[0];
+  const trendingPosts = allPosts.slice(1, 4);
 
   return (
     <div className="container mx-auto max-w-6xl py-12 px-4">
@@ -100,24 +172,51 @@ export default function BlogIndexPage() {
         <h1 className="text-4xl font-bold tracking-tight">AutoAllocator Insights</h1>
         <p className="mt-2 text-lg text-muted-foreground">Tips and strategies for managing your business finances.</p>
       </header>
+
        {featuredPost && (
            <section className="mb-12">
             <FeaturedPostCard post={featuredPost} />
            </section>
        )}
+       
+       {trendingPosts.length > 0 && (
+        <section className="mb-12">
+             <header className="my-12 pt-6 border-t">
+                <h2 className="text-3xl font-bold tracking-tight">Trending Posts</h2>
+            </header>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                {trendingPosts.map((post) => (
+                    <PostCard key={post.slug} post={post} />
+                ))}
+            </div>
+        </section>
+       )}
 
-      {otherPosts.length > 0 && (
+      {displayedPosts.length > 0 && (
         <section>
             <header className="my-12 pt-6 border-t">
                 <h2 className="text-3xl font-bold tracking-tight">More from the Blog</h2>
             </header>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-                {otherPosts.map((post) => (
+                {displayedPosts.map((post) => (
                     <PostCard key={post.slug} post={post} />
                 ))}
             </div>
         </section>
       )}
+
+      <div ref={loader} className="py-8">
+        {isLoading && (
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                <PostSkeleton />
+                <PostSkeleton />
+                <PostSkeleton />
+            </div>
+        )}
+        {!hasMore && displayedPosts.length > 0 && (
+            <p className="text-center text-muted-foreground">You've reached the end!</p>
+        )}
+      </div>
     </div>
   );
 }
