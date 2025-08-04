@@ -59,8 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
         await updateProfile(auth.currentUser, updates);
-        // Manually update the user state to reflect changes immediately
-        setUser(auth.currentUser);
+        // Manually create a new user object to trigger re-render
+        setUser({ ...auth.currentUser });
     } catch (error) {
         console.error("Error updating profile:", error);
         throw error;
