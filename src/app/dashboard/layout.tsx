@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Home, Settings, BarChart3, LogOut } from "lucide-react";
+import { Home, Settings, BarChart3, LogOut, PenSquare } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,7 @@ export default function DashboardLayout({
                   </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/reporting'}>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/reporting')}>
                       <Link href="/reporting">
                           <BarChart3 />
                           <span>Reporting</span>
@@ -69,7 +69,15 @@ export default function DashboardLayout({
                   </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === '/settings'}>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/blog-management')}>
+                      <Link href="/dashboard/blog">
+                          <PenSquare />
+                          <span>Blog</span>
+                      </Link>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')}>
                       <Link href="/settings">
                           <Settings />
                           <span>Settings</span>
@@ -95,7 +103,7 @@ export default function DashboardLayout({
         <SidebarInset>
             <header className="flex items-center justify-between p-4 border-b">
                  <SidebarTrigger />
-                 <h1 className="text-xl font-semibold capitalize">{pathname.substring(1) || 'Dashboard'}</h1>
+                 <h1 className="text-xl font-semibold capitalize">{pathname.substring(1).split('/').pop() || 'Dashboard'}</h1>
                  <div></div>
             </header>
             <main className="p-4 sm:p-6 lg:p-8">
