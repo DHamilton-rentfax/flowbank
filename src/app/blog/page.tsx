@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Footer } from "@/components/layout/footer";
 
 function PostCard({ post }: { post: Post }) {
   return (
@@ -193,56 +194,61 @@ export default function BlogIndexPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-6xl py-12 px-4">
-      <header className="mb-12 text-center">
-        <h1 className="text-4xl font-bold tracking-tight">Flow Bank Insights</h1>
-        <p className="mt-2 text-lg text-muted-foreground">Tips and strategies for managing your business finances.</p>
-      </header>
-
-       {featuredPost && (
-           <section className="mb-12">
-            <FeaturedPostCard post={featuredPost} />
-           </section>
-       )}
-       
-       {trendingPosts.length > 0 && (
-        <section className="mb-12">
-             <header className="my-12 pt-6 border-t">
-                <h2 className="text-3xl font-bold tracking-tight">Trending Posts</h2>
+    <div className="flex flex-col min-h-screen">
+        <main className="flex-1">
+            <div className="container mx-auto max-w-6xl py-12 px-4">
+            <header className="mb-12 text-center">
+                <h1 className="text-4xl font-bold tracking-tight">Flow Bank Insights</h1>
+                <p className="mt-2 text-lg text-muted-foreground">Tips and strategies for managing your business finances.</p>
             </header>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-                {trendingPosts.map((post) => (
-                    <PostCard key={post.slug} post={post} />
-                ))}
-            </div>
-        </section>
-       )}
 
-      {displayedPosts.length > 0 && (
-        <section>
-            <header className="my-12 pt-6 border-t">
-                <h2 className="text-3xl font-bold tracking-tight">More from the Blog</h2>
-            </header>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-                {displayedPosts.map((post) => (
-                    <PostCard key={post.slug} post={post} />
-                ))}
-            </div>
-        </section>
-      )}
+            {featuredPost && (
+                <section className="mb-12">
+                    <FeaturedPostCard post={featuredPost} />
+                </section>
+            )}
+            
+            {trendingPosts.length > 0 && (
+                <section className="mb-12">
+                    <header className="my-12 pt-6 border-t">
+                        <h2 className="text-3xl font-bold tracking-tight">Trending Posts</h2>
+                    </header>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                        {trendingPosts.map((post) => (
+                            <PostCard key={post.slug} post={post} />
+                        ))}
+                    </div>
+                </section>
+            )}
 
-      <div ref={loader} className="py-8">
-        {isLoading && hasMore && (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-                <PostSkeleton />
-                <PostSkeleton />
-                <PostSkeleton />
+            {displayedPosts.length > 0 && (
+                <section>
+                    <header className="my-12 pt-6 border-t">
+                        <h2 className="text-3xl font-bold tracking-tight">More from the Blog</h2>
+                    </header>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                        {displayedPosts.map((post) => (
+                            <PostCard key={post.slug} post={post} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            <div ref={loader} className="py-8">
+                {isLoading && hasMore && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                        <PostSkeleton />
+                        <PostSkeleton />
+                        <PostSkeleton />
+                    </div>
+                )}
+                {!hasMore && displayedPosts.length > 0 && (
+                    <p className="text-center text-muted-foreground">You've reached the end!</p>
+                )}
             </div>
-        )}
-        {!hasMore && displayedPosts.length > 0 && (
-            <p className="text-center text-muted-foreground">You've reached the end!</p>
-        )}
-      </div>
+            </div>
+        </main>
+        <Footer />
     </div>
   );
 }

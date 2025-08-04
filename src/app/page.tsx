@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons";
+import { Footer } from "@/components/layout/footer";
 
 export default function LandingPage() {
   return (
@@ -10,9 +11,12 @@ export default function LandingPage() {
           <Logo className="size-7 text-primary" />
           <h1 className="text-xl font-semibold">Flow Bank</h1>
         </div>
-        <nav>
+        <nav className="flex items-center gap-4">
           <Button variant="ghost" asChild>
             <Link href="/blog">Blog</Link>
+          </Button>
+           <Button variant="ghost" asChild>
+            <Link href="/faq">FAQ</Link>
           </Button>
         </nav>
       </header>
@@ -34,9 +38,7 @@ export default function LandingPage() {
           </div>
         </div>
       </main>
-      <footer className="p-4 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Flow Bank. All rights reserved.
-      </footer>
+      <Footer />
     </div>
   );
 }
