@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { AllocationRule } from "@/lib/types";
 import { PlaidIntegration } from "./plaid-integration";
 import { UserProfile } from "./user-profile";
+import { StripeConnect } from "./stripe-connect";
 
 export function SettingsClient() {
   const { rules, updateRules: saveRules } = useApp();
@@ -36,6 +37,7 @@ export function SettingsClient() {
           <UserProfile />
           <AIPlanGenerator onApplyRules={handleUpdateRules} />
           <PlaidIntegration />
+          <StripeConnect />
         </div>
       </div>
     </div>

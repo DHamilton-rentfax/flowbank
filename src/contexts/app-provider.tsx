@@ -159,13 +159,17 @@ export function AppProvider({ children }: AppProviderProps) {
     const existingAccountsSnap = await getDocs(collection(db, "users", user.uid, "accounts"));
     const existingAccounts = existingAccountsSnap.docs.map(d => d.data() as Account);
 
+    // Delete old rules first
+    const oldRulesSnap = await getDocs(collection(db, "users", user.uid, "rules"));
+    oldRulesSnap.forEach(doc => batch.delete(doc.ref));
+
     // Write new rules
     newRules.forEach(rule => {
         const ruleDocRef = doc(db, "users", user.uid, "rules", rule.id);
         batch.set(ruleDocRef, rule);
     });
 
-    // Create corresponding accounts
+    // Create or update corresponding accounts
      newRules.forEach(rule => {
         const existingAccount = existingAccounts.find(acc => acc.name.toLowerCase() === rule.name.toLowerCase());
         const accountDocRef = doc(db, "users", user.uid, "accounts", existingAccount?.id || rule.id);

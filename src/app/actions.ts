@@ -7,6 +7,11 @@ import { z } from "zod";
 import { plaidClient } from "@/lib/plaid";
 import { Products, TransactionsSyncRequest } from "plaid";
 import { CountryCode } from "plaid";
+import { stripe } from "@/lib/stripe";
+import { headers } from "next/headers";
+import { db } from "@/firebase/client";
+import { doc, setDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
     try {
@@ -133,5 +138,37 @@ export async function findIncomeTransactions(input: IdentifyIncomeInput) {
     } catch (error) {
         console.error("Error identifying income:", error);
         return { success: false, error: "Failed to identify income from transactions." };
+    }
+}
+
+export async function createStripeConnectedAccount(userId: string, email: string) {
+    try {
+        const account = await stripe.accounts.create({
+            type: 'express',
+            country: 'US',
+            email: email,
+            capabilities: {
+                card_payments: { requested: true },
+                transfers: { requested: true },
+            },
+        });
+
+        // Save the Stripe account ID to the user's document in Firestore
+        const userDocRef = doc(db, "users", userId);
+        await setDoc(userDocRef, { stripeAccountId: account.id }, { merge: true });
+
+        const origin = headers().get('origin');
+        const accountLink = await stripe.accountLinks.create({
+            account: account.id,
+            refresh_url: `${origin}/settings`,
+            return_url: `${origin}/settings`,
+            type: 'account_onboarding',
+        });
+        
+        return { success: true, url: accountLink.url };
+    } catch (error) {
+        console.error("Error creating Stripe connected account:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to create Stripe account: ${errorMessage}` };
     }
 }
