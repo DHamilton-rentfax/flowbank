@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useApp } from "@/contexts/app-provider";
 import { getTransactions, findIncomeTransactions } from "@/app/actions";
 import { formatCurrency } from "@/lib/utils";
-import { Loader2, Wand2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 export function PlaidTransactions() {
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +37,12 @@ export function PlaidTransactions() {
     const result = await findIncomeTransactions({ transactions: transactionsToScan });
     
     if (result.success && result.incomeTransactions) {
-      setIncomeTransactions(prev => [...prev, ...result.incomeTransactions!]);
+      setIncomeTransactions(prev => {
+        const newIncome = result.incomeTransactions!.filter(
+          (newTx: any) => !prev.some(prevTx => prevTx.transaction_id === newTx.transaction_id)
+        );
+        return [...prev, ...newIncome];
+      });
       return result.incomeTransactions.length;
     } else {
       toast({ title: "Error", description: result.error || "Could not identify income.", variant: "destructive" });
@@ -56,9 +61,14 @@ export function PlaidTransactions() {
     const result = await getTransactions(plaidAccessToken, plaidCursor);
 
     if (result.success && result.added) {
-      // In a real app, you would also handle `modified` and `removed` transactions.
-      const newTransactions = result.added;
-      setPlaidTransactions(prev => [...newTransactions, ...prev]);
+      const newTransactions = result.added.filter(
+        (newTx: any) => !plaidTransactions.some(existingTx => existingTx.transaction_id === newTx.transaction_id)
+      );
+      
+      if (newTransactions.length > 0) {
+        setPlaidTransactions(prev => [...newTransactions, ...prev]);
+      }
+      
       if (result.nextCursor) {
         updatePlaidCursor(result.nextCursor);
       }
@@ -77,11 +87,13 @@ export function PlaidTransactions() {
   };
   
   const handleAllocate = (amount: number, id: string) => {
+    // Plaid amounts for credits are negative, so we use Math.abs
     addIncome(Math.abs(amount));
     setAllocatedTransactionIds(prev => [...prev, id]);
     toast({
         title: "Success",
-        description: "Income allocated successfully.",
+        description: `${formatCurrency(Math.abs(amount))} allocated successfully.`,
+        className: "bg-accent text-accent-foreground",
     });
   }
 
@@ -93,6 +105,8 @@ export function PlaidTransactions() {
     return allocatedTransactionIds.includes(transactionId);
   }
 
+  const transactionsToShow = [...plaidTransactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   return (
     <Card>
       <CardHeader>
@@ -102,7 +116,7 @@ export function PlaidTransactions() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {plaidTransactions.length > 0 ? (
+        {transactionsToShow.length > 0 ? (
           <div className="max-h-96 overflow-auto">
             <Table>
                 <TableHeader>
@@ -115,15 +129,15 @@ export function PlaidTransactions() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {plaidTransactions.map((tx) => (
+                    {transactionsToShow.map((tx) => (
                         <TableRow key={tx.transaction_id}>
                             <TableCell>{tx.date}</TableCell>
                             <TableCell>{tx.merchant_name || tx.name}</TableCell>
-                            <TableCell className={`text-right font-medium ${tx.amount < 0 ? 'text-accent' : ''}`}>
+                            <TableCell className={`text-right font-medium ${tx.amount < 0 ? 'text-green-600' : ''}`}>
                                 {formatCurrency(Math.abs(tx.amount))}
                             </TableCell>
                             <TableCell className="text-center">
-                                {isIncome(tx) ? <Badge>Income</Badge> : tx.amount > 0 ? <Badge variant="outline">Expense</Badge> : null }
+                                {isIncome(tx) ? <Badge className="bg-green-100 text-green-800">Income</Badge> : tx.amount > 0 ? <Badge variant="outline">Expense</Badge> : null }
                             </TableCell>
                              <TableCell className="text-right">
                                 {isIncome(tx) && (
