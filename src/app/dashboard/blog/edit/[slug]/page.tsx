@@ -34,6 +34,7 @@ export default function BlogEditorPage() {
   });
   const [isLoading, setIsLoading] = useState(!isNewPost);
   const [isSaving, setIsSaving] = useState(false);
+  const [originalSlug, setOriginalSlug] = useState<string | undefined>(undefined);
 
   const { toast } = useToast();
 
@@ -44,6 +45,7 @@ export default function BlogEditorPage() {
           const existingPost = await getPostBySlug(slug);
           if (existingPost) {
             setPost(existingPost);
+            setOriginalSlug(existingPost.slug);
           } else {
             toast({
               title: "Post not found",
@@ -63,11 +65,10 @@ export default function BlogEditorPage() {
     setPost(prev => ({ ...prev, [name]: isNumber ? Number(value) : value }));
   };
   
-  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
-    // Basic slugification
     const newSlug = value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    setPost(prev => ({...prev, slug: newSlug}));
+    setPost(prev => ({...prev, title: value, slug: isNewPost ? newSlug : prev.slug}));
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -156,16 +157,16 @@ export default function BlogEditorPage() {
           <CardContent className="p-6 grid gap-4">
              <div className="grid gap-2">
                 <Label htmlFor="title">Title</Label>
-                <Input id="title" name="title" value={post.title} onChange={handleChange} placeholder="Your Post Title" required disabled={isSaving} />
+                <Input id="title" name="title" value={post.title} onChange={handleTitleChange} placeholder="Your Post Title" required disabled={isSaving} />
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="slug">Slug</Label>
-                <Input id="slug" name="slug" value={post.slug} onChange={handleSlugChange} placeholder="your-post-slug" required disabled={isSaving || !isNewPost}/>
-                 <p className="text-xs text-muted-foreground">The URL-friendly version of the title. Cannot be changed after creation.</p>
+                <Input id="slug" name="slug" value={post.slug} readOnly placeholder="your-post-slug" required disabled={true}/>
+                 <p className="text-xs text-muted-foreground">The URL-friendly version of the title. Generated automatically and cannot be changed.</p>
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="image">Image URL</Label>
-                <Input id="image" name="image" value={post.image} onChange={handleChange} placeholder="https://placehold.co/600x400.png" required disabled={isSaving}/>
+                <Input id="image" name="image" value={post.image} onChange={handleChange} placeholder="https://placehold.co/800x400.png" required disabled={isSaving}/>
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="excerpt">Excerpt</Label>
@@ -182,7 +183,7 @@ export default function BlogEditorPage() {
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="avatar">Avatar Initial</Label>
-                    <Input id="avatar" name="avatar" value={post.avatar} onChange={handleChange} placeholder="J" maxLength={1} disabled={isSaving} />
+                    <Input id="avatar" name="avatar" value={post.avatar} onChange={handleChange} placeholder="J" maxLength={2} disabled={isSaving} />
                 </div>
                  <div className="grid gap-2">
                     <Label htmlFor="readTime">Read Time (mins)</Label>
