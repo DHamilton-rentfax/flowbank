@@ -27,7 +27,6 @@ export function ReportingClient() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold">Reporting</h1>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <div className="lg:col-span-2">
           <AllocationPieChart rules={rules} />
@@ -48,8 +47,8 @@ export function ReportingClient() {
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
-                <TableHead>Total Income</TableHead>
-                <TableHead>Allocations</TableHead>
+                <TableHead className="text-right">Total Income</TableHead>
+                <TableHead className="text-right">Allocations</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -59,11 +58,11 @@ export function ReportingClient() {
                     <TableCell>
                       {new Date(tx.date).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="font-medium text-accent">
+                    <TableCell className="text-right font-medium text-accent">
                       {formatCurrency(tx.totalAmount)}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
+                    <TableCell className="text-right">
+                      <div className="flex flex-wrap justify-end gap-1">
                         {tx.allocations.map((alloc) => {
                           const rule = rules.find(
                             (r) => r.id === alloc.ruleId
