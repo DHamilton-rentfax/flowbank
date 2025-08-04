@@ -13,9 +13,41 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export function UserProfile() {
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
+  const [displayName, setDisplayName] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (user?.displayName) {
+      setDisplayName(user.displayName);
+    }
+  }, [user]);
+  
+  const handleUpdateProfile = async () => {
+    setIsUpdating(true);
+    try {
+        await updateUserProfile({ displayName });
+        toast({
+            title: "Profile Updated",
+            description: "Your display name has been successfully updated.",
+            className: "bg-accent text-accent-foreground",
+        });
+    } catch (error) {
+        toast({
+            title: "Update Failed",
+            description: (error as Error).message,
+            variant: "destructive",
+        });
+    } finally {
+        setIsUpdating(false);
+    }
+  }
 
   return (
     <Card>
@@ -32,11 +64,21 @@ export function UserProfile() {
         </div>
          <div className="space-y-2">
           <Label htmlFor="displayName">Display Name</Label>
-          <Input id="displayName" type="text" placeholder="Your Name" value={user?.displayName || ""} />
+          <Input 
+            id="displayName" 
+            type="text" 
+            placeholder="Your Name" 
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            disabled={isUpdating}
+          />
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
-        <Button className="w-full">Update Profile</Button>
+        <Button className="w-full" onClick={handleUpdateProfile} disabled={isUpdating}>
+            {isUpdating && <Loader2 className="mr-2 animate-spin" />}
+            Update Profile
+        </Button>
         <Button variant="outline" className="w-full">Change Password</Button>
       </CardFooter>
     </Card>

@@ -28,10 +28,25 @@ export default function DashboardLayout({
     }
   }, [user, loading, router]);
   
-  const getInitials = (email: string | null | undefined) => {
-    if (!email) return "?";
-    return email.substring(0, 2).toUpperCase();
+  const getInitials = (name: string | null | undefined, email: string | null | undefined) => {
+    if (name) {
+        return name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+    }
+    if (email) {
+        return email.substring(0, 2).toUpperCase();
+    }
+    return "?";
   };
+  
+  const getDisplayName = () => {
+    if (user?.displayName) {
+        return user.displayName;
+    }
+    if (user?.email) {
+        return user.email;
+    }
+    return "User";
+  }
 
   if (loading || !user) {
     return (
@@ -69,7 +84,7 @@ export default function DashboardLayout({
                   </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/blog-management')}>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/blog')}>
                       <Link href="/dashboard/blog">
                           <PenSquare />
                           <span>Blog</span>
@@ -89,10 +104,10 @@ export default function DashboardLayout({
                <div className="flex items-center gap-2 p-2 rounded-md bg-sidebar-accent">
                  <Avatar className="h-9 w-9">
                     {/* Placeholder for user avatar */}
-                    <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
+                    <AvatarFallback>{getInitials(user.displayName, user.email)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-medium truncate">{user.email}</p>
+                    <p className="text-sm font-medium truncate">{getDisplayName()}</p>
                 </div>
                 <Button variant="ghost" size="icon" onClick={logout} className="shrink-0">
                     <LogOut />
@@ -103,7 +118,7 @@ export default function DashboardLayout({
         <SidebarInset>
             <header className="flex items-center justify-between p-4 border-b">
                  <SidebarTrigger />
-                 <h1 className="text-xl font-semibold capitalize">{pathname.substring(1).split('/').pop() || 'Dashboard'}</h1>
+                 <h1 className="text-xl font-semibold capitalize">{pathname.substring(1).split('/').pop()?.replace('-', ' ') || 'Dashboard'}</h1>
                  <div></div>
             </header>
             <main className="p-4 sm:p-6 lg:p-8">

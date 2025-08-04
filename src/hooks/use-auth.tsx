@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User, updateProfile } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => void;
+  updateUserProfile: (updates: { displayName?: string; photoURL?: string; }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,9 +49,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
   };
+  
+  const updateUserProfile = async (updates: { displayName?: string; photoURL?: string; }) => {
+    if (!auth.currentUser) {
+        throw new Error("No user is signed in.");
+    }
+    try {
+        await updateProfile(auth.currentUser, updates);
+        // Manually update the user state to reflect changes immediately
+        setUser(auth.currentUser);
+    } catch (error) {
+        console.error("Error updating profile:", error);
+        throw error;
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, loading, logout, updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );
