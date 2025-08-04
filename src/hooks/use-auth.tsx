@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User, updateProfile } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => void;
   updateUserProfile: (updates: { displayName?: string; photoURL?: string; }) => Promise<void>;
+  sendPasswordReset: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,8 +65,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const sendPasswordReset = async () => {
+    if (!auth.currentUser?.email) {
+        throw new Error("No user email found to send reset link.");
+    }
+    try {
+        await sendPasswordResetEmail(auth, auth.currentUser.email);
+    } catch(error) {
+        console.error("Error sending password reset email:", error);
+        throw error;
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, logout, updateUserProfile }}>
+    <AuthContext.Provider value={{ user, loading, logout, updateUserProfile, sendPasswordReset }}>
       {children}
     </AuthContext.Provider>
   );

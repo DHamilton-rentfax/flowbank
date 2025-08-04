@@ -18,9 +18,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 export function UserProfile() {
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, sendPasswordReset } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -49,6 +50,26 @@ export function UserProfile() {
     }
   }
 
+  const handlePasswordReset = async () => {
+    setIsSendingReset(true);
+    try {
+        await sendPasswordReset();
+         toast({
+            title: "Password Reset Email Sent",
+            description: "Please check your inbox for instructions to reset your password.",
+            className: "bg-accent text-accent-foreground",
+        });
+    } catch (error) {
+         toast({
+            title: "Request Failed",
+            description: (error as Error).message,
+            variant: "destructive",
+        });
+    } finally {
+        setIsSendingReset(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -70,16 +91,19 @@ export function UserProfile() {
             placeholder="Your Name" 
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            disabled={isUpdating}
+            disabled={isUpdating || isSendingReset}
           />
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
-        <Button className="w-full" onClick={handleUpdateProfile} disabled={isUpdating}>
+        <Button className="w-full" onClick={handleUpdateProfile} disabled={isUpdating || isSendingReset}>
             {isUpdating && <Loader2 className="mr-2 animate-spin" />}
             Update Profile
         </Button>
-        <Button variant="outline" className="w-full">Change Password</Button>
+        <Button variant="outline" className="w-full" onClick={handlePasswordReset} disabled={isUpdating || isSendingReset}>
+            {isSendingReset && <Loader2 className="mr-2 animate-spin" />}
+            Change Password
+        </Button>
       </CardFooter>
     </Card>
   );
