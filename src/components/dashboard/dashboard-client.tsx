@@ -34,7 +34,7 @@ export function DashboardClient() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold font-headline">
               {formatCurrency(totalBalance)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -52,7 +52,7 @@ export function DashboardClient() {
           <RecentAllocations transactions={transactions} />
         </div>
         <div className="lg:col-span-4">
-            <h2 className="text-xl font-semibold mb-4">Account Balances</h2>
+            <h2 className="text-xl font-bold font-headline mb-4">Account Balances</h2>
             <div className="space-y-4">
               {accounts.map((account) => (
                   <AccountCard key={account.id} account={account} />

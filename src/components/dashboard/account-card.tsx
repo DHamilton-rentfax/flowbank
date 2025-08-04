@@ -30,11 +30,11 @@ export function AccountCard({ account }: AccountCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>{account.name}</CardTitle>
+        <CardTitle className="text-base font-medium">{account.name}</CardTitle>
         <Banknote className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{formatCurrency(account.balance)}</div>
+        <div className="text-2xl font-bold font-headline">{formatCurrency(account.balance)}</div>
         {account.goal ? (
           <div className="mt-2 space-y-2">
             <div className="space-y-1">

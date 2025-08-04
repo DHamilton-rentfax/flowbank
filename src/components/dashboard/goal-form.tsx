@@ -10,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -46,7 +45,7 @@ export function GoalForm({ children, onSetGoal, account }: GoalFormProps) {
     toast({
       title: "Goal Set!",
       description: `Your goal for the "${account.name}" account has been saved.`,
-      className: "bg-accent text-accent-foreground",
+      className: "bg-primary text-primary-foreground",
     });
   };
 
@@ -56,7 +55,7 @@ export function GoalForm({ children, onSetGoal, account }: GoalFormProps) {
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Set Goal for "{account.name}"</DialogTitle>
+            <DialogTitle className="font-headline">Set Goal for "{account.name}"</DialogTitle>
             <DialogDescription>
               Define a savings or budget goal for this account.
             </DialogDescription>

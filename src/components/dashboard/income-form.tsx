@@ -42,7 +42,7 @@ export function IncomeForm({ onAddIncome }: IncomeFormProps) {
       description: `${formatCurrency(
         numericAmount
       )} has been allocated.`,
-      className: "bg-accent text-accent-foreground",
+      className: "bg-primary text-primary-foreground",
     });
     setAmount("");
   };
@@ -51,7 +51,7 @@ export function IncomeForm({ onAddIncome }: IncomeFormProps) {
     <Card className="col-span-full md:col-span-1 lg:col-span-2">
       <form onSubmit={handleSubmit}>
         <CardHeader>
-          <CardTitle>Add Income</CardTitle>
+          <CardTitle className="font-headline">Add Income</CardTitle>
           <CardDescription>
             Enter a new deposit to automatically allocate it.
           </CardDescription>
@@ -65,7 +65,7 @@ export function IncomeForm({ onAddIncome }: IncomeFormProps) {
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="pl-8"
+              className="pl-8 text-lg"
             />
           </div>
         </CardContent>
