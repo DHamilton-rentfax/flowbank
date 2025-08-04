@@ -95,15 +95,13 @@ export async function exchangePublicToken(publicToken: string) {
     }
 }
 
-export async function getTransactions(accessToken: string) {
+export async function getTransactions(accessToken: string, initialCursor: string | null) {
     try {
+        let added: any[] = [];
+        let modified: any[] = [];
+        let removed: any[] = [];
         let hasMore = true;
-        let allTransactions: any[] = [];
-        let cursor: string | undefined = undefined;
-
-        // In a real app, you would store and use the cursor to fetch only new transactions.
-        // For this prototype, we'll fetch all transactions each time.
-        // You might also want to set a date range for the transactions you fetch.
+        let cursor = initialCursor || undefined;
 
         while(hasMore) {
             const request: TransactionsSyncRequest = {
@@ -111,14 +109,16 @@ export async function getTransactions(accessToken: string) {
                 cursor: cursor,
             };
             const response = await plaidClient.transactionsSync(request);
-            const transactions = response.data.added;
             
-            allTransactions = allTransactions.concat(transactions);
+            added = added.concat(response.data.added);
+            modified = modified.concat(response.data.modified);
+            removed = removed.concat(response.data.removed);
+
             hasMore = response.data.has_more;
             cursor = response.data.next_cursor;
         }
 
-        return { success: true, transactions: allTransactions };
+        return { success: true, added, modified, removed, nextCursor: cursor };
 
     } catch (error) {
         console.error("Error fetching transactions:", error);

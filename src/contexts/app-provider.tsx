@@ -14,12 +14,14 @@ interface AppContextType {
   rules: AllocationRule[];
   transactions: Transaction[];
   plaidTransactions: any[];
-  setPlaidTransactions: (transactions: any[]) => void;
+  setPlaidTransactions: (transactions: any[] | ((prev: any[]) => any[])) => void;
   addIncome: (amount: number) => void;
   updateRules: (newRules: AllocationRule[]) => void;
   updateAccount: (updatedAccount: Account) => void;
   plaidAccessToken: string | null;
   setPlaidAccessToken: (token: string | null) => void;
+  plaidCursor: string | null;
+  updatePlaidCursor: (cursor: string) => void;
   loadingData: boolean;
   userPlan: UserPlan | null;
 }
@@ -47,6 +49,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [rules, setRules] = useState<AllocationRule[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [plaidAccessToken, setPlaidAccessTokenState] = useState<string | null>(null);
+  const [plaidCursor, setPlaidCursor] = useState<string | null>(null);
   const [plaidTransactions, setPlaidTransactions] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
@@ -62,6 +65,7 @@ export function AppProvider({ children }: AppProviderProps) {
         if(doc.exists()) {
           const data = doc.data();
           setPlaidAccessTokenState(data.plaidAccessToken || null);
+          setPlaidCursor(data.plaidCursor || null);
           setUserPlan(data.plan || null);
         }
       });
@@ -98,6 +102,11 @@ export function AppProvider({ children }: AppProviderProps) {
       const transactionsUnsub = onSnapshot(transactionsQuery, (snapshot) => {
         setTransactions(snapshot.docs.map(doc => ({...doc.data(), id: doc.id } as Transaction)));
       });
+      
+      const plaidTransactionsQuery = query(collection(db, "users", user.uid, "plaid_transactions"), orderBy("date", "desc"));
+      const plaidTransactionsUnsub = onSnapshot(plaidTransactionsQuery, (snapshot) => {
+        setPlaidTransactions(snapshot.docs.map(doc => doc.data()));
+      });
 
       setLoadingData(false);
 
@@ -106,6 +115,7 @@ export function AppProvider({ children }: AppProviderProps) {
           rulesUnsub();
           accountsUnsub();
           transactionsUnsub();
+          plaidTransactionsUnsub();
       }
     } else {
       // Clear data if user logs out
@@ -113,6 +123,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setRules([]);
       setTransactions([]);
       setPlaidAccessTokenState(null);
+      setPlaidCursor(null);
       setUserPlan(null);
       setLoadingData(!user);
     }
@@ -122,9 +133,19 @@ export function AppProvider({ children }: AppProviderProps) {
   const setPlaidAccessToken = useCallback(async (token: string | null) => {
       if (!user) return;
       setPlaidAccessTokenState(token);
+      // Reset cursor and transactions when a new token is set
+      setPlaidCursor(null);
+      setPlaidTransactions([]);
       const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, { plaidAccessToken: token }, { merge: true });
+      await setDoc(userDocRef, { plaidAccessToken: token, plaidCursor: null }, { merge: true });
   },[user]);
+
+  const updatePlaidCursor = useCallback(async (cursor: string) => {
+    if(!user) return;
+    setPlaidCursor(cursor);
+    const userDocRef = doc(db, "users", user.uid);
+    await setDoc(userDocRef, { plaidCursor: cursor }, { merge: true });
+  }, [user]);
 
   const updateAccount = useCallback(async (updatedAccount: Account) => {
     if (!user) return;
@@ -192,6 +213,19 @@ export function AppProvider({ children }: AppProviderProps) {
     
     await batch.commit();
   }, [user, rules, accounts]);
+  
+  const setPlaidTransactionsWithPersistence = useCallback(async (newTransactions: any[]) => {
+      if (!user) return;
+
+      const batch = writeBatch(db);
+      newTransactions.forEach(tx => {
+        const txDocRef = doc(db, "users", user.uid, "plaid_transactions", tx.transaction_id);
+        batch.set(txDocRef, tx);
+      });
+      await batch.commit();
+
+  }, [user]);
+
 
   const value = {
     accounts,
@@ -202,8 +236,21 @@ export function AppProvider({ children }: AppProviderProps) {
     updateAccount,
     plaidAccessToken,
     setPlaidAccessToken,
+    plaidCursor,
+    updatePlaidCursor,
     plaidTransactions,
-    setPlaidTransactions,
+    setPlaidTransactions: (txs: any) => {
+        if (typeof txs === 'function') {
+            setPlaidTransactions(prev => {
+                const newTxs = txs(prev);
+                setPlaidTransactionsWithPersistence(newTxs.slice(0, prev.length -1));
+                return newTxs;
+            })
+        } else {
+             setPlaidTransactions(txs);
+             setPlaidTransactionsWithPersistence(txs);
+        }
+    },
     loadingData,
     userPlan
   };

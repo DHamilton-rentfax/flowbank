@@ -16,7 +16,14 @@ export function PlaidTransactions() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFindingIncome, setIsFindingIncome] = useState(false);
   const { toast } = useToast();
-  const { plaidAccessToken, plaidTransactions, setPlaidTransactions, addIncome } = useApp();
+  const { 
+    plaidAccessToken, 
+    plaidTransactions, 
+    setPlaidTransactions, 
+    addIncome,
+    plaidCursor,
+    updatePlaidCursor,
+  } = useApp();
   const [incomeTransactions, setIncomeTransactions] = useState<any[]>([]);
   const [allocatedTransactionIds, setAllocatedTransactionIds] = useState<string[]>([]);
 
@@ -26,12 +33,16 @@ export function PlaidTransactions() {
       return;
     }
     setIsLoading(true);
-    const result = await getTransactions(plaidAccessToken);
+    const result = await getTransactions(plaidAccessToken, plaidCursor);
     setIsLoading(false);
 
-    if (result.success && result.transactions) {
-      setPlaidTransactions(result.transactions);
-      toast({ title: "Success", description: "Transactions synced successfully." });
+    if (result.success && result.added) {
+      // In a real app, you would also handle `modified` and `removed` transactions.
+      setPlaidTransactions(prev => [...result.added!, ...prev]);
+      if (result.nextCursor) {
+        updatePlaidCursor(result.nextCursor);
+      }
+      toast({ title: "Success", description: `${result.added.length} new transaction(s) synced.` });
     } else {
       toast({ title: "Error", description: result.error || "Could not sync transactions.", variant: "destructive" });
     }
@@ -43,12 +54,21 @@ export function PlaidTransactions() {
       return;
     }
     setIsFindingIncome(true);
-    const result = await findIncomeTransactions({ transactions: plaidTransactions });
+    // Only check un-identified transactions
+    const transactionsToScan = plaidTransactions.filter(tx => !incomeTransactions.some(itx => itx.transaction_id === tx.transaction_id));
+    
+    if (transactionsToScan.length === 0) {
+        setIsFindingIncome(false);
+        toast({ title: "No New Transactions", description: "All synced transactions have already been analyzed."});
+        return;
+    }
+
+    const result = await findIncomeTransactions({ transactions: transactionsToScan });
     setIsFindingIncome(false);
 
     if (result.success && result.incomeTransactions) {
-      setIncomeTransactions(result.incomeTransactions);
-      toast({ title: "Income Found", description: `Found ${result.incomeTransactions.length} income transaction(s).` });
+      setIncomeTransactions(prev => [...prev, ...result.incomeTransactions!]);
+      toast({ title: "Income Found", description: `Found ${result.incomeTransactions.length} new income transaction(s).` });
     } else {
       toast({ title: "Error", description: result.error || "Could not identify income.", variant: "destructive" });
     }
@@ -101,7 +121,7 @@ export function PlaidTransactions() {
                                 {formatCurrency(Math.abs(tx.amount))}
                             </TableCell>
                             <TableCell className="text-center">
-                                {isIncome(tx) && <Badge>Income</Badge>}
+                                {isIncome(tx) ? <Badge>Income</Badge> : tx.amount > 0 ? <Badge variant="outline">Expense</Badge> : null }
                             </TableCell>
                              <TableCell className="text-right">
                                 {isIncome(tx) && (
