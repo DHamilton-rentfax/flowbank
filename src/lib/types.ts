@@ -3,6 +3,10 @@ export type Account = {
   id: string;
   name: string;
   balance: number;
+  goal?: {
+    name: string;
+    targetAmount: number;
+  };
 };
 
 export type AllocationRule = {

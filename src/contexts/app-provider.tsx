@@ -15,6 +15,7 @@ interface AppContextType {
   setPlaidTransactions: (transactions: any[]) => void;
   addIncome: (amount: number) => void;
   updateRules: (newRules: AllocationRule[]) => void;
+  updateAccount: (updatedAccount: Account) => void;
   plaidAccessToken: string | null;
   setPlaidAccessToken: (token: string | null) => void;
 }
@@ -98,15 +99,22 @@ export function AppProvider({ children }: AppProviderProps) {
     setPlaidAccessTokenState(token);
   }
 
+  const updateAccount = (updatedAccount: Account) => {
+    setAccounts(prevAccounts => 
+        prevAccounts.map(acc => acc.id === updatedAccount.id ? updatedAccount : acc)
+    );
+  };
+
   const updateRules = (newRules: AllocationRule[]) => {
     setRules(newRules);
-    // Update accounts based on new rules, keeping balances of existing accounts
+    // Update accounts based on new rules, keeping balances and goals of existing accounts
     const updatedAccounts = newRules.map(rule => {
         const existingAccount = accounts.find(acc => acc.name.toLowerCase() === rule.name.toLowerCase());
         return {
             id: existingAccount?.id || rule.id,
             name: rule.name,
             balance: existingAccount?.balance || 0,
+            goal: existingAccount?.goal,
         };
     });
     setAccounts(updatedAccounts);
@@ -150,6 +158,7 @@ export function AppProvider({ children }: AppProviderProps) {
     transactions,
     addIncome,
     updateRules,
+    updateAccount,
     plaidAccessToken,
     setPlaidAccessToken,
     plaidTransactions,
