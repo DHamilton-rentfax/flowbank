@@ -10,8 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BlogEditorPage() {
   const router = useRouter();
@@ -32,22 +33,27 @@ export default function BlogEditorPage() {
     views: 0,
   });
   const [isLoading, setIsLoading] = useState(!isNewPost);
+  const [isSaving, setIsSaving] = useState(false);
 
   const { toast } = useToast();
 
   useEffect(() => {
     if (!isNewPost && typeof slug === 'string') {
-      const existingPost = getPostBySlug(slug);
-      if (existingPost) {
-        setPost(existingPost);
-      } else {
-        toast({
-          title: "Post not found",
-          variant: "destructive",
-        });
-        router.push("/dashboard/blog");
+      const fetchPost = async () => {
+          setIsLoading(true);
+          const existingPost = await getPostBySlug(slug);
+          if (existingPost) {
+            setPost(existingPost);
+          } else {
+            toast({
+              title: "Post not found",
+              variant: "destructive",
+            });
+            router.push("/dashboard/blog");
+          }
+          setIsLoading(false);
       }
-      setIsLoading(false);
+      fetchPost();
     }
   }, [slug, isNewPost, router, toast]);
 
@@ -64,7 +70,7 @@ export default function BlogEditorPage() {
     setPost(prev => ({...prev, slug: newSlug}));
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!post.title || !post.slug || !post.content || !post.excerpt || !post.image) {
       toast({
@@ -75,15 +81,19 @@ export default function BlogEditorPage() {
       return;
     }
 
+    setIsSaving(true);
     try {
       if (isNewPost) {
-        createPost({
+        await createPost({
             ...post,
             date: new Date().toISOString()
         } as Post);
         toast({ title: "Post Created!", className: "bg-accent text-accent-foreground" });
       } else {
-        updatePost(post as Post);
+        if (!post.id) {
+            throw new Error("Post ID is missing. Cannot update.");
+        }
+        await updatePost(post.id, post as Post);
         toast({ title: "Post Updated!", className: "bg-accent text-accent-foreground" });
       }
       router.push("/dashboard/blog");
@@ -94,11 +104,35 @@ export default function BlogEditorPage() {
         description: (error as Error).message,
         variant: "destructive",
       });
+    } finally {
+        setIsSaving(false);
     }
   };
   
   if (isLoading) {
-    return <div>Loading post...</div>;
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center gap-4">
+                <Skeleton className="h-10 w-10" />
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+            </div>
+            <Card>
+                <CardContent className="p-6 grid gap-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-48 w-full" />
+                </CardContent>
+                <CardFooter className="justify-end">
+                    <Skeleton className="h-10 w-32" />
+                </CardFooter>
+            </Card>
+        </div>
+    )
   }
 
   return (
@@ -122,48 +156,48 @@ export default function BlogEditorPage() {
           <CardContent className="p-6 grid gap-4">
              <div className="grid gap-2">
                 <Label htmlFor="title">Title</Label>
-                <Input id="title" name="title" value={post.title} onChange={handleChange} placeholder="Your Post Title" required />
+                <Input id="title" name="title" value={post.title} onChange={handleChange} placeholder="Your Post Title" required disabled={isSaving} />
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="slug">Slug</Label>
-                <Input id="slug" name="slug" value={post.slug} onChange={handleSlugChange} placeholder="your-post-slug" required />
-                 <p className="text-xs text-muted-foreground">The URL-friendly version of the title.</p>
+                <Input id="slug" name="slug" value={post.slug} onChange={handleSlugChange} placeholder="your-post-slug" required disabled={isSaving || !isNewPost}/>
+                 <p className="text-xs text-muted-foreground">The URL-friendly version of the title. Cannot be changed after creation.</p>
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="image">Image URL</Label>
-                <Input id="image" name="image" value={post.image} onChange={handleChange} placeholder="https://placehold.co/600x400.png" required />
+                <Input id="image" name="image" value={post.image} onChange={handleChange} placeholder="https://placehold.co/600x400.png" required disabled={isSaving}/>
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="excerpt">Excerpt</Label>
-                <Textarea id="excerpt" name="excerpt" value={post.excerpt} onChange={handleChange} placeholder="A short summary of the post." required />
+                <Textarea id="excerpt" name="excerpt" value={post.excerpt} onChange={handleChange} placeholder="A short summary of the post." required disabled={isSaving} />
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="content">Content (HTML)</Label>
-                <Textarea id="content" name="content" value={post.content} onChange={handleChange} placeholder="<p>Start writing your post content here.</p>" rows={15} required />
+                <Textarea id="content" name="content" value={post.content} onChange={handleChange} placeholder="<p>Start writing your post content here.</p>" rows={15} required disabled={isSaving} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="author">Author</Label>
-                    <Input id="author" name="author" value={post.author} onChange={handleChange} placeholder="John Doe" />
+                    <Input id="author" name="author" value={post.author} onChange={handleChange} placeholder="John Doe" disabled={isSaving} />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="avatar">Avatar Initial</Label>
-                    <Input id="avatar" name="avatar" value={post.avatar} onChange={handleChange} placeholder="J" maxLength={1} />
+                    <Input id="avatar" name="avatar" value={post.avatar} onChange={handleChange} placeholder="J" maxLength={1} disabled={isSaving} />
                 </div>
                  <div className="grid gap-2">
                     <Label htmlFor="readTime">Read Time (mins)</Label>
-                    <Input id="readTime" name="readTime" type="number" value={post.readTime} onChange={handleChange} placeholder="5" />
+                    <Input id="readTime" name="readTime" type="number" value={post.readTime} onChange={handleChange} placeholder="5" disabled={isSaving} />
                 </div>
                  <div className="grid gap-2">
                     <Label htmlFor="views">Views</Label>
-                    <Input id="views" name="views" type="number" value={post.views} onChange={handleChange} placeholder="123" />
+                    <Input id="views" name="views" type="number" value={post.views} onChange={handleChange} placeholder="123" disabled={isSaving} />
                 </div>
             </div>
           </CardContent>
           <CardFooter className="justify-end">
-            <Button type="submit">
-                <Save className="mr-2" />
-                {isNewPost ? "Publish Post" : "Save Changes"}
+            <Button type="submit" disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 animate-spin" /> : <Save className="mr-2" />}
+                {isSaving ? "Saving..." : isNewPost ? "Publish Post" : "Save Changes"}
             </Button>
           </CardFooter>
         </Card>

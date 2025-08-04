@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Image from 'next/image';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function BlogPostPage() {
   const params = useParams();
@@ -17,14 +18,28 @@ export default function BlogPostPage() {
 
   useEffect(() => {
     if (slug) {
-      const foundPost = getPostBySlug(slug);
-      setPost(foundPost);
+      const fetchPost = async () => {
+          const foundPost = await getPostBySlug(slug);
+          setPost(foundPost);
+      }
+      fetchPost();
     }
   }, [slug]);
 
   if (post === undefined) {
-    // Still loading
-    return <div className="container mx-auto max-w-3xl py-12 px-4">Loading...</div>;
+    return (
+        <div className="container mx-auto max-w-3xl py-12 px-4">
+            <Skeleton className="h-8 w-32 mb-4" />
+            <Skeleton className="h-12 w-full mb-4" />
+            <Skeleton className="h-6 w-1/2 mb-8" />
+            <Skeleton className="w-full aspect-video rounded-lg mb-8" />
+            <div className="space-y-4">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-3/4" />
+            </div>
+        </div>
+    );
   }
 
   if (!post) {

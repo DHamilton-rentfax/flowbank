@@ -105,12 +105,17 @@ export default function BlogIndexPage() {
   const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
   const loader = useRef(null);
 
   useEffect(() => {
-    const posts = getAllPosts();
-    setAllPosts(posts);
+    const fetchPosts = async () => {
+        setIsLoading(true);
+        const posts = await getAllPosts();
+        setAllPosts(posts);
+        setIsLoading(false);
+    }
+    fetchPosts();
   }, []);
 
   // Set initial posts (featured, trending, initial set for infinite scroll)
@@ -125,17 +130,16 @@ export default function BlogIndexPage() {
 
   const loadMore = useCallback(() => {
     setIsLoading(true);
-    // Simulate a network request
-    setTimeout(() => {
-        const remainingPosts = allPosts.slice(4);
-        const nextPage = page + 1;
-        const newPosts = remainingPosts.slice(0, nextPage * POSTS_PER_PAGE);
-        
-        setDisplayedPosts(newPosts);
-        setPage(nextPage);
-        setHasMore(newPosts.length < remainingPosts.length);
-        setIsLoading(false);
-    }, 500); // Adjust delay as needed
+    // This logic can now be simpler as we fetch all posts at the beginning.
+    // In a real app with pagination, this would fetch the next page from the backend.
+    const remainingPosts = allPosts.slice(4);
+    const nextPage = page + 1;
+    const newPosts = remainingPosts.slice(0, nextPage * POSTS_PER_PAGE);
+    
+    setDisplayedPosts(newPosts);
+    setPage(nextPage);
+    setHasMore(newPosts.length < remainingPosts.length);
+    setIsLoading(false);
   }, [page, allPosts]);
   
   useEffect(() => {
@@ -152,19 +156,41 @@ export default function BlogIndexPage() {
         }
     }, options);
 
-    if (loader.current) {
-      observer.observe(loader.current);
+    const currentLoader = loader.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
     }
 
     return () => {
-      if (loader.current) {
-        observer.unobserve(loader.current);
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
       }
     };
   }, [loadMore, hasMore, isLoading]);
 
   const featuredPost = allPosts[0];
   const trendingPosts = allPosts.slice(1, 4);
+
+  if (isLoading && allPosts.length === 0) {
+    return (
+        <div className="container mx-auto max-w-6xl py-12 px-4 space-y-12">
+            <header className="mb-12 text-center">
+                <Skeleton className="h-10 w-1/2 mx-auto" />
+                <Skeleton className="h-6 w-3/4 mx-auto mt-2" />
+            </header>
+            <section>
+                <Skeleton className="h-80 w-full" />
+            </section>
+            <section>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                    <PostSkeleton />
+                    <PostSkeleton />
+                    <PostSkeleton />
+                </div>
+            </section>
+        </div>
+    )
+  }
 
   return (
     <div className="container mx-auto max-w-6xl py-12 px-4">
@@ -206,7 +232,7 @@ export default function BlogIndexPage() {
       )}
 
       <div ref={loader} className="py-8">
-        {isLoading && (
+        {isLoading && hasMore && (
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
                 <PostSkeleton />
                 <PostSkeleton />

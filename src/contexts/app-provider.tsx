@@ -1,10 +1,12 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Account, AllocationRule, Transaction } from '@/lib/types';
 import { nanoid } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/firebase/client';
+import { doc, getDoc, setDoc, collection, getDocs, addDoc, writeBatch, query, orderBy, onSnapshot } from "firebase/firestore";
 
 // Define the shape of the context
 interface AppContextType {
@@ -18,6 +20,7 @@ interface AppContextType {
   updateAccount: (updatedAccount: Account) => void;
   plaidAccessToken: string | null;
   setPlaidAccessToken: (token: string | null) => void;
+  loadingData: boolean;
 }
 
 // Create the context with a default value
@@ -44,113 +47,145 @@ export function AppProvider({ children }: AppProviderProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [plaidAccessToken, setPlaidAccessTokenState] = useState<string | null>(null);
   const [plaidTransactions, setPlaidTransactions] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
-  // Load data from localStorage when the component mounts
+  // Load data from Firestore
   useEffect(() => {
     if (user?.uid) {
-        const storedAccounts = localStorage.getItem(`auto_allocator_accounts_${user.uid}`);
-        const storedRules = localStorage.getItem(`auto_allocator_rules_${user.uid}`);
-        const storedTransactions = localStorage.getItem(`auto_allocator_transactions_${user.uid}`);
-        const storedPlaidToken = localStorage.getItem(`auto_allocator_plaid_token_${user.uid}`);
-        
-        if (storedRules) {
-            setRules(JSON.parse(storedRules));
-        } else {
-            setRules(initialRules);
-        }
+      setLoadingData(true);
+      const userDocRef = doc(db, "users", user.uid);
 
-        if (storedAccounts) {
-            setAccounts(JSON.parse(storedAccounts));
-        } else {
-            // Create accounts from rules if none exist
-            const newAccounts = initialRules.map(rule => ({
-                id: rule.id,
-                name: rule.name,
-                balance: 0,
-            }));
-            setAccounts(newAccounts);
-        }
-        
-        if (storedTransactions) {
-            setTransactions(JSON.parse(storedTransactions));
-        }
-        
-        if(storedPlaidToken) {
-            setPlaidAccessTokenState(storedPlaidToken);
-        }
+      const fetchData = async () => {
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+              setPlaidAccessTokenState(userDocSnap.data().plaidAccessToken || null);
+          }
+      };
+      fetchData();
+
+      const rulesUnsub = onSnapshot(collection(db, "users", user.uid, "rules"), async (snapshot) => {
+          if (snapshot.empty) {
+              // First time user, create initial rules and accounts
+              const batch = writeBatch(db);
+              const accountsData = initialRules.map(rule => ({
+                  id: rule.id,
+                  name: rule.name,
+                  balance: 0,
+              }));
+              initialRules.forEach(rule => {
+                  const ruleDocRef = doc(db, "users", user.uid, "rules", rule.id);
+                  batch.set(ruleDocRef, rule);
+              });
+              accountsData.forEach(account => {
+                  const accountDocRef = doc(db, "users", user.uid, "accounts", account.id);
+                  batch.set(accountDocRef, account);
+              });
+              await batch.commit();
+          } else {
+              setRules(snapshot.docs.map(doc => doc.data() as AllocationRule));
+          }
+      });
+      
+      const accountsUnsub = onSnapshot(collection(db, "users", user.uid, "accounts"), (snapshot) => {
+        setAccounts(snapshot.docs.map(doc => doc.data() as Account));
+      });
+
+      const transactionsQuery = query(collection(db, "users", user.uid, "transactions"), orderBy("date", "desc"));
+      const transactionsUnsub = onSnapshot(transactionsQuery, (snapshot) => {
+        setTransactions(snapshot.docs.map(doc => ({...doc.data(), id: doc.id } as Transaction)));
+      });
+
+      setLoadingData(false);
+
+      return () => {
+          rulesUnsub();
+          accountsUnsub();
+          transactionsUnsub();
+      }
+    } else {
+      // Clear data if user logs out
+      setAccounts([]);
+      setRules([]);
+      setTransactions([]);
+      setPlaidAccessTokenState(null);
+      setLoadingData(!user);
     }
   }, [user]);
 
-  // Save data to localStorage whenever it changes
-  useEffect(() => {
-    if (user?.uid) {
-        localStorage.setItem(`auto_allocator_accounts_${user.uid}`, JSON.stringify(accounts));
-        localStorage.setItem(`auto_allocator_rules_${user.uid}`, JSON.stringify(rules));
-        localStorage.setItem(`auto_allocator_transactions_${user.uid}`, JSON.stringify(transactions));
-        if (plaidAccessToken) {
-            localStorage.setItem(`auto_allocator_plaid_token_${user.uid}`, plaidAccessToken);
-        } else {
-            localStorage.removeItem(`auto_allocator_plaid_token_${user.uid}`);
-        }
-    }
-  }, [accounts, rules, transactions, user, plaidAccessToken]);
   
-  const setPlaidAccessToken = (token: string | null) => {
-    setPlaidAccessTokenState(token);
-  }
+  const setPlaidAccessToken = useCallback(async (token: string | null) => {
+      if (!user) return;
+      setPlaidAccessTokenState(token);
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, { plaidAccessToken: token }, { merge: true });
+  },[user]);
 
-  const updateAccount = (updatedAccount: Account) => {
-    setAccounts(prevAccounts => 
-        prevAccounts.map(acc => acc.id === updatedAccount.id ? updatedAccount : acc)
-    );
-  };
+  const updateAccount = useCallback(async (updatedAccount: Account) => {
+    if (!user) return;
+    const accountDocRef = doc(db, "users", user.uid, "accounts", updatedAccount.id);
+    await setDoc(accountDocRef, updatedAccount, { merge: true });
+  }, [user]);
 
-  const updateRules = (newRules: AllocationRule[]) => {
-    setRules(newRules);
-    // Update accounts based on new rules, keeping balances and goals of existing accounts
-    const updatedAccounts = newRules.map(rule => {
-        const existingAccount = accounts.find(acc => acc.name.toLowerCase() === rule.name.toLowerCase());
-        return {
+  const updateRules = useCallback(async (newRules: AllocationRule[]) => {
+    if (!user) return;
+    const batch = writeBatch(db);
+    const existingAccountsSnap = await getDocs(collection(db, "users", user.uid, "accounts"));
+    const existingAccounts = existingAccountsSnap.docs.map(d => d.data() as Account);
+
+    // Write new rules
+    newRules.forEach(rule => {
+        const ruleDocRef = doc(db, "users", user.uid, "rules", rule.id);
+        batch.set(ruleDocRef, rule);
+    });
+
+    // Create corresponding accounts
+     newRules.forEach(rule => {
+        const existingAccount = existingAccounts.find(acc => acc.name.toLowerCase() === rule.name.toLowerCase());
+        const accountDocRef = doc(db, "users", user.uid, "accounts", existingAccount?.id || rule.id);
+        batch.set(accountDocRef, {
             id: existingAccount?.id || rule.id,
             name: rule.name,
             balance: existingAccount?.balance || 0,
-            goal: existingAccount?.goal,
-        };
+            goal: existingAccount?.goal || null,
+        }, { merge: true });
     });
-    setAccounts(updatedAccounts);
-  };
+    
+    await batch.commit();
 
-  const addIncome = (amount: number) => {
+  }, [user]);
+
+  const addIncome = useCallback(async (amount: number) => {
+    if (!user || rules.length === 0 || accounts.length === 0) return;
+    
+    const batch = writeBatch(db);
+
     const newAllocations: { ruleId: string; amount: number }[] = [];
-    let updatedAccounts = [...accounts];
-
+    
     rules.forEach(rule => {
       const allocationAmount = amount * (rule.percentage / 100);
       newAllocations.push({ ruleId: rule.id, amount: allocationAmount });
 
       // Find the account corresponding to the rule
-      const accountIndex = updatedAccounts.findIndex(acc => acc.name.toLowerCase() === rule.name.toLowerCase());
-      if (accountIndex !== -1) {
-        updatedAccounts[accountIndex] = {
-          ...updatedAccounts[accountIndex],
-          balance: updatedAccounts[accountIndex].balance + allocationAmount,
-        };
-      } else {
-        // This case should ideally not happen if accounts are synced with rules
-        console.warn(`No account found for rule: ${rule.name}`);
+      const accountToUpdate = accounts.find(acc => acc.name.toLowerCase() === rule.name.toLowerCase());
+
+      if (accountToUpdate) {
+        const accountDocRef = doc(db, "users", user.uid, "accounts", accountToUpdate.id);
+        batch.update(accountDocRef, { balance: accountToUpdate.balance + allocationAmount });
       }
     });
 
-    const newTransaction: Transaction = {
-      id: nanoid(),
+    const newTransaction: Omit<Transaction, 'id'> = {
       date: new Date().toISOString(),
       totalAmount: amount,
       allocations: newAllocations,
     };
 
-    setAccounts(updatedAccounts);
-    setTransactions(prev => [newTransaction, ...prev]);
-  };
+    const transactionCollectionRef = collection(db, "users", user.uid, "transactions");
+    const newTransactionRef = doc(transactionCollectionRef);
+    batch.set(newTransactionRef, newTransaction);
+    
+    await batch.commit();
+  }, [user, rules, accounts]);
 
   const value = {
     accounts,
@@ -163,6 +198,7 @@ export function AppProvider({ children }: AppProviderProps) {
     setPlaidAccessToken,
     plaidTransactions,
     setPlaidTransactions,
+    loadingData
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

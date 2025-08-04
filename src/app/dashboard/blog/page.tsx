@@ -7,14 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PlusCircle, FileEdit } from "lucide-react";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BlogManagementPage() {
-  // Use state to make the component dynamic
   const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load posts on the client-side
-    setPosts(getAllPosts());
+    const fetchPosts = async () => {
+      setIsLoading(true);
+      const fetchedPosts = await getAllPosts();
+      setPosts(fetchedPosts);
+      setIsLoading(false);
+    };
+    fetchPosts();
   }, []);
 
   return (
@@ -39,8 +45,14 @@ export default function BlogManagementPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {posts.length > 0 ? posts.map((post) => (
-              <div key={post.slug} className="flex items-center justify-between rounded-lg border p-4">
+            {isLoading ? (
+                <>
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                </>
+            ) : posts.length > 0 ? posts.map((post) => (
+              <div key={post.id} className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <h3 className="font-semibold">{post.title}</h3>
                   <p className="text-sm text-muted-foreground">
