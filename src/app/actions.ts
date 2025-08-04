@@ -63,3 +63,26 @@ export async function createLinkToken() {
         return { success: false, error: "Failed to create Plaid link token." };
       }
 }
+
+export async function exchangePublicToken(publicToken: string) {
+    try {
+      const response = await plaidClient.itemPublicTokenExchange({
+        public_token: publicToken,
+      });
+  
+      // These values should be saved securely in your database
+      const accessToken = response.data.access_token;
+      const itemId = response.data.item_id;
+  
+      console.log({
+        accessToken,
+        itemId,
+      });
+      
+      // For now, we'll just return a success message
+      return { success: true, message: "Bank account linked successfully!" };
+    } catch (error) {
+      console.error("Error exchanging public token:", error);
+      return { success: false, error: "Failed to link bank account." };
+    }
+}
