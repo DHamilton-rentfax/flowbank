@@ -8,7 +8,7 @@ export default function LandingPage() {
       <header className="p-4 sm:p-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Logo className="size-7 text-primary" />
-          <h1 className="text-xl font-semibold">AutoAllocator</h1>
+          <h1 className="text-xl font-semibold">Flow Bank</h1>
         </div>
         <nav>
           <Button variant="ghost" asChild>
@@ -22,7 +22,7 @@ export default function LandingPage() {
             Automate Your Finances.
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            AutoAllocator helps you automatically split your income into different accounts based on rules you set. Take control of your money effortlessly.
+            Flow Bank helps you automatically split your income into different accounts based on rules you set. Take control of your money effortlessly.
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <Button asChild size="lg">
@@ -35,7 +35,7 @@ export default function LandingPage() {
         </div>
       </main>
       <footer className="p-4 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} AutoAllocator. All rights reserved.
+        © {new Date().getFullYear()} Flow Bank. All rights reserved.
       </footer>
     </div>
   );

@@ -9,7 +9,7 @@ export default function LoginPage() {
         <div className="mb-8 flex justify-center">
           <Link href="/" className="flex items-center gap-2">
             <Logo className="size-8 text-primary" />
-            <h1 className="text-2xl font-semibold">AutoAllocator</h1>
+            <h1 className="text-2xl font-semibold">Flow Bank</h1>
           </Link>
         </div>
         <AuthForm mode="login" />

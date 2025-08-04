@@ -49,7 +49,7 @@ export async function createLinkToken(accessToken?: string | null) {
           user: {
             client_user_id: 'user-id', // This should be a unique ID for the user
           },
-          client_name: 'AutoAllocator',
+          client_name: 'Flow Bank',
           country_codes: [CountryCode.Us],
           language: 'en',
           webhook: process.env.PLAID_WEBHOOK_URL,

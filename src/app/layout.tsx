@@ -5,8 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
 
 export const metadata: Metadata = {
-  title: "AutoAllocator",
-  description: "Allocate your funds automatically.",
+  title: "Flow Bank",
+  description: "Manage your finances with ease.",
 };
 
 export default function RootLayout({
