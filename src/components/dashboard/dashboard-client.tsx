@@ -5,7 +5,7 @@ import { useApp } from "@/contexts/app-provider";
 import { AccountCard } from "./account-card";
 import { IncomeForm } from "./income-form";
 import { RecentAllocations } from "./recent-allocations";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { PlaidTransactions } from "./plaid-transactions";
 import { DollarSign, Banknote } from "lucide-react";
