@@ -10,11 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useApp } from "@/contexts/app-provider";
 import { getTransactions, findIncomeTransactions } from "@/app/actions";
 import { formatCurrency } from "@/lib/utils";
-import { Loader2, Wand2 } from "lucide-react";
+import { Loader2, Wand2, RefreshCw } from "lucide-react";
 
 export function PlaidTransactions() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isFindingIncome, setIsFindingIncome] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Syncing...");
   const { toast } = useToast();
   const { 
     plaidAccessToken, 
@@ -27,51 +27,53 @@ export function PlaidTransactions() {
   const [incomeTransactions, setIncomeTransactions] = useState<any[]>([]);
   const [allocatedTransactionIds, setAllocatedTransactionIds] = useState<string[]>([]);
 
-  const handleSyncTransactions = async () => {
+  const handleFindIncome = async (transactionsToScan: any[]) => {
+    if (transactionsToScan.length === 0) {
+        toast({ title: "No New Transactions", description: "All synced transactions have already been analyzed."});
+        return 0;
+    }
+
+    setLoadingMessage("Analyzing...");
+    const result = await findIncomeTransactions({ transactions: transactionsToScan });
+    
+    if (result.success && result.incomeTransactions) {
+      setIncomeTransactions(prev => [...prev, ...result.incomeTransactions!]);
+      return result.incomeTransactions.length;
+    } else {
+      toast({ title: "Error", description: result.error || "Could not identify income.", variant: "destructive" });
+      return 0;
+    }
+  };
+
+  const handleSyncAndAnalyze = async () => {
     if (!plaidAccessToken) {
       toast({ title: "Error", description: "Plaid access token not found.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
+    setLoadingMessage("Syncing...");
+
     const result = await getTransactions(plaidAccessToken, plaidCursor);
-    setIsLoading(false);
 
     if (result.success && result.added) {
       // In a real app, you would also handle `modified` and `removed` transactions.
-      setPlaidTransactions(prev => [...result.added!, ...prev]);
+      const newTransactions = result.added;
+      setPlaidTransactions(prev => [...newTransactions, ...prev]);
       if (result.nextCursor) {
         updatePlaidCursor(result.nextCursor);
       }
-      toast({ title: "Success", description: `${result.added.length} new transaction(s) synced.` });
+      
+      const incomeFoundCount = await handleFindIncome(newTransactions);
+      
+      toast({ 
+        title: "Sync Complete!", 
+        description: `${newTransactions.length} new transaction(s) synced. ${incomeFoundCount > 0 ? `Found ${incomeFoundCount} new income deposit(s).` : ''}` 
+      });
+
     } else {
       toast({ title: "Error", description: result.error || "Could not sync transactions.", variant: "destructive" });
     }
-  };
-
-  const handleFindIncome = async () => {
-    if (plaidTransactions.length === 0) {
-      toast({ title: "No Transactions", description: "Sync transactions before trying to find income.", variant: "destructive" });
-      return;
-    }
-    setIsFindingIncome(true);
-    // Only check un-identified transactions
-    const transactionsToScan = plaidTransactions.filter(tx => !incomeTransactions.some(itx => itx.transaction_id === tx.transaction_id));
-    
-    if (transactionsToScan.length === 0) {
-        setIsFindingIncome(false);
-        toast({ title: "No New Transactions", description: "All synced transactions have already been analyzed."});
-        return;
-    }
-
-    const result = await findIncomeTransactions({ transactions: transactionsToScan });
-    setIsFindingIncome(false);
-
-    if (result.success && result.incomeTransactions) {
-      setIncomeTransactions(prev => [...prev, ...result.incomeTransactions!]);
-      toast({ title: "Income Found", description: `Found ${result.incomeTransactions.length} new income transaction(s).` });
-    } else {
-      toast({ title: "Error", description: result.error || "Could not identify income.", variant: "destructive" });
-    }
+    setIsLoading(false);
   };
   
   const handleAllocate = (amount: number, id: string) => {
@@ -138,18 +140,14 @@ export function PlaidTransactions() {
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <p>No transactions synced yet.</p>
-            <p>Click "Sync Transactions" to get started.</p>
+            <p>Click "Sync & Analyze" to get started.</p>
           </div>
         )}
       </CardContent>
       <CardFooter className="flex justify-end gap-2">
-        <Button onClick={handleSyncTransactions} disabled={isLoading || isFindingIncome}>
-          {isLoading ? <Loader2 className="mr-2 animate-spin" /> : null}
-          {isLoading ? "Syncing..." : "Sync Transactions"}
-        </Button>
-        <Button onClick={handleFindIncome} disabled={isLoading || isFindingIncome || plaidTransactions.length === 0}>
-          {isFindingIncome ? <Loader2 className="mr-2 animate-spin" /> : <Wand2 className="mr-2"/>}
-          {isFindingIncome ? "Analyzing..." : "Find Income"}
+        <Button onClick={handleSyncAndAnalyze} disabled={isLoading}>
+          {isLoading ? <Loader2 className="mr-2 animate-spin" /> : <RefreshCw className="mr-2"/>}
+          {isLoading ? loadingMessage : "Sync & Analyze"}
         </Button>
       </CardFooter>
     </Card>
