@@ -24,6 +24,7 @@ export default function BlogEditorPage() {
     slug: "",
     excerpt: "",
     content: "",
+    image: "",
     date: new Date().toISOString(),
   });
   const [isLoading, setIsLoading] = useState(!isNewPost);
@@ -60,7 +61,7 @@ export default function BlogEditorPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!post.title || !post.slug || !post.content || !post.excerpt) {
+    if (!post.title || !post.slug || !post.content || !post.excerpt || !post.image) {
       toast({
         title: "Missing Fields",
         description: "Please fill out all fields before saving.",
@@ -122,6 +123,10 @@ export default function BlogEditorPage() {
                 <Label htmlFor="slug">Slug</Label>
                 <Input id="slug" name="slug" value={post.slug} onChange={handleSlugChange} placeholder="your-post-slug" />
                  <p className="text-xs text-muted-foreground">The URL-friendly version of the title.</p>
+            </div>
+             <div className="grid gap-2">
+                <Label htmlFor="image">Image URL</Label>
+                <Input id="image" name="image" value={post.image} onChange={handleChange} placeholder="https://placehold.co/600x400.png" />
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="excerpt">Excerpt</Label>
