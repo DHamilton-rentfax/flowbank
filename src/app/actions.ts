@@ -4,7 +4,7 @@
 import { suggestAllocationPlan, type SuggestAllocationPlanInput } from "@/ai/flows/suggest-allocation-plan";
 import { z } from "zod";
 import { plaidClient } from "@/lib/plaid";
-import { Products } from "plaid";
+import { Products, TransactionsSyncRequest } from "plaid";
 import { CountryCode } from "plaid";
 
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
@@ -42,17 +42,25 @@ export async function getAISuggestion(input: SuggestAllocationPlanInput) {
     }
 }
 
-export async function createLinkToken() {
+export async function createLinkToken(accessToken?: string | null) {
     try {
-        const response = await plaidClient.linkTokenCreate({
+        const tokenRequest: any = {
           user: {
             client_user_id: 'user-id', // This should be a unique ID for the user
           },
           client_name: 'AutoAllocator',
-          products: [Products.Auth],
           country_codes: [CountryCode.Us],
           language: 'en',
-        });
+        };
+
+        if (accessToken) {
+            tokenRequest.access_token = accessToken;
+            tokenRequest.products = [Products.Transactions];
+        } else {
+            tokenRequest.products = [Products.Auth, Products.Transactions];
+        }
+
+        const response = await plaidClient.linkTokenCreate(tokenRequest);
     
         return {
             success: true,
@@ -70,19 +78,44 @@ export async function exchangePublicToken(publicToken: string) {
         public_token: publicToken,
       });
   
-      // These values should be saved securely in your database
       const accessToken = response.data.access_token;
       const itemId = response.data.item_id;
   
-      console.log({
+      return { 
+        success: true, 
         accessToken,
         itemId,
-      });
-      
-      // For now, we'll just return a success message
-      return { success: true, message: "Bank account linked successfully!" };
+        message: "Bank account linked successfully!" 
+      };
     } catch (error) {
       console.error("Error exchanging public token:", error);
       return { success: false, error: "Failed to link bank account." };
+    }
+}
+
+export async function getTransactions(accessToken: string) {
+    try {
+        let hasMore = true;
+        let allTransactions: any[] = [];
+        let cursor: string | undefined = undefined;
+
+        while(hasMore) {
+            const request: TransactionsSyncRequest = {
+                access_token: accessToken,
+                cursor: cursor,
+            };
+            const response = await plaidClient.transactionsSync(request);
+            const transactions = response.data.added;
+            
+            allTransactions = allTransactions.concat(transactions);
+            hasMore = response.data.has_more;
+            cursor = response.data.next_cursor;
+        }
+
+        return { success: true, transactions: allTransactions };
+
+    } catch (error) {
+        console.error("Error fetching transactions:", error);
+        return { success: false, error: "Could not fetch transactions." };
     }
 }

@@ -13,6 +13,8 @@ interface AppContextType {
   transactions: Transaction[];
   addIncome: (amount: number) => void;
   updateRules: (newRules: AllocationRule[]) => void;
+  plaidAccessToken: string | null;
+  setPlaidAccessToken: (token: string | null) => void;
 }
 
 // Create the context with a default value
@@ -37,6 +39,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rules, setRules] = useState<AllocationRule[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [plaidAccessToken, setPlaidAccessTokenState] = useState<string | null>(null);
 
   // Load data from localStorage when the component mounts
   useEffect(() => {
@@ -44,6 +47,7 @@ export function AppProvider({ children }: AppProviderProps) {
         const storedAccounts = localStorage.getItem(`auto_allocator_accounts_${user.uid}`);
         const storedRules = localStorage.getItem(`auto_allocator_rules_${user.uid}`);
         const storedTransactions = localStorage.getItem(`auto_allocator_transactions_${user.uid}`);
+        const storedPlaidToken = localStorage.getItem(`auto_allocator_plaid_token_${user.uid}`);
         
         if (storedRules) {
             setRules(JSON.parse(storedRules));
@@ -66,6 +70,10 @@ export function AppProvider({ children }: AppProviderProps) {
         if (storedTransactions) {
             setTransactions(JSON.parse(storedTransactions));
         }
+        
+        if(storedPlaidToken) {
+            setPlaidAccessTokenState(storedPlaidToken);
+        }
     }
   }, [user]);
 
@@ -75,9 +83,17 @@ export function AppProvider({ children }: AppProviderProps) {
         localStorage.setItem(`auto_allocator_accounts_${user.uid}`, JSON.stringify(accounts));
         localStorage.setItem(`auto_allocator_rules_${user.uid}`, JSON.stringify(rules));
         localStorage.setItem(`auto_allocator_transactions_${user.uid}`, JSON.stringify(transactions));
+        if (plaidAccessToken) {
+            localStorage.setItem(`auto_allocator_plaid_token_${user.uid}`, plaidAccessToken);
+        } else {
+            localStorage.removeItem(`auto_allocator_plaid_token_${user.uid}`);
+        }
     }
-  }, [accounts, rules, transactions, user]);
-
+  }, [accounts, rules, transactions, user, plaidAccessToken]);
+  
+  const setPlaidAccessToken = (token: string | null) => {
+    setPlaidAccessTokenState(token);
+  }
 
   const updateRules = (newRules: AllocationRule[]) => {
     setRules(newRules);
@@ -131,6 +147,8 @@ export function AppProvider({ children }: AppProviderProps) {
     transactions,
     addIncome,
     updateRules,
+    plaidAccessToken,
+    setPlaidAccessToken
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
