@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await sendPasswordResetEmail(auth, auth.currentUser.email);
     } catch(error) {
         console.error("Error sending password reset email:", error);
-        throw error;
+        throw (error as Error);
     }
   }
 
