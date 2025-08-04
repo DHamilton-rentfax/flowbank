@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useApp } from "@/contexts/app-provider";
@@ -58,7 +59,7 @@ export function ReportingClient() {
                     <TableCell>
                       {new Date(tx.date).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right font-medium text-accent">
+                    <TableCell className="text-right font-medium text-green-600">
                       {formatCurrency(tx.totalAmount)}
                     </TableCell>
                     <TableCell className="text-right">
