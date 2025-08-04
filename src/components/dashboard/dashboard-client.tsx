@@ -7,9 +7,10 @@ import { IncomeForm } from "./income-form";
 import { RecentAllocations } from "./recent-allocations";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { PlaidTransactions } from "./plaid-transactions";
 
 export function DashboardClient() {
-  const { accounts, addIncome, transactions } = useApp();
+  const { accounts, addIncome, transactions, plaidAccessToken } = useApp();
 
   const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
 
@@ -43,6 +44,9 @@ export function DashboardClient() {
         </Card>
         <IncomeForm onAddIncome={addIncome} />
       </div>
+      
+      {plaidAccessToken && <PlaidTransactions />}
+      
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
           <RecentAllocations transactions={transactions} />

@@ -11,6 +11,8 @@ interface AppContextType {
   accounts: Account[];
   rules: AllocationRule[];
   transactions: Transaction[];
+  plaidTransactions: any[];
+  setPlaidTransactions: (transactions: any[]) => void;
   addIncome: (amount: number) => void;
   updateRules: (newRules: AllocationRule[]) => void;
   plaidAccessToken: string | null;
@@ -40,6 +42,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [rules, setRules] = useState<AllocationRule[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [plaidAccessToken, setPlaidAccessTokenState] = useState<string | null>(null);
+  const [plaidTransactions, setPlaidTransactions] = useState<any[]>([]);
 
   // Load data from localStorage when the component mounts
   useEffect(() => {
@@ -148,7 +151,9 @@ export function AppProvider({ children }: AppProviderProps) {
     addIncome,
     updateRules,
     plaidAccessToken,
-    setPlaidAccessToken
+    setPlaidAccessToken,
+    plaidTransactions,
+    setPlaidTransactions,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
