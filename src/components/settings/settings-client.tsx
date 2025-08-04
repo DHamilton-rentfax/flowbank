@@ -6,6 +6,7 @@ import { AllocationRules } from "./allocation-rules";
 import { AIPlanGenerator } from "./ai-plan-generator";
 import { useState } from "react";
 import type { AllocationRule } from "@/lib/types";
+import { PlaidIntegration } from "./plaid-integration";
 
 export function SettingsClient() {
   const { rules, updateRules: saveRules } = useApp();
@@ -30,8 +31,9 @@ export function SettingsClient() {
             onSave={handleSave}
           />
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
           <AIPlanGenerator onApplyRules={handleUpdateRules} />
+          <PlaidIntegration />
         </div>
       </div>
     </div>
