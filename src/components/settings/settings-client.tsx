@@ -7,6 +7,7 @@ import { AIPlanGenerator } from "./ai-plan-generator";
 import { useState } from "react";
 import type { AllocationRule } from "@/lib/types";
 import { PlaidIntegration } from "./plaid-integration";
+import { UserProfile } from "./user-profile";
 
 export function SettingsClient() {
   const { rules, updateRules: saveRules } = useApp();
@@ -24,7 +25,7 @@ export function SettingsClient() {
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-bold">Settings</h1>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <AllocationRules 
             rules={currentRules} 
             setRules={handleUpdateRules}
@@ -32,6 +33,7 @@ export function SettingsClient() {
           />
         </div>
         <div className="lg:col-span-1 space-y-6">
+          <UserProfile />
           <AIPlanGenerator onApplyRules={handleUpdateRules} />
           <PlaidIntegration />
         </div>
