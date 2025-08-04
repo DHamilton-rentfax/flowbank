@@ -2,6 +2,7 @@
 "use server";
 
 import { suggestAllocationPlan, type SuggestAllocationPlanInput } from "@/ai/flows/suggest-allocation-plan";
+import { identifyIncome, type IdentifyIncomeInput } from "@/ai/flows/identify-income";
 import { z } from "zod";
 import { plaidClient } from "@/lib/plaid";
 import { Products, TransactionsSyncRequest } from "plaid";
@@ -51,11 +52,12 @@ export async function createLinkToken(accessToken?: string | null) {
           client_name: 'AutoAllocator',
           country_codes: [CountryCode.Us],
           language: 'en',
+          webhook: process.env.PLAID_WEBHOOK_URL,
         };
 
         if (accessToken) {
             tokenRequest.access_token = accessToken;
-            tokenRequest.products = [Products.Transactions];
+            tokenRequest.products = [];
         } else {
             tokenRequest.products = [Products.Auth, Products.Transactions];
         }
@@ -99,6 +101,10 @@ export async function getTransactions(accessToken: string) {
         let allTransactions: any[] = [];
         let cursor: string | undefined = undefined;
 
+        // In a real app, you would store and use the cursor to fetch only new transactions.
+        // For this prototype, we'll fetch all transactions each time.
+        // You might also want to set a date range for the transactions you fetch.
+
         while(hasMore) {
             const request: TransactionsSyncRequest = {
                 access_token: accessToken,
@@ -117,5 +123,15 @@ export async function getTransactions(accessToken: string) {
     } catch (error) {
         console.error("Error fetching transactions:", error);
         return { success: false, error: "Could not fetch transactions." };
+    }
+}
+
+export async function findIncomeTransactions(input: IdentifyIncomeInput) {
+    try {
+        const result = await identifyIncome(input);
+        return { success: true, incomeTransactions: result.incomeTransactions };
+    } catch (error) {
+        console.error("Error identifying income:", error);
+        return { success: false, error: "Failed to identify income from transactions." };
     }
 }
