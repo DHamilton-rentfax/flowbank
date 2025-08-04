@@ -3,6 +3,9 @@
 
 import { suggestAllocationPlan, type SuggestAllocationPlanInput } from "@/ai/flows/suggest-allocation-plan";
 import { z } from "zod";
+import { plaidClient } from "@/lib/plaid";
+import { Products } from "plaid";
+import { CountryCode } from "plaid";
 
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
     try {
@@ -37,4 +40,26 @@ export async function getAISuggestion(input: SuggestAllocationPlanInput) {
             error: errorMessage,
         };
     }
+}
+
+export async function createLinkToken() {
+    try {
+        const response = await plaidClient.linkTokenCreate({
+          user: {
+            client_user_id: 'user-id', // This should be a unique ID for the user
+          },
+          client_name: 'AutoAllocator',
+          products: [Products.Auth],
+          country_codes: [CountryCode.Us],
+          language: 'en',
+        });
+    
+        return {
+            success: true,
+            linkToken: response.data.link_token
+        };
+      } catch (error) {
+        console.error("Error creating Plaid link token:", error);
+        return { success: false, error: "Failed to create Plaid link token." };
+      }
 }
