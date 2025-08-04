@@ -51,7 +51,7 @@ const identifyIncomePrompt = ai.definePrompt({
   {{{json transactions}}}
 
   Identify transactions that are income. Income is typically characterized by:
-  - Positive amounts (credits to the account).
+  - Positive amounts (credits to the account). In Plaid's data, these are represented by negative numbers.
   - Descriptions like "payroll", "deposit", "payment", "salary", "commission", or "customer payment".
   - Recurring deposits from the same source.
   - Do NOT include refunds, transfers from other personal accounts, or small credits like interest payments.
@@ -69,8 +69,8 @@ const identifyIncomeFlow = ai.defineFlow(
     outputSchema: IdentifyIncomeOutputSchema,
   },
   async (input) => {
-    // In a real application, you might filter for positive amounts first
-    // to reduce tokens sent to the model.
+    // In Plaid, credit transactions are represented by negative amounts.
+    // We pre-filter for these to reduce tokens sent to the model and improve focus.
     const credits = input.transactions.filter(t => t.amount < 0);
     
     if (credits.length === 0) {
