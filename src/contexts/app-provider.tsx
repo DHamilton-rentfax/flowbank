@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { Account, AllocationRule, Transaction } from '@/lib/types';
+import type { Account, AllocationRule, Transaction, UserPlan } from '@/lib/types';
 import { nanoid } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/firebase/client';
@@ -21,6 +21,7 @@ interface AppContextType {
   plaidAccessToken: string | null;
   setPlaidAccessToken: (token: string | null) => void;
   loadingData: boolean;
+  userPlan: UserPlan | null;
 }
 
 // Create the context with a default value
@@ -48,20 +49,23 @@ export function AppProvider({ children }: AppProviderProps) {
   const [plaidAccessToken, setPlaidAccessTokenState] = useState<string | null>(null);
   const [plaidTransactions, setPlaidTransactions] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
+
 
   // Load data from Firestore
   useEffect(() => {
     if (user?.uid) {
       setLoadingData(true);
+      
       const userDocRef = doc(db, "users", user.uid);
+      const userUnsub = onSnapshot(userDocRef, (doc) => {
+        if(doc.exists()) {
+          const data = doc.data();
+          setPlaidAccessTokenState(data.plaidAccessToken || null);
+          setUserPlan(data.plan || null);
+        }
+      });
 
-      const fetchData = async () => {
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists()) {
-              setPlaidAccessTokenState(userDocSnap.data().plaidAccessToken || null);
-          }
-      };
-      fetchData();
 
       const rulesUnsub = onSnapshot(collection(db, "users", user.uid, "rules"), async (snapshot) => {
           if (snapshot.empty) {
@@ -98,6 +102,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setLoadingData(false);
 
       return () => {
+          userUnsub();
           rulesUnsub();
           accountsUnsub();
           transactionsUnsub();
@@ -108,6 +113,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setRules([]);
       setTransactions([]);
       setPlaidAccessTokenState(null);
+      setUserPlan(null);
       setLoadingData(!user);
     }
   }, [user]);
@@ -198,7 +204,8 @@ export function AppProvider({ children }: AppProviderProps) {
     setPlaidAccessToken,
     plaidTransactions,
     setPlaidTransactions,
-    loadingData
+    loadingData,
+    userPlan
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

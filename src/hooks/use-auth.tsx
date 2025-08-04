@@ -2,10 +2,11 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
+import { createUserDocument } from "@/lib/plans";
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +14,7 @@ interface AuthContextType {
   logout: () => void;
   updateUserProfile: (updates: { displayName?: string; photoURL?: string; }) => Promise<void>;
   sendPasswordReset: () => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,8 +79,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const signUpWithEmail = async (email: string, password: string) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const { user } = userCredential;
+    // Create a corresponding document in Firestore
+    await createUserDocument(user.uid, user.email!);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, logout, updateUserProfile, sendPasswordReset }}>
+    <AuthContext.Provider value={{ user, loading, logout, updateUserProfile, sendPasswordReset, signUpWithEmail }}>
       {children}
     </AuthContext.Provider>
   );

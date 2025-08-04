@@ -24,3 +24,16 @@ export type Transaction = {
     amount: number;
   }[];
 };
+
+export interface Plan {
+    id: string;
+    name: string;
+    price: number;
+    features: string[];
+}
+
+export interface UserPlan {
+    id: string;
+    name: string;
+    status: 'active' | 'trialing' | 'cancelled';
+}

@@ -14,12 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { auth } from "@/firebase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { 
-  createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   type AuthError
 } from "firebase/auth";
+import { auth } from "@/firebase/client";
 import { useRouter } from "next/navigation";
 
 
@@ -34,6 +34,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const { signUpWithEmail } = useAuth();
 
   const title = mode === "login" ? "Welcome Back" : "Create an Account";
   const description =
@@ -79,7 +80,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await signUpWithEmail(email, password);
          toast({
           title: "Account Created!",
           description: "You've been successfully signed up.",
