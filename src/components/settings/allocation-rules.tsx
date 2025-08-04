@@ -5,10 +5,12 @@ import type { AllocationRule } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, PlusCircle, Save } from "lucide-react";
+import { Trash2, PlusCircle, Save, Zap } from "lucide-react";
 import { nanoid } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
+import { useApp } from "@/contexts/app-provider";
+import Link from "next/link";
 
 interface AllocationRulesProps {
   rules: AllocationRule[];
@@ -18,9 +20,23 @@ interface AllocationRulesProps {
 
 export function AllocationRules({ rules, setRules, onSave }: AllocationRulesProps) {
   const { toast } = useToast();
+  const { userPlan } = useApp();
   const totalPercentage = rules.reduce((sum, rule) => sum + Number(rule.percentage || 0), 0);
 
+  const isFreePlan = userPlan?.id === 'free';
+  const ruleLimit = 3;
+  const canAddMoreRules = !isFreePlan || rules.length < ruleLimit;
+
+
   const handleAddRule = () => {
+    if (!canAddMoreRules) {
+       toast({
+        title: "Rule Limit Reached",
+        description: "Upgrade to a Pro plan to add more allocation rules.",
+        variant: "destructive",
+      });
+      return;
+    }
     setRules([...rules, { id: nanoid(), name: "", percentage: 0 }]);
   };
 
@@ -87,9 +103,20 @@ export function AllocationRules({ rules, setRules, onSave }: AllocationRulesProp
             </Button>
           </div>
         ))}
-         <Button variant="outline" onClick={handleAddRule} className="w-full">
+         <Button variant="outline" onClick={handleAddRule} className="w-full" disabled={!canAddMoreRules}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add Rule
         </Button>
+        {!canAddMoreRules && (
+            <div className="text-center text-sm text-muted-foreground p-4 rounded-md border border-dashed">
+                <p className="font-medium">You've reached the {ruleLimit}-rule limit for the Free plan.</p>
+                <Button size="sm" variant="link" asChild>
+                    <Link href="/pricing">
+                        <Zap className="mr-2 h-4 w-4" />
+                        Upgrade to Pro for unlimited rules
+                    </Link>
+                </Button>
+            </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between items-center">
         <div>
