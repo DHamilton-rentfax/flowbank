@@ -18,6 +18,7 @@ export function PlaidTransactions() {
   const { toast } = useToast();
   const { plaidAccessToken, plaidTransactions, setPlaidTransactions, addIncome } = useApp();
   const [incomeTransactions, setIncomeTransactions] = useState<any[]>([]);
+  const [allocatedTransactionIds, setAllocatedTransactionIds] = useState<string[]>([]);
 
   const handleSyncTransactions = async () => {
     if (!plaidAccessToken) {
@@ -54,8 +55,8 @@ export function PlaidTransactions() {
   };
   
   const handleAllocate = (amount: number, id: string) => {
-    // A more robust implementation would prevent re-allocating the same transaction
     addIncome(Math.abs(amount));
+    setAllocatedTransactionIds(prev => [...prev, id]);
     toast({
         title: "Success",
         description: "Income allocated successfully.",
@@ -64,6 +65,10 @@ export function PlaidTransactions() {
 
   const isIncome = (transaction: any) => {
     return incomeTransactions.some(incomeTx => incomeTx.transaction_id === transaction.transaction_id);
+  }
+  
+  const isAllocated = (transactionId: string) => {
+    return allocatedTransactionIds.includes(transactionId);
   }
 
   return (
@@ -83,7 +88,7 @@ export function PlaidTransactions() {
                     <TableHead>Date</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-center">Income?</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -91,17 +96,17 @@ export function PlaidTransactions() {
                     {plaidTransactions.map((tx) => (
                         <TableRow key={tx.transaction_id}>
                             <TableCell>{tx.date}</TableCell>
-                            <TableCell>{tx.name}</TableCell>
-                            <TableCell className={`text-right ${tx.amount < 0 ? 'text-accent' : ''}`}>
-                                {formatCurrency(tx.amount)}
+                            <TableCell>{tx.merchant_name || tx.name}</TableCell>
+                            <TableCell className={`text-right font-medium ${tx.amount < 0 ? 'text-accent' : ''}`}>
+                                {formatCurrency(Math.abs(tx.amount))}
                             </TableCell>
                             <TableCell className="text-center">
                                 {isIncome(tx) && <Badge>Income</Badge>}
                             </TableCell>
                              <TableCell className="text-right">
                                 {isIncome(tx) && (
-                                    <Button size="sm" onClick={() => handleAllocate(tx.amount, tx.transaction_id)}>
-                                        Allocate
+                                    <Button size="sm" onClick={() => handleAllocate(tx.amount, tx.transaction_id)} disabled={isAllocated(tx.transaction_id)}>
+                                        {isAllocated(tx.transaction_id) ? "Allocated" : "Allocate"}
                                     </Button>
                                 )}
                             </TableCell>
