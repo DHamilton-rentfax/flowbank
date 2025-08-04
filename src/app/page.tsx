@@ -5,11 +5,16 @@ import { Logo } from "@/components/icons";
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="p-4 sm:p-6">
+      <header className="p-4 sm:p-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Logo className="size-7 text-primary" />
           <h1 className="text-xl font-semibold">AutoAllocator</h1>
         </div>
+        <nav>
+          <Button variant="ghost" asChild>
+            <Link href="/blog">Blog</Link>
+          </Button>
+        </nav>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
         <div className="max-w-md">
