@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { MainLayout } from "@/components/main-layout";
-import { AppProvider } from "@/contexts/app-provider";
 
 export const metadata: Metadata = {
   title: "AutoAllocator",
@@ -29,9 +27,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AppProvider>
-          <MainLayout>{children}</MainLayout>
-        </AppProvider>
+        {children}
         <Toaster />
       </body>
     </html>
