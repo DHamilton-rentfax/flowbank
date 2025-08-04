@@ -14,6 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
+import { auth } from "@/firebase/client";
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  type AuthError
+} from "firebase/auth";
+import { useRouter } from "next/navigation";
+
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -25,6 +33,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const title = mode === "login" ? "Welcome Back" : "Create an Account";
   const description =
@@ -33,19 +42,63 @@ export function AuthForm({ mode }: AuthFormProps) {
       : "Fill out the form to get started.";
   const buttonText = mode === "login" ? "Log In" : "Sign Up";
 
+  const handleAuthError = (error: AuthError) => {
+    console.error("Firebase Auth Error:", error);
+    let message = "An unknown error occurred.";
+    switch (error.code) {
+      case "auth/invalid-email":
+        message = "Please enter a valid email address.";
+        break;
+      case "auth/user-disabled":
+        message = "This account has been disabled.";
+        break;
+      case "auth/user-not-found":
+      case "auth/wrong-password":
+        message = "Invalid email or password.";
+        break;
+      case "auth/email-already-in-use":
+        message = "An account already exists with this email.";
+        break;
+      case "auth/weak-password":
+        message = "The password is too weak. Please use at least 6 characters.";
+        break;
+      default:
+        message = "Authentication failed. Please try again.";
+        break;
+    }
+     toast({
+        title: "Authentication Failed",
+        description: message,
+        variant: "destructive",
+       });
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // TODO: Implement actual authentication logic with Firebase
-    setTimeout(() => {
-       toast({
-        title: "Feature not implemented",
-        description: "Authentication is not yet connected.",
-        variant: "destructive",
-       });
-       setIsLoading(false);
-    }, 1000);
+    try {
+      if (mode === 'signup') {
+        await createUserWithEmailAndPassword(auth, email, password);
+         toast({
+          title: "Account Created!",
+          description: "You've been successfully signed up.",
+          className: "bg-accent text-accent-foreground",
+        });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+         toast({
+          title: "Logged In!",
+          description: "Welcome back.",
+          className: "bg-accent text-accent-foreground",
+        });
+      }
+      router.push("/dashboard");
+    } catch (error) {
+      handleAuthError(error as AuthError);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
