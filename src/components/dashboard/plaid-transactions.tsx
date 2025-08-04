@@ -137,7 +137,7 @@ export function PlaidTransactions() {
                                 {formatCurrency(Math.abs(tx.amount))}
                             </TableCell>
                             <TableCell className="text-center">
-                                {isIncome(tx) ? <Badge className="bg-green-100 text-green-800">Income</Badge> : tx.amount > 0 ? <Badge variant="outline">Expense</Badge> : null }
+                                {isIncome(tx) && <Badge className="bg-green-100 text-green-800">Income</Badge>}
                             </TableCell>
                              <TableCell className="text-right">
                                 {isIncome(tx) && (
