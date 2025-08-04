@@ -1,18 +1,29 @@
-import { getAllPosts, getPostBySlug } from "@/lib/blog";
-import { notFound } from "next/navigation";
+
+"use client";
+
+import { useEffect, useState } from 'react';
+import { getPostBySlug, type Post } from "@/lib/blog";
+import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-export async function generateStaticParams() {
-  const posts = getAllPosts();
-  return posts.map((post) => ({
-    slug: post.slug,
-  }));
-}
+export default function BlogPostPage() {
+  const params = useParams();
+  const slug = params.slug as string;
+  const [post, setPost] = useState<Post | null | undefined>(undefined);
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = getPostBySlug(params.slug);
+  useEffect(() => {
+    if (slug) {
+      const foundPost = getPostBySlug(slug);
+      setPost(foundPost);
+    }
+  }, [slug]);
+
+  if (post === undefined) {
+    // Still loading
+    return <div className="container mx-auto max-w-3xl py-12 px-4">Loading...</div>;
+  }
 
   if (!post) {
     notFound();

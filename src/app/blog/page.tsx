@@ -1,10 +1,18 @@
+
+"use client";
+
 import Link from "next/link";
-import { getAllPosts } from "@/lib/blog";
+import { useEffect, useState } from 'react';
+import { getAllPosts, type Post } from "@/lib/blog";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ArrowRight } from "lucide-react";
 
 export default function BlogIndexPage() {
-  const posts = getAllPosts();
+  const [posts, setPosts] = useState<Post[]>([]);
+
+  useEffect(() => {
+    setPosts(getAllPosts());
+  }, []);
 
   return (
     <div className="container mx-auto max-w-4xl py-12 px-4">
