@@ -21,7 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
-import { Badge } from "../ui/badge";
 
 export function ReportingClient() {
   const { rules, transactions } = useApp();
@@ -65,7 +64,7 @@ export function ReportingClient() {
                             {formatCurrency(tx.totalAmount)}
                         </TableCell>
                         <TableCell>
-                        <div className="flex flex-col gap-1 items-end">
+                        <div className="flex flex-col gap-1 items-start">
                             {tx.allocations.map((alloc) => {
                             const rule = rules.find(
                                 (r) => r.id === alloc.ruleId

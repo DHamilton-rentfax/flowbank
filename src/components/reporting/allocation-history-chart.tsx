@@ -2,8 +2,8 @@
 "use client";
 
 import type { AllocationRule, Transaction } from "@/lib/types";
-import { useMemo }s from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { useMemo } from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from "recharts";
 import {
   Card,
   CardContent,
@@ -47,7 +47,7 @@ export function AllocationHistoryChart({
     const data = Object.keys(totals).map(name => ({
       name,
       total: totals[name]
-    }));
+    })).filter(item => item.total > 0); // Only show categories with allocations
 
     const config = rules.reduce((acc, rule, index) => {
       acc[rule.name] = {
@@ -93,6 +93,9 @@ export function AllocationHistoryChart({
               tickLine={false}
               tickMargin={10}
               axisLine={false}
+              angle={-45}
+              textAnchor="end"
+              height={60}
             />
             <YAxis
               tickFormatter={(value) => formatCurrency(Number(value))}
@@ -101,7 +104,7 @@ export function AllocationHistoryChart({
             />
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />}
+              content={<ChartTooltipContent formatter={(value, name) => `${name}: ${formatCurrency(Number(value))}`}/>}
             />
             <Bar
               dataKey="total"
