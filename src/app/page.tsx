@@ -81,7 +81,7 @@ export default function LandingPage() {
                         width={1200}
                         height={600}
                         className="rounded-t-lg"
-                        data-ai-hint="app dashboard"
+                        data-ai-hint="finance dashboard"
                         />
                         <div className="p-4 bg-muted/30 rounded-b-lg border-t text-sm text-muted-foreground text-left">
                             <p><strong>How it works:</strong> Inspired by the “Profit First” method, FlowBank eliminates budgeting anxiety.</p>
@@ -124,7 +124,7 @@ export default function LandingPage() {
                             width={600}
                             height={400}
                             className="rounded-lg shadow-lg"
-                            data-ai-hint="financial planning business"
+                            data-ai-hint="freelancer working"
                         />
                      </div>
                      <div>

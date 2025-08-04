@@ -86,7 +86,7 @@ export default function BlogPostPage() {
                             alt={post.title} 
                             fill 
                             className="object-cover"
-                            data-ai-hint="financial blog header"
+                            data-ai-hint="small business finances"
                         />
                     </div>
                 </header>

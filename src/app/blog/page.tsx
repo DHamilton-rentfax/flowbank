@@ -20,7 +20,7 @@ function PostCard({ post }: { post: Post }) {
           width={400}
           height={250}
           className="w-full h-auto object-cover aspect-video transition-transform duration-300 group-hover:scale-105"
-          data-ai-hint="financial blog"
+          data-ai-hint="entrepreneur laptop"
         />
       </div>
       <div className="py-4">
@@ -54,7 +54,7 @@ function FeaturedPostCard({ post }: { post: Post }) {
                                 alt={post.title} 
                                 fill
                                 className="object-cover"
-                                data-ai-hint="financial blog header"
+                                data-ai-hint="small business finances"
                             />
                          </div>
                          <div className="p-6 sm:p-8 flex flex-col justify-center">
