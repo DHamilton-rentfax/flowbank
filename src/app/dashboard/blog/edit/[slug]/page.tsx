@@ -26,6 +26,10 @@ export default function BlogEditorPage() {
     content: "",
     image: "",
     date: new Date().toISOString(),
+    author: 'Admin',
+    avatar: 'A',
+    readTime: 5,
+    views: 0,
   });
   const [isLoading, setIsLoading] = useState(!isNewPost);
 
@@ -49,7 +53,8 @@ export default function BlogEditorPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setPost(prev => ({ ...prev, [name]: value }));
+    const isNumber = ['readTime', 'views'].includes(name);
+    setPost(prev => ({ ...prev, [name]: isNumber ? Number(value) : value }));
   };
   
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,7 +69,7 @@ export default function BlogEditorPage() {
     if (!post.title || !post.slug || !post.content || !post.excerpt || !post.image) {
       toast({
         title: "Missing Fields",
-        description: "Please fill out all fields before saving.",
+        description: "Please fill out all required fields before saving.",
         variant: "destructive",
       });
       return;
@@ -117,24 +122,42 @@ export default function BlogEditorPage() {
           <CardContent className="p-6 grid gap-4">
              <div className="grid gap-2">
                 <Label htmlFor="title">Title</Label>
-                <Input id="title" name="title" value={post.title} onChange={handleChange} placeholder="Your Post Title" />
+                <Input id="title" name="title" value={post.title} onChange={handleChange} placeholder="Your Post Title" required />
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="slug">Slug</Label>
-                <Input id="slug" name="slug" value={post.slug} onChange={handleSlugChange} placeholder="your-post-slug" />
+                <Input id="slug" name="slug" value={post.slug} onChange={handleSlugChange} placeholder="your-post-slug" required />
                  <p className="text-xs text-muted-foreground">The URL-friendly version of the title.</p>
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="image">Image URL</Label>
-                <Input id="image" name="image" value={post.image} onChange={handleChange} placeholder="https://placehold.co/600x400.png" />
+                <Input id="image" name="image" value={post.image} onChange={handleChange} placeholder="https://placehold.co/600x400.png" required />
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="excerpt">Excerpt</Label>
-                <Textarea id="excerpt" name="excerpt" value={post.excerpt} onChange={handleChange} placeholder="A short summary of the post." />
+                <Textarea id="excerpt" name="excerpt" value={post.excerpt} onChange={handleChange} placeholder="A short summary of the post." required />
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="content">Content (HTML)</Label>
-                <Textarea id="content" name="content" value={post.content} onChange={handleChange} placeholder="<p>Start writing your post content here.</p>" rows={15} />
+                <Textarea id="content" name="content" value={post.content} onChange={handleChange} placeholder="<p>Start writing your post content here.</p>" rows={15} required />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="author">Author</Label>
+                    <Input id="author" name="author" value={post.author} onChange={handleChange} placeholder="John Doe" />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="avatar">Avatar Initial</Label>
+                    <Input id="avatar" name="avatar" value={post.avatar} onChange={handleChange} placeholder="J" maxLength={1} />
+                </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="readTime">Read Time (mins)</Label>
+                    <Input id="readTime" name="readTime" type="number" value={post.readTime} onChange={handleChange} placeholder="5" />
+                </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="views">Views</Label>
+                    <Input id="views" name="views" type="number" value={post.views} onChange={handleChange} placeholder="123" />
+                </div>
             </div>
           </CardContent>
           <CardFooter className="justify-end">
