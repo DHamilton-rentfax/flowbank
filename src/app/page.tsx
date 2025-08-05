@@ -33,10 +33,10 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <Logo className="size-8 text-primary" />
           <h1 className="text-2xl font-bold font-headline">FlowBank</h1>
-        </div>
+        </Link>
         <nav className="hidden md:flex items-center gap-2">
           <Button variant="ghost" asChild>
             <Link href="/pricing">Pricing</Link>
