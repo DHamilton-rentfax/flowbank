@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,30 +23,43 @@ export function PlaidTransactions() {
     addIncome,
     plaidCursor,
     updatePlaidCursor,
+    userPlan,
   } = useApp();
   const [incomeTransactions, setIncomeTransactions] = useState<any[]>([]);
   const [allocatedTransactionIds, setAllocatedTransactionIds] = useState<string[]>([]);
 
+  const isPaidUser = userPlan?.id === 'pro' || userPlan?.id === 'business';
+
+  const handleAllocate = (amount: number, id: string) => {
+    // Plaid amounts for credits are negative, so we use Math.abs
+    addIncome(Math.abs(amount));
+    setAllocatedTransactionIds(prev => [...prev, id]);
+    toast({
+        title: "Success",
+        description: `${formatCurrency(Math.abs(amount))} allocated successfully.`,
+        className: "bg-accent text-accent-foreground",
+    });
+  }
+  
   const handleFindIncome = async (transactionsToScan: any[]) => {
     if (transactionsToScan.length === 0) {
         toast({ title: "No New Transactions", description: "All synced transactions have already been analyzed."});
-        return 0;
+        return { count: 0, newIncome: [] };
     }
 
     setLoadingMessage("Analyzing...");
     const result = await findIncomeTransactions({ transactions: transactionsToScan });
     
     if (result.success && result.incomeTransactions) {
-      setIncomeTransactions(prev => {
-        const newIncome = result.incomeTransactions!.filter(
-          (newTx: any) => !prev.some(prevTx => prevTx.transaction_id === newTx.transaction_id)
-        );
-        return [...prev, ...newIncome];
-      });
-      return result.incomeTransactions.length;
+      const newIncome = result.incomeTransactions.filter(
+          (newTx: any) => !incomeTransactions.some(prevTx => prevTx.transaction_id === newTx.transaction_id)
+      );
+      setIncomeTransactions(prev => [...prev, ...newIncome]);
+      
+      return { count: newIncome.length, newIncome };
     } else {
       toast({ title: "Error", description: result.error || "Could not identify income.", variant: "destructive" });
-      return 0;
+      return { count: 0, newIncome: [] };
     }
   };
 
@@ -73,11 +86,25 @@ export function PlaidTransactions() {
         updatePlaidCursor(result.nextCursor);
       }
       
-      const incomeFoundCount = await handleFindIncome(newTransactions);
+      const { count: incomeFoundCount, newIncome } = await handleFindIncome(newTransactions);
       
+      let toastMessage = `${newTransactions.length} new transaction(s) synced.`;
+
+      if (incomeFoundCount > 0) {
+          if (isPaidUser) {
+              toastMessage += ` Found and automatically allocated ${incomeFoundCount} income deposit(s).`;
+              newIncome.forEach(tx => {
+                  addIncome(Math.abs(tx.amount));
+                  setAllocatedTransactionIds(prev => [...prev, tx.transaction_id]);
+              });
+          } else {
+             toastMessage += ` Found ${incomeFoundCount} new income deposit(s) ready to allocate.`;
+          }
+      }
+
       toast({ 
         title: "Sync Complete!", 
-        description: `${newTransactions.length} new transaction(s) synced. ${incomeFoundCount > 0 ? `Found ${incomeFoundCount} new income deposit(s).` : ''}` 
+        description: toastMessage
       });
 
     } else {
@@ -86,17 +113,6 @@ export function PlaidTransactions() {
     setIsLoading(false);
   };
   
-  const handleAllocate = (amount: number, id: string) => {
-    // Plaid amounts for credits are negative, so we use Math.abs
-    addIncome(Math.abs(amount));
-    setAllocatedTransactionIds(prev => [...prev, id]);
-    toast({
-        title: "Success",
-        description: `${formatCurrency(Math.abs(amount))} allocated successfully.`,
-        className: "bg-accent text-accent-foreground",
-    });
-  }
-
   const isIncome = (transaction: any) => {
     return incomeTransactions.some(incomeTx => incomeTx.transaction_id === transaction.transaction_id);
   }
@@ -104,6 +120,20 @@ export function PlaidTransactions() {
   const isAllocated = (transactionId: string) => {
     return allocatedTransactionIds.includes(transactionId);
   }
+  
+  // This effect will pre-populate incomeTransactions from the existing plaidTransactions on load
+  useEffect(() => {
+    const findInitialIncome = async () => {
+        if (plaidTransactions.length > 0) {
+            const result = await findIncomeTransactions({ transactions: plaidTransactions });
+            if (result.success && result.incomeTransactions) {
+                setIncomeTransactions(result.incomeTransactions);
+            }
+        }
+    }
+    findInitialIncome();
+  }, []);
+
 
   const transactionsToShow = [...plaidTransactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -113,6 +143,7 @@ export function PlaidTransactions() {
         <CardTitle>Bank Transactions</CardTitle>
         <CardDescription>
           Sync your latest transactions and let AI find your income deposits.
+          {isPaidUser && " Income will be allocated automatically."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -140,9 +171,14 @@ export function PlaidTransactions() {
                                 {isIncome(tx) && <Badge className="bg-green-100 text-green-800">Income</Badge>}
                             </TableCell>
                              <TableCell className="text-right">
-                                {isIncome(tx) && (
+                                {isIncome(tx) && !isPaidUser && (
                                     <Button size="sm" onClick={() => handleAllocate(tx.amount, tx.transaction_id)} disabled={isAllocated(tx.transaction_id)}>
                                         {isAllocated(tx.transaction_id) ? "Allocated" : "Allocate"}
+                                    </Button>
+                                )}
+                                {isIncome(tx) && isPaidUser && (
+                                    <Button size="sm" disabled={true}>
+                                        Allocated
                                     </Button>
                                 )}
                             </TableCell>
