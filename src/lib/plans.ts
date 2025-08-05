@@ -92,16 +92,19 @@ export async function createUserDocument(userId: string, email: string, displayN
         },
     });
 
+    const userPlan: UserPlan = {
+        id: plan.id,
+        name: plan.name,
+        status: 'active',
+        stripeCustomerId: stripeCustomer.id,
+    };
+
     const userData = {
         email,
         displayName: displayName || email,
         createdAt: new Date().toISOString(),
         stripeCustomerId: stripeCustomer.id,
-        plan: {
-            id: plan.id,
-            name: plan.name,
-            status: 'active'
-        } as UserPlan,
+        plan: userPlan,
     };
 
     const batch = writeBatch(db);
