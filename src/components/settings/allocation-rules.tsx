@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
 import { useApp } from "@/contexts/app-provider";
 import Link from "next/link";
-import { useEffect } from "react";
 
 interface AllocationRulesProps {
   rules: AllocationRule[];
@@ -21,13 +20,8 @@ interface AllocationRulesProps {
 
 export function AllocationRules({ rules, setRules, onSave }: AllocationRulesProps) {
   const { toast } = useToast();
-  const { userPlan, rules: initialRules } = useApp();
+  const { userPlan } = useApp();
   const totalPercentage = rules.reduce((sum, rule) => sum + Number(rule.percentage || 0), 0);
-
-  useEffect(() => {
-    setRules(initialRules);
-  }, [initialRules, setRules]);
-
 
   const isFreePlan = userPlan?.id === 'free';
   const ruleLimit = 3;
