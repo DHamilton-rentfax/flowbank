@@ -63,8 +63,8 @@ export default function SignupPage() {
             </p>
             <div className="space-y-4">
                 {adFeatures.map((feature, index) => (
-                    <div key={index} className="flex gap-4 p-4 rounded-lg bg-background/5">
-                        <feature.icon className="size-8 text-primary shrink-0 mt-1" />
+                    <div key={index} className="flex gap-4 p-4 rounded-lg bg-sidebar-accent">
+                        <feature.icon className="size-8 text-sidebar-primary shrink-0 mt-1" />
                         <div>
                             <h3 className="font-semibold">{feature.title}</h3>
                             <p className="text-sm text-muted-foreground">{feature.description}</p>
