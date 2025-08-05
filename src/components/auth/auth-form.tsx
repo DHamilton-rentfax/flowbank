@@ -85,7 +85,7 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recaptchaToken) {
+    if (mode === 'signup' && !recaptchaToken) {
         toast({
             title: "Verification Required",
             description: "Please complete the reCAPTCHA challenge.",
@@ -97,7 +97,7 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
-        const result = await signUpWithEmail(email, password, recaptchaToken, planId);
+        const result = await signUpWithEmail(email, password, recaptchaToken!, planId);
         if (!result.success) {
             throw new Error(result.error);
         }
@@ -172,15 +172,17 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
                 </Button>
               </div>
             </div>
-            <div className="flex justify-center mt-4">
-                <ReCAPTCHA
-                    ref={recaptchaRef}
-                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                    onChange={setRecaptchaToken}
-                    action="signup"
-                />
-            </div>
-            <Button type="submit" className="w-full mt-4" disabled={isLoading || !recaptchaToken}>
+            {mode === 'signup' && (
+                <div className="flex justify-center mt-4">
+                    <ReCAPTCHA
+                        ref={recaptchaRef}
+                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                        onChange={setRecaptchaToken}
+                        action="signup"
+                    />
+                </div>
+            )}
+            <Button type="submit" className="w-full mt-4" disabled={isLoading || (mode === 'signup' && !recaptchaToken)}>
               {isLoading && <Loader2 className="mr-2 animate-spin" />}
               {buttonText}
             </Button>
