@@ -21,6 +21,8 @@ import {
 } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { useRouter } from "next/navigation";
+import ReCAPTCHA from "react-google-recaptcha";
+import { verifyRecaptcha } from "@/app/actions";
 
 
 interface AuthFormProps {
@@ -32,6 +34,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const { signUpWithEmail } = useAuth();
@@ -78,6 +81,27 @@ export function AuthForm({ mode }: AuthFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    if (!recaptchaToken) {
+        toast({
+            title: "reCAPTCHA Required",
+            description: "Please complete the reCAPTCHA challenge.",
+            variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+    }
+
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken);
+    if (!recaptchaResult.success) {
+        toast({
+            title: "reCAPTCHA Failed",
+            description: "Could not verify reCAPTCHA. Please try again.",
+            variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+    }
 
     try {
       if (mode === 'signup') {
@@ -150,7 +174,13 @@ export function AuthForm({ mode }: AuthFormProps) {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <div className="flex justify-center">
+                 <ReCAPTCHA
+                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                    onChange={setRecaptchaToken}
+                />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading || !recaptchaToken}>
               {isLoading && <Loader2 className="mr-2 animate-spin" />}
               {buttonText}
             </Button>

@@ -14,6 +14,23 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth } from "@/firebase/client";
 import { plans } from "@/lib/plans";
 
+export async function verifyRecaptcha(token: string) {
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
+    
+    try {
+        const response = await fetch(verificationUrl, {
+            method: 'POST',
+        });
+        const data = await response.json();
+        return { success: data.success, error: data['error-codes']?.[0] };
+    } catch (error) {
+        console.error("reCAPTCHA verification failed:", error);
+        return { success: false, error: 'recaptcha-verification-failed' };
+    }
+}
+
+
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
     try {
         const result = await suggestAllocationPlan(input);
