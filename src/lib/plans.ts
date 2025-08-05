@@ -72,13 +72,15 @@ export const initialRulesForNewUser = (): AllocationRule[] => {
 }
 
 
-export async function createUserDocument(userId: string, email: string, displayName?: string | null) {
+export async function createUserDocument(userId: string, email: string, displayName?: string | null, planId?: string | null) {
     const userDocRef = doc(db, "users", userId);
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
-        const freePlan = plans.find(p => p.id === 'free');
-        if (!freePlan) throw new Error("Free plan not found.");
+        const selectedPlanId = planId || 'free';
+        const plan = plans.find(p => p.id === selectedPlanId);
+
+        if (!plan) throw new Error(`Plan with ID "${selectedPlanId}" not found.`);
         
         const stripeCustomer = await stripe.customers.create({
             email,
@@ -94,8 +96,8 @@ export async function createUserDocument(userId: string, email: string, displayN
             createdAt: new Date().toISOString(),
             stripeCustomerId: stripeCustomer.id,
             plan: {
-                id: freePlan.id,
-                name: freePlan.name,
+                id: plan.id,
+                name: plan.name,
                 status: 'active'
             } as UserPlan,
         };

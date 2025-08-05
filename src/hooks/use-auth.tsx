@@ -15,7 +15,7 @@ interface AuthContextType {
   logout: () => void;
   updateUserProfile: (updates: { displayName?: string; photoURL?: string; }) => Promise<void>;
   sendPasswordReset: () => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, planId?: string | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -79,11 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signUpWithEmail = async (email: string, password: string) => {
+  const signUpWithEmail = async (email: string, password: string, planId?: string | null) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const { user } = userCredential;
     // Ensure the user document is created before proceeding
-    await createUserDocument(user.uid, user.email!);
+    await createUserDocument(user.uid, user.email!, null, planId);
   }
 
   return (

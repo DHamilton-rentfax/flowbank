@@ -21,14 +21,14 @@ import {
 } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { useRouter } from "next/navigation";
-import { verifyRecaptcha } from "@/app/actions";
 
 
 interface AuthFormProps {
   mode: "login" | "signup";
+  planId?: string | null;
 }
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, planId }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -82,7 +82,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
-        await signUpWithEmail(email, password);
+        await signUpWithEmail(email, password, planId);
          toast({
           title: "Account Created!",
           description: "You've been successfully signed up.",

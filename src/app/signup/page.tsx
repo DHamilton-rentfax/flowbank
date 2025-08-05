@@ -5,6 +5,8 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { Logo } from "@/components/icons";
 import Link from "next/link";
 import { Users, Banknote, ShieldCheck, Zap } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 
 const adFeatures = [
@@ -30,10 +32,12 @@ const adFeatures = [
     }
 ]
 
-export default function SignupPage() {
+function SignupContent() {
+  const searchParams = useSearchParams();
+  const planId = searchParams.get('plan');
+
   return (
-    <div className="flex min-h-screen w-full">
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4">
+     <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex justify-center">
             <Link href="/" className="flex items-center gap-2">
@@ -41,7 +45,7 @@ export default function SignupPage() {
               <h1 className="text-2xl font-semibold">FlowBank</h1>
             </Link>
           </div>
-          <AuthForm mode="signup" />
+          <AuthForm mode="signup" planId={planId} />
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link
@@ -53,30 +57,39 @@ export default function SignupPage() {
           </p>
         </div>
       </div>
-      <div className="hidden lg:flex w-1/2 flex-col items-start justify-center bg-sidebar p-12 text-sidebar-foreground">
-        <div className="max-w-md">
-            <h2 className="text-3xl font-bold font-headline mb-4">
-                An All-in-One Platform to Grow Your Business
-            </h2>
-            <p className="text-muted-foreground mb-8">
-                Create a free account to start managing your cash flow with the power of automation. See how FlowBank can help you achieve financial clarity.
-            </p>
-            <div className="space-y-4">
-                {adFeatures.map((feature, index) => (
-                    <div key={index} className="flex gap-4 p-4 rounded-lg bg-sidebar-accent">
-                        <feature.icon className="size-8 text-sidebar-primary shrink-0 mt-1" />
-                        <div>
-                            <h3 className="font-semibold">{feature.title}</h3>
-                            <p className="text-sm text-muted-foreground">{feature.description}</p>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+        <div className="flex min-h-screen w-full">
+        <SignupContent />
+        <div className="hidden lg:flex w-1/2 flex-col items-start justify-center bg-sidebar p-12 text-sidebar-foreground">
+            <div className="max-w-md">
+                <h2 className="text-3xl font-bold font-headline mb-4">
+                    An All-in-One Platform to Grow Your Business
+                </h2>
+                <p className="text-muted-foreground mb-8">
+                    Create a free account to start managing your cash flow with the power of automation. See how FlowBank can help you achieve financial clarity.
+                </p>
+                <div className="space-y-4">
+                    {adFeatures.map((feature, index) => (
+                        <div key={index} className="flex gap-4 p-4 rounded-lg bg-sidebar-accent">
+                            <feature.icon className="size-8 text-sidebar-primary shrink-0 mt-1" />
+                            <div>
+                                <h3 className="font-semibold">{feature.title}</h3>
+                                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
+                <p className="mt-8 text-xs text-muted-foreground">
+                    Start for free • No credit card required • Cancel anytime
+                </p>
             </div>
-             <p className="mt-8 text-xs text-muted-foreground">
-                Start for free • No credit card required • Cancel anytime
-            </p>
         </div>
-      </div>
-    </div>
+        </div>
+    </Suspense>
   );
 }
