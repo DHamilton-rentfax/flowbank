@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import type { Account, AllocationRule, Transaction, UserPlan } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/firebase/client';
-import { doc, getDoc, setDoc, collection, writeBatch, query, orderBy, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, writeBatch, query, orderBy, onSnapshot, getDocs } from "firebase/firestore";
 import { createUserDocument, initialRulesForNewUser } from '@/lib/plans';
 
 // Define the shape of the context
@@ -136,18 +136,18 @@ export function AppProvider({ children }: AppProviderProps) {
     
     // Get all accounts to find existing ones by name
     const accountsRef = collection(db, "users", user.uid, "accounts");
-    const accountsSnap = await getDoc(doc(accountsRef));
-    const existingAccounts = accountsSnap.exists() ? accountsSnap.data() as Account[] : [];
+    const accountsSnap = await getDocs(accountsRef);
+    const existingAccounts = accountsSnap.docs.map(d => d.data() as Account);
 
 
     // Delete old rules first to handle deletions
     const rulesCollectionRef = collection(db, "users", user.uid, "rules");
-    const oldRulesSnap = await getDoc(doc(rulesCollectionRef));
-    if(oldRulesSnap.exists()){
-        // Not a standard operation, typically you'd query and delete.
-        // For simplicity here we assume IDs are known or can be fetched.
-        // A better approach would be to fetch all docs and delete them.
-    }
+    const oldRulesSnap = await getDocs(rulesCollectionRef);
+    oldRulesSnap.docs.forEach(doc => {
+        if (!newRules.some(r => r.id === doc.id)) {
+            batch.delete(doc.ref);
+        }
+    });
     
     // Set new rules and create/update corresponding accounts
     newRules.forEach(rule => {
