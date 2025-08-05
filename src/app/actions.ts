@@ -71,7 +71,7 @@ export async function createLinkToken(accessToken?: string | null) {
           user: {
             client_user_id: user.uid,
           },
-          client_name: 'FlowBank',
+          client_name: 'Flow Bank',
           country_codes: [CountryCode.Us],
           language: 'en',
           webhook: `${process.env.NEXT_PUBLIC_SITE_URL}/api/plaid/webhook`,
@@ -271,19 +271,18 @@ export async function setup2FA() {
     
     try {
         // Generate a new secret for the user.
-        const secret = OTPAuth.Secret.fromBase32(process.env.OTP_SECRET || '');
         const totp = new OTPAuth.TOTP({
             issuer: 'FlowBank',
             label: user.email,
             algorithm: 'SHA1',
             digits: 6,
             period: 30,
-            secret: secret
+            secret: new OTPAuth.Secret()
         });
 
         const uri = totp.toString();
 
-        return { success: true, secret: secret.base32, uri };
+        return { success: true, secret: totp.secret.base32, uri };
 
     } catch (error) {
         console.error("Error setting up 2FA:", error);
