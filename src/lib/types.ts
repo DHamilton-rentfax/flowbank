@@ -30,10 +30,14 @@ export interface Plan {
     name: string;
     price: number;
     features: string[];
+    stripePriceId?: string;
 }
 
 export interface UserPlan {
     id: string;
     name: string;
     status: 'active' | 'trialing' | 'cancelled';
+    stripeSubscriptionId?: string;
+    stripeCustomerId?: string;
+    currentPeriodEnd?: number;
 }

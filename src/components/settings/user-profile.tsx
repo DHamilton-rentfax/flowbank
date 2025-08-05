@@ -16,12 +16,17 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useApp } from "@/contexts/app-provider";
+import { createCustomerPortalSession } from "@/app/actions";
+import { Badge } from "../ui/badge";
 
 export function UserProfile() {
   const { user, updateUserProfile, sendPasswordReset } = useAuth();
+  const { userPlan } = useApp();
   const [displayName, setDisplayName] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [isManagingSubscription, setIsManagingSubscription] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -70,13 +75,36 @@ export function UserProfile() {
     }
   }
 
+  const handleManageSubscription = async () => {
+    if (!user) return;
+    setIsManagingSubscription(true);
+    const result = await createCustomerPortalSession(user.uid);
+    if (result.success && result.url) {
+      window.location.href = result.url;
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Could not open subscription management.",
+        variant: "destructive",
+      });
+      setIsManagingSubscription(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>User Profile</CardTitle>
-        <CardDescription>
-          Manage your account details and password.
-        </CardDescription>
+        <div className="flex justify-between items-start">
+            <div>
+                 <CardTitle>User Profile</CardTitle>
+                <CardDescription>
+                Manage your account details and password.
+                </CardDescription>
+            </div>
+            {userPlan && (
+                <Badge variant={userPlan.id === 'pro' ? 'default' : 'secondary'}>{userPlan.name} Plan</Badge>
+            )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -104,6 +132,12 @@ export function UserProfile() {
             {isSendingReset && <Loader2 className="mr-2 animate-spin" />}
             Change Password
         </Button>
+         {userPlan && userPlan.id !== 'free' && (
+             <Button variant="outline" className="w-full" onClick={handleManageSubscription} disabled={isManagingSubscription}>
+                {isManagingSubscription && <Loader2 className="mr-2 animate-spin" />}
+                Manage Subscription
+            </Button>
+         )}
       </CardFooter>
     </Card>
   );

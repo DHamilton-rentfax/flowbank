@@ -1,52 +1,51 @@
 
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Footer } from "@/components/layout/footer";
 import { Logo } from "@/components/icons";
 import Link from "next/link";
-import { Check } from "lucide-react";
-
-const plans = [
-    {
-        name: "Free",
-        price: "$0",
-        description: "For individuals getting started.",
-        features: [
-            "1 Bank Connection",
-            "3 Split Rules",
-            "Manual Splits",
-            "Basic Reporting"
-        ],
-        cta: "Get Started"
-    },
-    {
-        name: "Pro",
-        price: "$9.99",
-        description: "For solopreneurs and freelancers.",
-        features: [
-            "Unlimited Split Rules",
-            "Automated Splits",
-            "Advanced Reporting",
-            "Email & Chat Support"
-        ],
-        cta: "Start Pro Trial",
-        popular: true
-    },
-    {
-        name: "Business",
-        price: "$29.99",
-        description: "For small businesses and teams.",
-        features: [
-            "All Pro Features",
-            "Multi-account sync",
-            "Team Splits & Permissions",
-            "Priority Support"
-        ],
-        cta: "Contact Sales"
-    }
-]
+import { Check, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { createCheckoutSession } from "@/app/actions";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { plans } from "@/lib/plans";
 
 export default function PricingPage() {
+    const { user, loading } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+    const router = useRouter();
+
+    const handlePlanClick = async (planId: string, isFree: boolean) => {
+        if (!user) {
+            router.push("/signup");
+            return;
+        }
+        
+        if (isFree) {
+            router.push("/dashboard");
+            return;
+        }
+
+        setIsLoading(true);
+        const result = await createCheckoutSession(user.uid, planId);
+        
+        if (result.success && result.url) {
+            window.location.href = result.url;
+        } else {
+            toast({
+                title: "Error",
+                description: result.error || "Could not start the checkout process.",
+                variant: "destructive",
+            });
+            setIsLoading(false);
+        }
+    }
+
     return (
         <div className="flex flex-col min-h-screen">
             <header className="p-4 sm:p-6 flex items-center justify-between">
@@ -73,14 +72,14 @@ export default function PricingPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {plans.map((plan) => (
-                            <Card key={plan.name} className={`flex flex-col ${plan.popular ? 'border-primary shadow-lg' : ''}`}>
+                            <Card key={plan.name} className={`flex flex-col ${plan.id === 'pro' ? 'border-primary shadow-lg' : ''}`}>
                                 <CardHeader>
                                     <CardTitle className="font-headline">{plan.name}</CardTitle>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl font-bold font-headline">{plan.price}</span>
+                                        <span className="text-4xl font-bold font-headline">${plan.price}</span>
                                         <span className="text-muted-foreground">/ month</span>
                                     </div>
-                                    <CardDescription>{plan.description}</CardDescription>
+                                    <CardDescription>{plan.id === 'free' ? "For individuals getting started." : plan.id === 'pro' ? "For solopreneurs and freelancers." : "For small businesses and teams."}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-1">
                                     <ul className="space-y-3">
@@ -93,8 +92,13 @@ export default function PricingPage() {
                                     </ul>
                                 </CardContent>
                                 <CardFooter>
-                                    <Button className="w-full" variant={plan.popular ? 'default' : 'outline'}>
-                                        {plan.cta}
+                                    <Button 
+                                        className="w-full" 
+                                        variant={plan.id === 'pro' ? 'default' : 'outline'}
+                                        onClick={() => handlePlanClick(plan.id, plan.id === 'free')}
+                                        disabled={isLoading || loading}
+                                    >
+                                        {isLoading ? <Loader2 className="animate-spin" /> : (plan.id === 'free' ? 'Get Started' : 'Upgrade to ' + plan.name)}
                                     </Button>
                                 </CardFooter>
                             </Card>
