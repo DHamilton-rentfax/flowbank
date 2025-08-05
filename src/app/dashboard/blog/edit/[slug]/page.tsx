@@ -17,8 +17,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function BlogEditorPage() {
   const router = useRouter();
   const params = useParams();
-  const { slug } = params;
-  const isNewPost = slug === "new";
+  const slugParam = params.slug as string;
+  const isNewPost = slugParam === "new";
 
   const [post, setPost] = useState<Partial<Post>>({
     title: "",
@@ -34,18 +34,16 @@ export default function BlogEditorPage() {
   });
   const [isLoading, setIsLoading] = useState(!isNewPost);
   const [isSaving, setIsSaving] = useState(false);
-  const [originalSlug, setOriginalSlug] = useState<string | undefined>(undefined);
 
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isNewPost && typeof slug === 'string') {
+    if (!isNewPost && slugParam) {
       const fetchPost = async () => {
           setIsLoading(true);
-          const existingPost = await getPostBySlug(slug);
+          const existingPost = await getPostBySlug(slugParam);
           if (existingPost) {
             setPost(existingPost);
-            setOriginalSlug(existingPost.slug);
           } else {
             toast({
               title: "Post not found",
@@ -57,7 +55,7 @@ export default function BlogEditorPage() {
       }
       fetchPost();
     }
-  }, [slug, isNewPost, router, toast]);
+  }, [slugParam, isNewPost, router, toast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -114,19 +112,30 @@ export default function BlogEditorPage() {
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
-                <Skeleton className="h-10 w-10" />
-                <div className="space-y-2">
+                <Skeleton className="h-10 w-10 rounded-md" />
+                <div className="space-y-1">
                     <Skeleton className="h-8 w-48" />
                     <Skeleton className="h-4 w-64" />
                 </div>
             </div>
             <Card>
                 <CardContent className="p-6 grid gap-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-48 w-full" />
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                     <div className="space-y-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                     <div className="space-y-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-24 w-full" />
+                    </div>
+                     <div className="space-y-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-48 w-full" />
+                    </div>
                 </CardContent>
                 <CardFooter className="justify-end">
                     <Skeleton className="h-10 w-32" />
@@ -142,6 +151,7 @@ export default function BlogEditorPage() {
         <Button asChild variant="outline" size="icon">
           <Link href="/dashboard/blog">
             <ArrowLeft />
+            <span className="sr-only">Back</span>
           </Link>
         </Button>
         <div>
@@ -162,7 +172,7 @@ export default function BlogEditorPage() {
              <div className="grid gap-2">
                 <Label htmlFor="slug">Slug</Label>
                 <Input id="slug" name="slug" value={post.slug} readOnly placeholder="your-post-slug" required disabled={true}/>
-                 <p className="text-xs text-muted-foreground">The URL-friendly version of the title. Generated automatically and cannot be changed.</p>
+                 <p className="text-xs text-muted-foreground">The URL-friendly version of the title. Generated automatically.</p>
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="image">Image URL</Label>

@@ -30,20 +30,27 @@ export default function BlogPostPage() {
   if (post === undefined) {
     return (
         <div className="container mx-auto max-w-3xl py-12 px-4">
-            <Skeleton className="h-8 w-32 mb-4" />
-            <Skeleton className="h-12 w-full mb-4" />
-            <Skeleton className="h-6 w-1/2 mb-8" />
-            <Skeleton className="w-full aspect-video rounded-lg mb-8" />
+            <header className="mb-8">
+                <Skeleton className="h-10 w-32 mb-4" />
+                <Skeleton className="h-12 w-full mb-4" />
+                <div className="flex items-center gap-4">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <Skeleton className="h-6 w-1/2" />
+                </div>
+                 <Skeleton className="w-full aspect-video rounded-lg my-8" />
+            </header>
             <div className="space-y-4">
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-3/4" />
+                 <Skeleton className="h-6 w-full mt-4" />
+                <Skeleton className="h-6 w-5/6" />
             </div>
         </div>
     );
   }
 
-  if (!post) {
+  if (post === null) {
     notFound();
   }
 

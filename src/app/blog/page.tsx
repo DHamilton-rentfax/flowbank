@@ -99,63 +99,63 @@ function PostSkeleton() {
     )
 }
 
-const POSTS_PER_PAGE = 3;
+const POSTS_PER_PAGE = 6; // Show more posts per "page"
 
 export default function BlogIndexPage() {
-  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // States for infinite scroll, though we might not need it if we load all upfront
   const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoading, setIsLoading] = useState(true); // Start with loading true
+  const [hasMore, setHasMore] = useState(false);
   const loader = useRef(null);
 
   useEffect(() => {
     const fetchPosts = async () => {
         setIsLoading(true);
-        const posts = await getAllPosts();
-        setAllPosts(posts);
+        const fetchedPosts = await getAllPosts();
+        setPosts(fetchedPosts);
         setIsLoading(false);
     }
     fetchPosts();
   }, []);
-
-  // Set initial posts (featured, trending, initial set for infinite scroll)
+  
+  // This effect sets up the initial posts to be displayed.
   useEffect(() => {
-    if (allPosts.length > 0) {
+    if (posts.length > 0) {
         // The first post is featured, next 3 are trending
-        const remainingPosts = allPosts.slice(4); 
+        const remainingPosts = posts.slice(4); 
         setDisplayedPosts(remainingPosts.slice(0, POSTS_PER_PAGE));
+        setPage(1);
         setHasMore(remainingPosts.length > POSTS_PER_PAGE);
     }
-  }, [allPosts]);
-
+  }, [posts]);
+  
   const loadMore = useCallback(() => {
-    setIsLoading(true);
-    // This logic can now be simpler as we fetch all posts at the beginning.
-    // In a real app with pagination, this would fetch the next page from the backend.
-    const remainingPosts = allPosts.slice(4);
+    if (!hasMore) return;
+    
+    const remainingPosts = posts.slice(4);
     const nextPage = page + 1;
     const newPosts = remainingPosts.slice(0, nextPage * POSTS_PER_PAGE);
     
     setDisplayedPosts(newPosts);
     setPage(nextPage);
     setHasMore(newPosts.length < remainingPosts.length);
-    setIsLoading(false);
-  }, [page, allPosts]);
+  }, [page, posts, hasMore]);
   
+  // Intersection observer for infinite scroll
   useEffect(() => {
-    const options = {
+    const observer = new IntersectionObserver((entities) => {
+        const target = entities[0];
+        if (target.isIntersecting && hasMore) {
+            loadMore();
+        }
+    }, {
       root: null,
       rootMargin: "20px",
       threshold: 1.0
-    };
-
-    const observer = new IntersectionObserver((entities) => {
-        const target = entities[0];
-        if (target.isIntersecting && hasMore && !isLoading) {
-            loadMore();
-        }
-    }, options);
+    });
 
     const currentLoader = loader.current;
     if (currentLoader) {
@@ -167,12 +167,12 @@ export default function BlogIndexPage() {
         observer.unobserve(currentLoader);
       }
     };
-  }, [loadMore, hasMore, isLoading]);
+  }, [loadMore, hasMore]);
 
-  const featuredPost = allPosts[0];
-  const trendingPosts = allPosts.slice(1, 4);
+  const featuredPost = posts[0];
+  const trendingPosts = posts.slice(1, 4);
 
-  if (isLoading && allPosts.length === 0) {
+  if (isLoading) {
     return (
         <div className="container mx-auto max-w-6xl py-12 px-4 space-y-12">
             <header className="mb-12 text-center">
@@ -235,14 +235,12 @@ export default function BlogIndexPage() {
             )}
 
             <div ref={loader} className="py-8">
-                {isLoading && hasMore && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-                        <PostSkeleton />
-                        <PostSkeleton />
-                        <PostSkeleton />
+                {hasMore && (
+                    <div className="text-center">
+                        <p className="text-muted-foreground">Loading more posts...</p>
                     </div>
                 )}
-                {!hasMore && displayedPosts.length > 0 && (
+                {!hasMore && posts.length > (4 + POSTS_PER_PAGE) && (
                     <p className="text-center text-muted-foreground">You've reached the end!</p>
                 )}
             </div>

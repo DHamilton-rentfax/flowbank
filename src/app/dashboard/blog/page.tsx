@@ -15,7 +15,7 @@ export default function BlogManagementPage() {
 
   useEffect(() => {
     const fetchPosts = async () => {
-      setIsLoading(true);
+      // Don't set loading to true here again, it's already true initially
       const fetchedPosts = await getAllPosts();
       setPosts(fetchedPosts);
       setIsLoading(false);
@@ -67,7 +67,16 @@ export default function BlogManagementPage() {
                 </Button>
               </div>
             )) : (
-                <p className="text-center text-muted-foreground">No posts found. Create one to get started!</p>
+                <div className="text-center py-10 text-muted-foreground">
+                  <p className="font-semibold">No posts found.</p>
+                  <p className="mt-2">Ready to share your insights? Create your first blog post to get started!</p>
+                  <Button asChild className="mt-4">
+                    <Link href="/dashboard/blog/edit/new">
+                        <PlusCircle className="mr-2" />
+                        Create New Post
+                    </Link>
+                  </Button>
+                </div>
             )}
           </div>
         </CardContent>
