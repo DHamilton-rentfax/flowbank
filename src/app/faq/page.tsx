@@ -12,12 +12,12 @@ import { Button } from "@/components/ui/button";
 
 const faqs = [
     {
-        question: "What is Flow Bank?",
-        answer: "Flow Bank is a smart financial tool that helps you automatically allocate your income into different categories based on rules you set. It's designed to help freelancers, small business owners, and individuals manage their finances effortlessly."
+        question: "What is FlowBank?",
+        answer: "FlowBank is a smart financial tool that helps you automatically allocate your income into different categories based on rules you set. It's designed to help freelancers, small business owners, and individuals manage their finances effortlessly."
     },
     {
         question: "How does the income allocation work?",
-        answer: "You define a set of allocation rules in the settings, such as 'Taxes: 25%' or 'Savings: 15%'. When you add an income transaction, Flow Bank automatically divides the amount according to these percentages and updates your account balances."
+        answer: "You define a set of allocation rules in the settings, such as 'Taxes: 25%' or 'Savings: 15%'. When you add an income transaction, FlowBank automatically divides the amount according to these percentages and updates your account balances."
     },
     {
         question: "Is my financial data secure?",
@@ -28,7 +28,7 @@ const faqs = [
         answer: "Our AI Plan Generator uses a large language model to suggest a tailored allocation plan based on your business type. Just enter a description of your business, and the AI will provide a recommended set of rules that you can apply and customize."
     },
     {
-        question: "Can I use Flow Bank on multiple devices?",
+        question: "Can I use FlowBank on multiple devices?",
         answer: "Yes! All your data—accounts, rules, and transactions—is securely stored in the cloud using Firebase Firestore. This means you can log in from any device and always have access to your up-to-date financial information."
     }
 ]

@@ -56,7 +56,7 @@ export async function createLinkToken(accessToken?: string | null) {
           user: {
             client_user_id: user.uid,
           },
-          client_name: 'Flow Bank',
+          client_name: 'FlowBank',
           country_codes: [CountryCode.Us],
           language: 'en',
           webhook: `${process.env.NEXT_PUBLIC_SITE_URL}/api/plaid/webhook`,

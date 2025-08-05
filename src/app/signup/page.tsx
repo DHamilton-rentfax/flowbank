@@ -1,3 +1,4 @@
+
 import { AuthForm } from "@/components/auth/auth-form";
 import { Logo } from "@/components/icons";
 import Link from "next/link";
@@ -9,7 +10,7 @@ export default function SignupPage() {
         <div className="mb-8 flex justify-center">
           <Link href="/" className="flex items-center gap-2">
             <Logo className="size-8 text-primary" />
-            <h1 className="text-2xl font-semibold">Flow Bank</h1>
+            <h1 className="text-2xl font-semibold">FlowBank</h1>
           </Link>
         </div>
         <AuthForm mode="signup" />

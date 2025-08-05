@@ -198,7 +198,7 @@ export default function BlogIndexPage() {
         <main className="flex-1">
             <div className="container mx-auto max-w-6xl py-12 px-4">
             <header className="mb-12 text-center">
-                <h1 className="text-4xl font-bold tracking-tight">Flow Bank Insights</h1>
+                <h1 className="text-4xl font-bold tracking-tight">FlowBank Insights</h1>
                 <p className="mt-2 text-lg text-muted-foreground">Tips and strategies for managing your business finances.</p>
             </header>
 
