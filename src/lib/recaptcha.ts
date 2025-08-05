@@ -14,6 +14,9 @@ export async function createAssessment({
 }: CreateAssessmentParams): Promise<number | null> {
   const projectID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const recaptchaKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  // The reCAPTCHA secret key is used for server-side validation, but the Google Cloud library uses service account authentication.
+  // The library doesn't directly take the secret key. It relies on the application's default credentials.
+  // We'll proceed assuming the service account has the necessary permissions.
 
   if (!projectID || !recaptchaKey) {
     throw new Error("reCAPTCHA environment variables are not set.");
@@ -66,3 +69,4 @@ export async function createAssessment({
     return null;
   }
 }
+
