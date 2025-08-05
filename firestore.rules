@@ -1,0 +1,29 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Helper function to check if user is the owner of the document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+  
+    // Users can only read and write their own data.
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Blog posts are public to read, but writes are disallowed for now
+    // to prevent unauthorized content changes.
+    match /blog_posts/{postId} {
+      allow read: if true;
+      allow write: if false; // In the future, this could be restricted to an 'admin' role
+    }
+    
+    // By default, deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
