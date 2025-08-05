@@ -62,8 +62,8 @@ export function AppProvider({ children }: AppProviderProps) {
             setUserPlan(data.plan || null);
           } else {
             // This case handles a brand-new user where the doc might not be created yet.
-            // We'll create it here to be safe.
-            await createUserDocument(user.uid, user.email!);
+            // We'll create it here to be safe, then the listeners will pick it up.
+             await createUserDocument(user.uid, user.email!);
           }
         }),
         onSnapshot(collection(db, "users", user.uid, "rules"), (snapshot) => {
@@ -77,11 +77,11 @@ export function AppProvider({ children }: AppProviderProps) {
         onSnapshot(collection(db, "users", user.uid, "accounts"), (snapshot) => {
           if (!snapshot.empty) {
             setAccounts(snapshot.docs.map(doc => doc.data() as Account));
-            setLoadingData(false); // Consider data loaded once accounts are fetched
           } else {
+             // If accounts don't exist, create them client-side from default rules
              setAccounts(initialRulesForNewUser().map(rule => ({id: rule.id, name: rule.name, balance: 0})));
-             setLoadingData(false);
           }
+          setLoadingData(false); // Consider data loaded once accounts are checked/set
         }),
         onSnapshot(query(collection(db, "users", user.uid, "transactions"), orderBy("date", "desc")), (snapshot) => {
           setTransactions(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Transaction)));
