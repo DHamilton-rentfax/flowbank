@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef } from "react";
@@ -20,7 +21,6 @@ import {
 } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { useRouter } from "next/navigation";
-import ReCAPTCHA from "react-google-recaptcha";
 import { verifyRecaptcha } from "@/app/actions";
 
 
@@ -33,7 +33,6 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
   const { toast } = useToast();
   const router = useRouter();
   const { signUpWithEmail } = useAuth();
@@ -81,32 +80,6 @@ export function AuthForm({ mode }: AuthFormProps) {
     e.preventDefault();
     setIsLoading(true);
 
-    const recaptchaToken = await recaptchaRef.current?.executeAsync();
-    if (!recaptchaToken) {
-        toast({
-            title: "reCAPTCHA Required",
-            description: "Please complete the reCAPTCHA challenge.",
-            variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-    }
-
-    const recaptchaResult = await verifyRecaptcha(recaptchaToken);
-    if (!recaptchaResult.success) {
-        toast({
-            title: "reCAPTCHA Failed",
-            description: "Could not verify reCAPTCHA. Please try again.",
-            variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-    }
-    
-    // Reset reCAPTCHA for next attempt
-    recaptchaRef.current?.reset();
-
-
     try {
       if (mode === 'signup') {
         await signUpWithEmail(email, password);
@@ -141,11 +114,6 @@ export function AuthForm({ mode }: AuthFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit}>
-          <ReCAPTCHA
-            ref={recaptchaRef}
-            size="invisible"
-            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-          />
           <div className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
