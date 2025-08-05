@@ -48,17 +48,27 @@ export default function PricingPage() {
 
     return (
         <div className="flex flex-col min-h-screen">
-            <header className="p-4 sm:p-6 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <header className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-2">
-                    <Logo className="size-7 text-primary" />
-                    <h1 className="text-xl font-bold font-headline">FlowBank</h1>
+                    <Logo className="size-8 text-primary" />
+                    <h1 className="text-2xl font-bold font-headline">FlowBank</h1>
                 </Link>
-                </div>
-                <nav>
-                <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                    Login
-                </Link>
+                <nav className="hidden md:flex items-center gap-2">
+                    <Button variant="ghost" asChild>
+                        <Link href="/pricing">Pricing</Link>
+                    </Button>
+                    <Button variant="ghost" asChild>
+                        <Link href="/blog">Blog</Link>
+                    </Button>
+                    <Button variant="ghost" asChild>
+                        <Link href="/faq">FAQ</Link>
+                    </Button>
+                    <Button variant="ghost" asChild>
+                        <Link href="/login">Sign In</Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href="/signup">Get Started</Link>
+                    </Button>
                 </nav>
             </header>
             <main className="flex-1">
