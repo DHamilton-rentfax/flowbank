@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,43 +25,51 @@ export function PlaidTransactions() {
     updatePlaidCursor,
     userPlan,
   } = useApp();
-  const [incomeTransactions, setIncomeTransactions] = useState<any[]>([]);
+  const [incomeTransactionIds, setIncomeTransactionIds] = useState<string[]>([]);
   const [allocatedTransactionIds, setAllocatedTransactionIds] = useState<string[]>([]);
 
   const isPaidUser = userPlan?.id !== 'free';
 
-  const handleAllocate = (amount: number, id: string) => {
+  const analyzeAndSetIncome = useCallback(async (transactions: any[]) => {
+      if (transactions.length === 0) return;
+      const result = await findIncomeTransactions({ transactions });
+      if (result.success && result.incomeTransactions) {
+          const newIncomeIds = result.incomeTransactions.map((tx: any) => tx.transaction_id);
+          setIncomeTransactionIds(prev => Array.from(new Set([...prev, ...newIncomeIds])));
+
+          if (isPaidUser) {
+              const newlyFoundIncome = result.incomeTransactions.filter((tx: any) => !allocatedTransactionIds.includes(tx.transaction_id));
+              if (newlyFoundIncome.length > 0) {
+                 newlyFoundIncome.forEach(tx => handleAllocate(tx.amount, tx.transaction_id, true));
+                 toast({
+                    title: "Income Allocated",
+                    description: `Automatically allocated ${newlyFoundIncome.length} income deposit(s).`,
+                    className: "bg-accent text-accent-foreground",
+                 });
+              }
+          }
+      }
+  }, [isPaidUser, allocatedTransactionIds]);
+
+  useEffect(() => {
+      // Analyze transactions that are already loaded on initial mount
+      if (plaidTransactions.length > 0) {
+          analyzeAndSetIncome(plaidTransactions);
+      }
+  }, [plaidTransactions, analyzeAndSetIncome]);
+
+  const handleAllocate = (amount: number, id: string, isAuto: boolean = false) => {
     // Plaid amounts for credits are negative, so we use Math.abs
     addIncome(Math.abs(amount));
     setAllocatedTransactionIds(prev => [...prev, id]);
-    toast({
-        title: "Success",
-        description: `${formatCurrency(Math.abs(amount))} allocated successfully.`,
-        className: "bg-accent text-accent-foreground",
-    });
+    if (!isAuto) {
+        toast({
+            title: "Success",
+            description: `${formatCurrency(Math.abs(amount))} allocated successfully.`,
+            className: "bg-accent text-accent-foreground",
+        });
+    }
   }
-  
-  const handleFindIncome = async (transactionsToScan: any[]) => {
-    if (transactionsToScan.length === 0) {
-        toast({ title: "No New Transactions", description: "All synced transactions have already been analyzed."});
-        return { count: 0, newIncome: [] };
-    }
-
-    setLoadingMessage("Analyzing...");
-    const result = await findIncomeTransactions({ transactions: transactionsToScan });
-    
-    if (result.success && result.incomeTransactions) {
-      const newIncome = result.incomeTransactions.filter(
-          (newTx: any) => !incomeTransactions.some(prevTx => prevTx.transaction_id === newTx.transaction_id)
-      );
-      setIncomeTransactions(prev => [...prev, ...newIncome]);
-      
-      return { count: newIncome.length, newIncome };
-    } else {
-      toast({ title: "Error", description: result.error || "Could not identify income.", variant: "destructive" });
-      return { count: 0, newIncome: [] };
-    }
-  };
 
   const handleSyncAndAnalyze = async () => {
     if (!plaidAccessToken) {
@@ -80,31 +88,17 @@ export function PlaidTransactions() {
       
       if (newTransactions.length > 0) {
         setPlaidTransactions(prev => [...newTransactions, ...prev]);
+        setLoadingMessage("Analyzing...");
+        await analyzeAndSetIncome(newTransactions);
       }
       
       if (result.nextCursor) {
         updatePlaidCursor(result.nextCursor);
       }
       
-      const { count: incomeFoundCount, newIncome } = await handleFindIncome(newTransactions);
-      
-      let toastMessage = `${newTransactions.length} new transaction(s) synced.`;
-
-      if (incomeFoundCount > 0) {
-          if (isPaidUser) {
-              toastMessage += ` Found and automatically allocated ${incomeFoundCount} income deposit(s).`;
-              newIncome.forEach(tx => {
-                  addIncome(Math.abs(tx.amount));
-                  setAllocatedTransactionIds(prev => [...prev, tx.transaction_id]);
-              });
-          } else {
-             toastMessage += ` Found ${incomeFoundCount} new income deposit(s) ready to allocate.`;
-          }
-      }
-
       toast({ 
         title: "Sync Complete!", 
-        description: toastMessage
+        description: `${newTransactions.length} new transaction(s) synced.`
       });
 
     } else {
@@ -113,28 +107,14 @@ export function PlaidTransactions() {
     setIsLoading(false);
   };
   
-  const isIncome = (transaction: any) => {
-    return incomeTransactions.some(incomeTx => incomeTx.transaction_id === transaction.transaction_id);
+  const isIncome = (transactionId: string) => {
+    return incomeTransactionIds.includes(transactionId);
   }
   
   const isAllocated = (transactionId: string) => {
     return allocatedTransactionIds.includes(transactionId);
   }
   
-  // This effect will pre-populate incomeTransactions from the existing plaidTransactions on load
-  useEffect(() => {
-    const findInitialIncome = async () => {
-        if (plaidTransactions.length > 0) {
-            const result = await findIncomeTransactions({ transactions: plaidTransactions });
-            if (result.success && result.incomeTransactions) {
-                setIncomeTransactions(result.incomeTransactions);
-            }
-        }
-    }
-    findInitialIncome();
-  }, []);
-
-
   const transactionsToShow = [...plaidTransactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
@@ -168,18 +148,18 @@ export function PlaidTransactions() {
                                 {formatCurrency(Math.abs(tx.amount))}
                             </TableCell>
                             <TableCell className="text-center">
-                                {isIncome(tx) && <Badge className="bg-green-100 text-green-800">Income</Badge>}
+                                {isIncome(tx.transaction_id) && <Badge className="bg-green-100 text-green-800">Income</Badge>}
                             </TableCell>
                              <TableCell className="text-right">
-                                {isIncome(tx) && !isPaidUser && (
+                                {isIncome(tx.transaction_id) && !isPaidUser && (
                                     <Button size="sm" onClick={() => handleAllocate(tx.amount, tx.transaction_id)} disabled={isAllocated(tx.transaction_id)}>
                                         {isAllocated(tx.transaction_id) ? "Allocated" : "Allocate"}
                                     </Button>
                                 )}
-                                {isIncome(tx) && isPaidUser && (
-                                    <Button size="sm" disabled={true}>
-                                        Allocated
-                                    </Button>
+                                {isIncome(tx.transaction_id) && isPaidUser && (
+                                    <Badge variant="secondary" className={isAllocated(tx.transaction_id) ? "bg-green-100 text-green-800" : ""}>
+                                        {isAllocated(tx.transaction_id) ? "Allocated" : "Pending"}
+                                    </Badge>
                                 )}
                             </TableCell>
                         </TableRow>

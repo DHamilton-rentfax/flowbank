@@ -268,19 +268,20 @@ export async function setup2FA() {
     }
     
     try {
+        // Generate a new secret for the user.
+        const secret = OTPAuth.Secret.fromBase32(process.env.OTP_SECRET || '');
         const totp = new OTPAuth.TOTP({
             issuer: 'FlowBank',
             label: user.email,
             algorithm: 'SHA1',
             digits: 6,
             period: 30,
-            secret: OTPAuth.Secret.fromBase32(process.env.OTP_SECRET || '') // A default secret for generation
+            secret: secret
         });
 
         const uri = totp.toString();
-        const secret = totp.secret.base32;
 
-        return { success: true, secret, uri };
+        return { success: true, secret: secret.base32, uri };
 
     } catch (error) {
         console.error("Error setting up 2FA:", error);

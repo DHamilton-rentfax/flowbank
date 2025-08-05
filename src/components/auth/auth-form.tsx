@@ -147,7 +147,7 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
                   onClick={togglePasswordVisibility}
                   disabled={isLoading}
                 >
-                  {showPassword ? <EyeOff /> : <Eye />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
