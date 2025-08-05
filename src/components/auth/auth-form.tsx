@@ -21,6 +21,7 @@ import {
 } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { useRouter } from "next/navigation";
+import ReCAPTCHA from "react-google-recaptcha";
 
 
 interface AuthFormProps {
@@ -33,9 +34,11 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const { signUpWithEmail } = useAuth();
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const title = mode === "login" ? "Welcome Back" : "Create an Account";
   const description =
@@ -78,6 +81,14 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!recaptchaToken) {
+        toast({
+            title: "Verification Required",
+            description: "Please complete the reCAPTCHA challenge.",
+            variant: "destructive",
+        });
+        return;
+    }
     setIsLoading(true);
 
     try {
@@ -101,6 +112,9 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
       handleAuthError(error as AuthError);
     } finally {
       setIsLoading(false);
+      // Reset reCAPTCHA for security
+      recaptchaRef.current?.reset();
+      setRecaptchaToken(null);
     }
   };
   
@@ -151,7 +165,14 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full mt-4" disabled={isLoading}>
+            <div className="flex justify-center mt-4">
+                <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                    onChange={setRecaptchaToken}
+                />
+            </div>
+            <Button type="submit" className="w-full mt-4" disabled={isLoading || !recaptchaToken}>
               {isLoading && <Loader2 className="mr-2 animate-spin" />}
               {buttonText}
             </Button>
