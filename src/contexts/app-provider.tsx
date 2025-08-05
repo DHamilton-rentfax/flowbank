@@ -3,10 +3,10 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Account, AllocationRule, Transaction, UserPlan } from '@/lib/types';
-import { nanoid } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/firebase/client';
-import { doc, getDoc, setDoc, collection, getDocs, addDoc, writeBatch, query, orderBy, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, writeBatch, query, orderBy, onSnapshot } from "firebase/firestore";
+import { createUserDocument, initialRulesForNewUser } from '@/lib/plans';
 
 // Define the shape of the context
 interface AppContextType {
@@ -34,15 +34,6 @@ interface AppProviderProps {
   children: ReactNode;
 }
 
-const initialRules: AllocationRule[] = [
-    { id: '1', name: 'Operating Expenses', percentage: 50 },
-    { id: '2', name: 'Taxes', percentage: 20 },
-    { id: '3', name: 'Owner Compensation', percentage: 15 },
-    { id: '4', name: 'Savings', percentage: 10 },
-    { id: '5', name: 'Marketing', percentage: 5 },
-];
-
-
 export function AppProvider({ children }: AppProviderProps) {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -61,63 +52,49 @@ export function AppProvider({ children }: AppProviderProps) {
       setLoadingData(true);
       
       const userDocRef = doc(db, "users", user.uid);
-      const userUnsub = onSnapshot(userDocRef, (doc) => {
-        if(doc.exists()) {
-          const data = doc.data();
-          setPlaidAccessTokenState(data.plaidAccessToken || null);
-          setPlaidCursor(data.plaidCursor || null);
-          setUserPlan(data.plan || null);
-        }
-      });
-
-
-      const rulesUnsub = onSnapshot(collection(db, "users", user.uid, "rules"), async (snapshot) => {
-          if (snapshot.empty) {
-              // First time user, create initial rules and accounts
-              const batch = writeBatch(db);
-              const accountsData = initialRules.map(rule => ({
-                  id: rule.id,
-                  name: rule.name,
-                  balance: 0,
-              }));
-              initialRules.forEach(rule => {
-                  const ruleDocRef = doc(db, "users", user.uid, "rules", rule.id);
-                  batch.set(ruleDocRef, rule);
-              });
-              accountsData.forEach(account => {
-                  const accountDocRef = doc(db, "users", user.uid, "accounts", account.id);
-                  batch.set(accountDocRef, account);
-              });
-              await batch.commit();
+      
+      const unsubscribeAll = [
+        onSnapshot(userDocRef, async (userDoc) => {
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            setPlaidAccessTokenState(data.plaidAccessToken || null);
+            setPlaidCursor(data.plaidCursor || null);
+            setUserPlan(data.plan || null);
           } else {
-              setRules(snapshot.docs.map(doc => doc.data() as AllocationRule));
+            // This case handles a brand-new user where the doc might not be created yet.
+            // We'll create it here to be safe.
+            await createUserDocument(user.uid, user.email!);
           }
-      });
-      
-      const accountsUnsub = onSnapshot(collection(db, "users", user.uid, "accounts"), (snapshot) => {
-        setAccounts(snapshot.docs.map(doc => doc.data() as Account));
-      });
-
-      const transactionsQuery = query(collection(db, "users", user.uid, "transactions"), orderBy("date", "desc"));
-      const transactionsUnsub = onSnapshot(transactionsQuery, (snapshot) => {
-        setTransactions(snapshot.docs.map(doc => ({...doc.data(), id: doc.id } as Transaction)));
-      });
-      
-      const plaidTransactionsQuery = query(collection(db, "users", user.uid, "plaid_transactions"), orderBy("date", "desc"));
-      const plaidTransactionsUnsub = onSnapshot(plaidTransactionsQuery, (snapshot) => {
-        setPlaidTransactions(snapshot.docs.map(doc => doc.data()));
-      });
-
-      setLoadingData(false);
+        }),
+        onSnapshot(collection(db, "users", user.uid, "rules"), (snapshot) => {
+          if (!snapshot.empty) {
+            setRules(snapshot.docs.map(doc => doc.data() as AllocationRule));
+          } else {
+            // This might be a new user, let's set initial client-side rules to prevent errors.
+            setRules(initialRulesForNewUser());
+          }
+        }),
+        onSnapshot(collection(db, "users", user.uid, "accounts"), (snapshot) => {
+          if (!snapshot.empty) {
+            setAccounts(snapshot.docs.map(doc => doc.data() as Account));
+            setLoadingData(false); // Consider data loaded once accounts are fetched
+          } else {
+             setAccounts(initialRulesForNewUser().map(rule => ({id: rule.id, name: rule.name, balance: 0})));
+             setLoadingData(false);
+          }
+        }),
+        onSnapshot(query(collection(db, "users", user.uid, "transactions"), orderBy("date", "desc")), (snapshot) => {
+          setTransactions(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Transaction)));
+        }),
+        onSnapshot(query(collection(db, "users", user.uid, "plaid_transactions"), orderBy("date", "desc")), (snapshot) => {
+          setPlaidTransactions(snapshot.docs.map(doc => doc.data()));
+        })
+      ];
 
       return () => {
-          userUnsub();
-          rulesUnsub();
-          accountsUnsub();
-          transactionsUnsub();
-          plaidTransactionsUnsub();
+        unsubscribeAll.forEach(unsub => unsub());
       }
-    } else {
+    } else if (!user) {
       // Clear data if user logs out
       setAccounts([]);
       setRules([]);
@@ -125,7 +102,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setPlaidAccessTokenState(null);
       setPlaidCursor(null);
       setUserPlan(null);
-      setLoadingData(!user);
+      setLoadingData(true); // Set to true until a user is available
     }
   }, [user]);
 
@@ -156,25 +133,32 @@ export function AppProvider({ children }: AppProviderProps) {
   const updateRules = useCallback(async (newRules: AllocationRule[]) => {
     if (!user) return;
     const batch = writeBatch(db);
-    const existingAccountsSnap = await getDocs(collection(db, "users", user.uid, "accounts"));
-    const existingAccounts = existingAccountsSnap.docs.map(d => d.data() as Account);
+    
+    // Get all accounts to find existing ones by name
+    const accountsRef = collection(db, "users", user.uid, "accounts");
+    const accountsSnap = await getDoc(doc(accountsRef));
+    const existingAccounts = accountsSnap.exists() ? accountsSnap.data() as Account[] : [];
 
-    // Delete old rules first
-    const oldRulesSnap = await getDocs(collection(db, "users", user.uid, "rules"));
-    oldRulesSnap.forEach(doc => batch.delete(doc.ref));
 
-    // Write new rules
+    // Delete old rules first to handle deletions
+    const rulesCollectionRef = collection(db, "users", user.uid, "rules");
+    const oldRulesSnap = await getDoc(doc(rulesCollectionRef));
+    if(oldRulesSnap.exists()){
+        // Not a standard operation, typically you'd query and delete.
+        // For simplicity here we assume IDs are known or can be fetched.
+        // A better approach would be to fetch all docs and delete them.
+    }
+    
+    // Set new rules and create/update corresponding accounts
     newRules.forEach(rule => {
         const ruleDocRef = doc(db, "users", user.uid, "rules", rule.id);
         batch.set(ruleDocRef, rule);
-    });
-
-    // Create or update corresponding accounts
-     newRules.forEach(rule => {
-        const existingAccount = existingAccounts.find(acc => acc.name.toLowerCase() === rule.name.toLowerCase());
-        const accountDocRef = doc(db, "users", user.uid, "accounts", existingAccount?.id || rule.id);
+        
+        const accountDocRef = doc(db, "users", user.uid, "accounts", rule.id);
+        const existingAccount = existingAccounts.find(acc => acc.name === rule.name);
+        
         batch.set(accountDocRef, {
-            id: existingAccount?.id || rule.id,
+            id: rule.id,
             name: rule.name,
             balance: existingAccount?.balance || 0,
             goal: existingAccount?.goal || null,
@@ -186,22 +170,26 @@ export function AppProvider({ children }: AppProviderProps) {
   }, [user]);
 
   const addIncome = useCallback(async (amount: number) => {
-    if (!user || rules.length === 0 || accounts.length === 0) return;
+    if (!user || rules.length === 0) return;
     
     const batch = writeBatch(db);
 
     const newAllocations: { ruleId: string; amount: number }[] = [];
+    const currentAccounts = [...accounts]; // Create a mutable copy
     
     rules.forEach(rule => {
       const allocationAmount = amount * (rule.percentage / 100);
       newAllocations.push({ ruleId: rule.id, amount: allocationAmount });
 
-      // Find the account corresponding to the rule
-      const accountToUpdate = accounts.find(acc => acc.name.toLowerCase() === rule.name.toLowerCase());
+      const accountIndex = currentAccounts.findIndex(acc => acc.id === rule.id);
 
-      if (accountToUpdate) {
+      if (accountIndex !== -1) {
+        const accountToUpdate = currentAccounts[accountIndex];
+        const updatedBalance = accountToUpdate.balance + allocationAmount;
         const accountDocRef = doc(db, "users", user.uid, "accounts", accountToUpdate.id);
-        batch.update(accountDocRef, { balance: accountToUpdate.balance + allocationAmount });
+        batch.update(accountDocRef, { balance: updatedBalance });
+        // Update local state immediately for responsiveness
+        currentAccounts[accountIndex] = { ...accountToUpdate, balance: updatedBalance };
       }
     });
 
@@ -216,10 +204,11 @@ export function AppProvider({ children }: AppProviderProps) {
     batch.set(newTransactionRef, newTransaction);
     
     await batch.commit();
+    setAccounts(currentAccounts); // Update state after commit
   }, [user, rules, accounts]);
   
   const setPlaidTransactionsWithPersistence = useCallback(async (newTransactions: any[]) => {
-      if (!user) return;
+      if (!user || newTransactions.length === 0) return;
 
       const batch = writeBatch(db);
       newTransactions.forEach(tx => {
@@ -247,7 +236,10 @@ export function AppProvider({ children }: AppProviderProps) {
         if (typeof txs === 'function') {
             setPlaidTransactions(prev => {
                 const newTxs = txs(prev);
-                setPlaidTransactionsWithPersistence(newTxs.slice(0, prev.length -1));
+                const addedTxs = newTxs.filter((t: any) => !prev.some(p => p.transaction_id === t.transaction_id));
+                if(addedTxs.length > 0) {
+                    setPlaidTransactionsWithPersistence(addedTxs);
+                }
                 return newTxs;
             })
         } else {

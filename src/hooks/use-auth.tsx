@@ -29,20 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Check if user document exists, if not wait a bit and recheck.
-        // This handles the small delay between user creation and firestore document creation.
-        const userDocRef = doc(db, "users", user.uid);
-        let docSnap = await getDoc(userDocRef);
-        if (!docSnap.exists()) {
-            await new Promise(resolve => setTimeout(resolve, 1500)); // wait 1.5s
-            docSnap = await getDoc(userDocRef);
-        }
-      }
       setUser(user);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
   
@@ -71,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
         await updateProfile(auth.currentUser, updates);
         // Manually create a new user object to trigger re-render
-        setUser({ ...auth.currentUser });
+        setUser(auth.currentUser ? { ...auth.currentUser } : null);
     } catch (error) {
         console.error("Error updating profile:", error);
         throw error;

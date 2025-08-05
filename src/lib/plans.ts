@@ -1,8 +1,9 @@
 
 import { db } from '@/firebase/client';
-import { doc, setDoc, getDoc, writeBatch, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc, writeBatch } from 'firebase/firestore';
 import type { Plan, UserPlan, AllocationRule, Account } from './types';
 import { stripe } from './stripe';
+import { nanoid } from './utils';
 
 
 export const plans: Plan[] = [
@@ -55,13 +56,20 @@ export const plans: Plan[] = [
     }
 ];
 
-const initialRules: Omit<AllocationRule, 'id'>[] = [
+const initialRulesData: Omit<AllocationRule, 'id'>[] = [
     { name: 'Operating Expenses', percentage: 50 },
     { name: 'Taxes', percentage: 20 },
     { name: 'Owner Compensation', percentage: 15 },
     { name: 'Savings', percentage: 10 },
     { name: 'Marketing', percentage: 5 },
 ];
+
+export const initialRulesForNewUser = (): AllocationRule[] => {
+    return initialRulesData.map(rule => ({
+        id: nanoid(),
+        ...rule
+    }));
+}
 
 
 export async function createUserDocument(userId: string, email: string, displayName?: string | null) {
@@ -98,15 +106,14 @@ export async function createUserDocument(userId: string, email: string, displayN
         batch.set(userDocRef, userData);
 
         // 2. Create initial rules and accounts
-        initialRules.forEach((ruleData, index) => {
-            const ruleId = (index + 1).toString();
-            const rule: AllocationRule = { id: ruleId, ...ruleData };
-            const account: Account = { id: ruleId, name: rule.name, balance: 0 };
+        const newRules = initialRulesForNewUser();
+        newRules.forEach((rule) => {
+            const account: Account = { id: rule.id, name: rule.name, balance: 0 };
             
-            const ruleDocRef = doc(db, "users", userId, "rules", ruleId);
+            const ruleDocRef = doc(db, "users", userId, "rules", rule.id);
             batch.set(ruleDocRef, rule);
 
-            const accountDocRef = doc(db, "users", userId, "accounts", ruleId);
+            const accountDocRef = doc(db, "users", userId, "accounts", rule.id);
             batch.set(accountDocRef, account);
         });
 
