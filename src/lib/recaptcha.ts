@@ -29,6 +29,7 @@ export async function createAssessment({
       event: {
         token: token,
         siteKey: recaptchaKey,
+        userIpAddress: undefined
       },
     },
     parent: projectPath,
