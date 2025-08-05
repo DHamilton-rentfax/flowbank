@@ -1,16 +1,15 @@
 
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-const firebaseConfig = {
-  projectId: "autoallocator",
-  appId: "1:280963293966:web:878190c5bfae3d00e7ad5f",
-  storageBucket: "autoallocator.firebasestorage.app",
+const firebaseConfig: FirebaseOptions = {
   apiKey: "AIzaSyC9BfxPjqxsL96Op0MhV2IidqNynSvdjjg",
   authDomain: "autoallocator.firebaseapp.com",
-  measurementId: "",
+  projectId: "autoallocator",
+  storageBucket: "autoallocator.appspot.com",
   messagingSenderId: "280963293966",
+  appId: "1:280963293966:web:878190c5bfae3d00e7ad5f",
 };
 
 // Initialize Firebase
