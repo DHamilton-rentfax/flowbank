@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,7 +33,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
   const { toast } = useToast();
   const router = useRouter();
   const { signUpWithEmail } = useAuth();
@@ -82,6 +81,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     e.preventDefault();
     setIsLoading(true);
 
+    const recaptchaToken = await recaptchaRef.current?.executeAsync();
     if (!recaptchaToken) {
         toast({
             title: "reCAPTCHA Required",
@@ -102,6 +102,10 @@ export function AuthForm({ mode }: AuthFormProps) {
         setIsLoading(false);
         return;
     }
+    
+    // Reset reCAPTCHA for next attempt
+    recaptchaRef.current?.reset();
+
 
     try {
       if (mode === 'signup') {
@@ -137,6 +141,11 @@ export function AuthForm({ mode }: AuthFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit}>
+          <ReCAPTCHA
+            ref={recaptchaRef}
+            size="invisible"
+            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+          />
           <div className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
@@ -174,13 +183,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 </Button>
               </div>
             </div>
-            <div className="flex justify-center">
-                 <ReCAPTCHA
-                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                    onChange={setRecaptchaToken}
-                />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading || !recaptchaToken}>
+            <Button type="submit" className="w-full mt-4" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 animate-spin" />}
               {buttonText}
             </Button>
