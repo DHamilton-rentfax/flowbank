@@ -55,6 +55,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         break;
       case "auth/user-not-found":
       case "auth/wrong-password":
+      case "auth/invalid-credential":
         message = "Invalid email or password.";
         break;
       case "auth/email-already-in-use":
