@@ -5,8 +5,6 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { Logo } from "@/components/icons";
 import Link from "next/link";
 import { Users, Banknote, ShieldCheck, Zap } from "lucide-react";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
 
 
 const adFeatures = [
@@ -55,7 +53,7 @@ export default function SignupPage() {
           </p>
         </div>
       </div>
-      <div className="hidden lg:flex w-1/2 flex-col items-start justify-center bg-muted p-12 text-foreground">
+      <div className="hidden lg:flex w-1/2 flex-col items-start justify-center bg-sidebar p-12 text-sidebar-foreground">
         <div className="max-w-md">
             <h2 className="text-3xl font-bold font-headline mb-4">
                 An All-in-One Platform to Grow Your Business
@@ -63,27 +61,17 @@ export default function SignupPage() {
             <p className="text-muted-foreground mb-8">
                 Create a free account to start managing your cash flow with the power of automation. See how FlowBank can help you achieve financial clarity.
             </p>
-            <Carousel 
-                opts={{ loop: true }}
-                plugins={[Autoplay({ delay: 5000 })]} 
-                className="w-full"
-            >
-                <CarouselContent>
-                    {adFeatures.map((feature, index) => (
-                        <CarouselItem key={index}>
-                            <div className="p-1">
-                                <div className="flex gap-4 p-6 rounded-lg bg-background/50">
-                                    <feature.icon className="size-8 text-primary shrink-0 mt-1" />
-                                    <div>
-                                        <h3 className="font-semibold">{feature.title}</h3>
-                                        <p className="text-sm text-muted-foreground">{feature.description}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-            </Carousel>
+            <div className="space-y-4">
+                {adFeatures.map((feature, index) => (
+                    <div key={index} className="flex gap-4 p-4 rounded-lg bg-background/5">
+                        <feature.icon className="size-8 text-primary shrink-0 mt-1" />
+                        <div>
+                            <h3 className="font-semibold">{feature.title}</h3>
+                            <p className="text-sm text-muted-foreground">{feature.description}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
              <p className="mt-8 text-xs text-muted-foreground">
                 Start for free • No credit card required • Cancel anytime
             </p>

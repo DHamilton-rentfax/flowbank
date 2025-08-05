@@ -3,6 +3,7 @@
 
 import { suggestAllocationPlan, type SuggestAllocationPlanInput } from "@/ai/flows/suggest-allocation-plan";
 import { identifyIncome, type IdentifyIncomeInput } from "@/ai/flows/identify-income";
+import { chat, type ChatInput } from "@/ai/flows/chatbot";
 import { z } from "zod";
 import { plaidClient } from "@/lib/plaid";
 import { Products, TransactionsSyncRequest } from "plaid";
@@ -62,6 +63,17 @@ export async function getAISuggestion(input: SuggestAllocationPlanInput) {
             success: false,
             error: errorMessage,
         };
+    }
+}
+
+export async function getChatbotResponse(input: ChatInput) {
+    try {
+        const result = await chat(input);
+        return { success: true, response: result.response };
+    } catch (error) {
+        console.error("Error getting chatbot response:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
     }
 }
 

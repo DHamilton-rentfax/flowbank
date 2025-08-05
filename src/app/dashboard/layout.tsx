@@ -7,11 +7,13 @@ import { useEffect, useState } from "react";
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Home, Settings, BarChart3, LogOut, PenSquare } from "lucide-react";
+import { Home, Settings, BarChart3, LogOut, PenSquare, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AppProvider } from "@/contexts/app-provider";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Chat } from "@/components/chatbot/chat";
 
 export default function DashboardLayout({
   children,
@@ -124,6 +126,16 @@ export default function DashboardLayout({
             <main className="p-4 sm:p-6 lg:p-8">
               {children}
             </main>
+             <Popover>
+                <PopoverTrigger asChild>
+                     <Button className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg">
+                        <MessageSquare />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 h-96 p-0 mr-4 mb-2" side="top" align="end">
+                    <Chat />
+                </PopoverContent>
+            </Popover>
         </SidebarInset>
       </SidebarProvider>
     </AppProvider>
