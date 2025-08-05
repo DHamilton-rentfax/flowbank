@@ -47,10 +47,14 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
       : "Fill out the form to get started.";
   const buttonText = mode === "login" ? "Log In" : "Sign Up";
 
-  const handleAuthError = (error: AuthError) => {
+  const handleAuthError = (error: any) => {
     console.error("Firebase Auth Error:", error);
     let message = "An unknown error occurred.";
-    switch (error.code) {
+    
+    // Handle both Firebase AuthError and custom errors from our server action
+    const errorCode = error.code || error.name;
+
+    switch (errorCode) {
       case "auth/invalid-email":
         message = "Please enter a valid email address.";
         break;
@@ -69,7 +73,7 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
         message = "The password is too weak. Please use at least 6 characters.";
         break;
       default:
-        message = "Authentication failed. Please try again.";
+        message = error.message || "Authentication failed. Please try again.";
         break;
     }
      toast({
@@ -93,7 +97,10 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
-        await signUpWithEmail(email, password, planId);
+        const result = await signUpWithEmail(email, password, recaptchaToken, planId);
+        if (!result.success) {
+            throw new Error(result.error);
+        }
          toast({
           title: "Account Created!",
           description: "You've been successfully signed up.",
@@ -170,6 +177,7 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
                     ref={recaptchaRef}
                     sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
                     onChange={setRecaptchaToken}
+                    action="signup"
                 />
             </div>
             <Button type="submit" className="w-full mt-4" disabled={isLoading || !recaptchaToken}>

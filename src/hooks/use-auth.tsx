@@ -2,11 +2,11 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail } from "firebase/auth";
 import { auth, db } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
-import { createUserDocument } from "@/lib/plans";
+import { verifyRecaptchaAndSignUp } from "@/app/actions";
 import { doc, getDoc } from "firebase/firestore";
 
 interface AuthContextType {
@@ -15,7 +15,7 @@ interface AuthContextType {
   logout: () => void;
   updateUserProfile: (updates: { displayName?: string; photoURL?: string; }) => Promise<void>;
   sendPasswordReset: () => Promise<void>;
-  signUpWithEmail: (email: string, password: string, planId?: string | null) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, token: string, planId?: string | null) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -79,11 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signUpWithEmail = async (email: string, password: string, planId?: string | null) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const { user } = userCredential;
-    // Ensure the user document is created before proceeding
-    await createUserDocument(user.uid, user.email!, null, planId);
+  const signUpWithEmail = async (email: string, password: string, token: string, planId?: string | null) => {
+    return await verifyRecaptchaAndSignUp(email, password, token, planId);
   }
 
   return (

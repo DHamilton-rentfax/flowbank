@@ -13,8 +13,10 @@ import { headers } from "next/headers";
 import { db } from "@/firebase/client";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth } from "@/firebase/client";
-import { plans } from "@/lib/plans";
+import { plans, createUserDocument } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
+import { createAssessment } from "@/lib/recaptcha";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
     try {
@@ -287,5 +289,33 @@ export async function setup2FA() {
         console.error("Error setting up 2FA:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: `Failed to set up 2FA: ${errorMessage}` };
+    }
+}
+
+export async function verifyRecaptchaAndSignUp(email: string, password: string, token: string, planId?: string | null) {
+    try {
+        const score = await createAssessment({
+            token,
+            recaptchaAction: "signup" 
+        });
+
+        // For now, we'll accept any score. In a real app, you'd check if the score is above a threshold.
+        if (score === null) {
+            throw new Error("reCAPTCHA verification failed. Please try again.");
+        }
+
+        console.log("reCAPTCHA score:", score);
+
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const { user } = userCredential;
+
+        await createUserDocument(user.uid, user.email!, null, planId);
+
+        return { success: true, userId: user.uid };
+
+    } catch (error) {
+        console.error("Sign up with reCAPTCHA failed:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
     }
 }
