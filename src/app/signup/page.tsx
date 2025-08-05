@@ -1,7 +1,36 @@
+
+"use client";
+
 import { AuthForm } from "@/components/auth/auth-form";
 import { Logo } from "@/components/icons";
 import Link from "next/link";
 import { Users, Banknote, ShieldCheck, Zap } from "lucide-react";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
+
+
+const adFeatures = [
+    {
+        icon: Banknote,
+        title: "Automated Payouts",
+        description: "Set up automated transfers to your personal and business accounts with Stripe."
+    },
+    {
+        icon: Zap,
+        title: "AI-Powered Insights",
+        description: "Get smart, AI-driven suggestions for your allocation rules based on your business type."
+    },
+    {
+        icon: ShieldCheck,
+        title: "Enhanced Security",
+        description: "Enable Two-Factor Authentication (2FA) for an extra layer of account protection."
+    },
+    {
+        icon: Users,
+        title: "Unlimited Rules",
+        description: "Create as many allocation buckets as you need to manage your money with precision."
+    }
+]
 
 export default function SignupPage() {
   return (
@@ -34,36 +63,27 @@ export default function SignupPage() {
             <p className="text-muted-foreground mb-8">
                 Create a free account to start managing your cash flow with the power of automation. See how FlowBank can help you achieve financial clarity.
             </p>
-            <div className="grid grid-cols-2 gap-6">
-                <div className="flex gap-3">
-                    <Banknote className="size-8 text-primary shrink-0" />
-                    <div>
-                        <h3 className="font-semibold">Automated Payouts</h3>
-                        <p className="text-sm text-muted-foreground">Set up automated transfers to your personal and business accounts with Stripe.</p>
-                    </div>
-                </div>
-                <div className="flex gap-3">
-                    <Zap className="size-8 text-primary shrink-0" />
-                    <div>
-                        <h3 className="font-semibold">AI-Powered Insights</h3>
-                        <p className="text-sm text-muted-foreground">Get smart, AI-driven suggestions for your allocation rules based on your business type.</p>
-                    </div>
-                </div>
-                <div className="flex gap-3">
-                    <Users className="size-8 text-primary shrink-0" />
-                    <div>
-                        <h3 className="font-semibold">Unlimited Rules</h3>
-                        <p className="text-sm text-muted-foreground">Create as many allocation buckets as you need to manage your money with precision.</p>
-                    </div>
-                </div>
-                <div className="flex gap-3">
-                    <ShieldCheck className="size-8 text-primary shrink-0" />
-                    <div>
-                        <h3 className="font-semibold">Enhanced Security</h3>
-                        <p className="text-sm text-muted-foreground">Enable Two-Factor Authentication (2FA) for an extra layer of account protection.</p>
-                    </div>
-                </div>
-            </div>
+            <Carousel 
+                opts={{ loop: true }}
+                plugins={[Autoplay({ delay: 5000 })]} 
+                className="w-full"
+            >
+                <CarouselContent>
+                    {adFeatures.map((feature, index) => (
+                        <CarouselItem key={index}>
+                            <div className="p-1">
+                                <div className="flex gap-4 p-6 rounded-lg bg-background/50">
+                                    <feature.icon className="size-8 text-primary shrink-0 mt-1" />
+                                    <div>
+                                        <h3 className="font-semibold">{feature.title}</h3>
+                                        <p className="text-sm text-muted-foreground">{feature.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+            </Carousel>
              <p className="mt-8 text-xs text-muted-foreground">
                 Start for free • No credit card required • Cancel anytime
             </p>
