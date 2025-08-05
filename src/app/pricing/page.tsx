@@ -13,6 +13,7 @@ import { createCheckoutSession } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { plans } from "@/lib/plans";
+import type { Plan } from "@/lib/types";
 
 export default function PricingPage() {
     const { user, loading } = useAuth();
@@ -52,8 +53,8 @@ export default function PricingPage() {
         }
     }
 
-    const getPlanDescription = (planId: string) => {
-        switch (planId) {
+    const getPlanDescription = (plan: Plan) => {
+        switch (plan.id) {
             case 'free': return "For individuals getting started.";
             case 'starter': return "For solopreneurs and freelancers.";
             case 'pro': return "For growing businesses & power users.";
@@ -111,7 +112,7 @@ export default function PricingPage() {
                                             <span className="text-4xl font-bold font-headline">Free</span>
                                         )}
                                     </div>
-                                    <CardDescription>{getPlanDescription(plan.id)}</CardDescription>
+                                    <CardDescription>{getPlanDescription(plan)}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-1">
                                     <ul className="space-y-3">

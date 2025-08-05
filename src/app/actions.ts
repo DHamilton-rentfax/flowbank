@@ -13,6 +13,7 @@ import { db } from "@/firebase/client";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth } from "@/firebase/client";
 import { plans } from "@/lib/plans";
+import * as OTPAuth from 'otpauth';
 
 export async function verifyRecaptcha(token: string) {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
@@ -261,5 +262,34 @@ export async function createCustomerPortalSession(userId: string) {
         console.error("Error creating customer portal session:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: `Failed to create customer portal session: ${errorMessage}` };
+    }
+}
+
+
+export async function setup2FA() {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+        throw new Error("User not authenticated or email is missing.");
+    }
+    
+    try {
+        const totp = new OTPAuth.TOTP({
+            issuer: 'FlowBank',
+            label: user.email,
+            algorithm: 'SHA1',
+            digits: 6,
+            period: 30,
+            secret: OTPAuth.Secret.fromBase32(process.env.OTP_SECRET || '') // A default secret for generation
+        });
+
+        const uri = totp.toString();
+        const secret = totp.secret.base32;
+
+        return { success: true, secret, uri };
+
+    } catch (error) {
+        console.error("Error setting up 2FA:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to set up 2FA: ${errorMessage}` };
     }
 }

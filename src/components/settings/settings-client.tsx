@@ -12,6 +12,7 @@ import { StripeConnect } from "./stripe-connect";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { TwoFactorAuth } from "./two-factor-auth";
 
 export function SettingsClient() {
   const { rules, updateRules: saveRules } = useApp();
@@ -30,9 +31,10 @@ export function SettingsClient() {
       <h1 className="text-3xl font-bold">Settings</h1>
       
       <Tabs defaultValue="profile">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile">Profile & Plan</TabsTrigger>
             <TabsTrigger value="allocations">Allocations</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="mt-6">
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -58,6 +60,13 @@ export function SettingsClient() {
                 <AIPlanGenerator onApplyRules={handleUpdateRules} />
                 </div>
             </div>
+        </TabsContent>
+        <TabsContent value="security" className="mt-6">
+             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-2 space-y-6">
+                    <TwoFactorAuth />
+                </div>
+             </div>
         </TabsContent>
       </Tabs>
     </div>
