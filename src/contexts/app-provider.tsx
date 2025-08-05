@@ -60,10 +60,6 @@ export function AppProvider({ children }: AppProviderProps) {
             setPlaidAccessTokenState(data.plaidAccessToken || null);
             setPlaidCursor(data.plaidCursor || null);
             setUserPlan(data.plan || null);
-          } else {
-            // This case handles a brand-new user where the doc might not be created yet.
-            // We'll create it here to be safe, then the listeners will pick it up.
-             await createUserDocument(user.uid, user.email!);
           }
         }),
         onSnapshot(collection(db, "users", user.uid, "rules"), (snapshot) => {
