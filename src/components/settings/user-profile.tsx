@@ -102,7 +102,7 @@ export function UserProfile() {
                 </CardDescription>
             </div>
             {userPlan && (
-                <Badge variant={userPlan.id === 'pro' ? 'default' : 'secondary'}>{userPlan.name} Plan</Badge>
+                <Badge variant={userPlan.id !== 'free' ? 'default' : 'secondary'}>{userPlan.name} Plan</Badge>
             )}
         </div>
       </CardHeader>

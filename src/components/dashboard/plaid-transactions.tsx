@@ -28,7 +28,7 @@ export function PlaidTransactions() {
   const [incomeTransactions, setIncomeTransactions] = useState<any[]>([]);
   const [allocatedTransactionIds, setAllocatedTransactionIds] = useState<string[]>([]);
 
-  const isPaidUser = userPlan?.id === 'pro' || userPlan?.id === 'business';
+  const isPaidUser = userPlan?.id !== 'free';
 
   const handleAllocate = (amount: number, id: string) => {
     // Plaid amounts for credits are negative, so we use Math.abs

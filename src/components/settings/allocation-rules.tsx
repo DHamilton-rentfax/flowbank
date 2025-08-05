@@ -23,16 +23,22 @@ export function AllocationRules({ rules, setRules, onSave }: AllocationRulesProp
   const { userPlan } = useApp();
   const totalPercentage = rules.reduce((sum, rule) => sum + Number(rule.percentage || 0), 0);
 
-  const isFreePlan = userPlan?.id === 'free';
-  const ruleLimit = 3;
-  const canAddMoreRules = !isFreePlan || rules.length < ruleLimit;
+  const getRuleLimit = () => {
+    switch(userPlan?.id) {
+        case 'free': return 1;
+        case 'starter': return 5;
+        default: return Infinity;
+    }
+  }
 
+  const ruleLimit = getRuleLimit();
+  const canAddMoreRules = rules.length < ruleLimit;
 
   const handleAddRule = () => {
     if (!canAddMoreRules) {
        toast({
         title: "Rule Limit Reached",
-        description: "Upgrade to a Pro plan to add more allocation rules.",
+        description: `Upgrade your plan to add more than ${ruleLimit} allocation rule(s).`,
         variant: "destructive",
       });
       return;
@@ -108,11 +114,11 @@ export function AllocationRules({ rules, setRules, onSave }: AllocationRulesProp
         </Button>
         {!canAddMoreRules && (
             <div className="text-center text-sm text-muted-foreground p-4 rounded-md border border-dashed">
-                <p className="font-medium">You've reached the {ruleLimit}-rule limit for the Free plan.</p>
+                <p className="font-medium">You've reached the {ruleLimit} rule limit for the {userPlan?.name} plan.</p>
                 <Button size="sm" variant="link" asChild>
                     <Link href="/pricing">
                         <Zap className="mr-2 h-4 w-4" />
-                        Upgrade to Pro for unlimited rules
+                        Upgrade for more rules
                     </Link>
                 </Button>
             </div>

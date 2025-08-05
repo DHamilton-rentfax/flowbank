@@ -11,33 +11,45 @@ export const plans: Plan[] = [
         name: "Free",
         price: 0,
         features: [
-            "1 Bank Connection",
-            "3 Split Rules",
-            "Manual Splits",
-            "Basic Reporting"
+            "1 connected bank account",
+            "1 allocation rule",
+            "Manual income allocation",
+            "Lead generation tool"
         ]
+    },
+    {
+        id: "starter",
+        name: "Starter",
+        price: 9,
+        features: [
+            "3 bank accounts",
+            "Up to 5 automation rules",
+            "Monthly splits",
+            "Email reports"
+        ],
+        stripePriceId: 'price_1PgfTkGCq4vA4vNq7z4xYp7z' // Placeholder - Replace with your actual Stripe Price ID
     },
     {
         id: "pro",
         name: "Pro",
-        price: 9.99,
+        price: 19,
         features: [
-            "Unlimited Split Rules",
-            "Automated Splits",
-            "Advanced Reporting",
-            "Email & Chat Support"
+            "Up to 10 bank accounts",
+            "Unlimited rules",
+            "Weekly or custom schedule",
+            "Priority support"
         ],
         stripePriceId: 'price_1Pge5VGCq4vA4vNqgA3jRk2d' // Replace with your actual Stripe Price ID
     },
     {
         id: "business",
         name: "Business",
-        price: 29.99,
+        price: 49,
         features: [
-            "All Pro Features",
-            "Multi-account sync",
-            "Team Splits & Permissions",
-            "Priority Support"
+            "10+ accounts",
+            "Full automation",
+            "CSV reporting / accountant export",
+            "Phone support"
         ],
         stripePriceId: 'price_1Pge5lGCq4vA4vNqlsO0vL6r' // Replace with your actual Stripe Price ID
     }

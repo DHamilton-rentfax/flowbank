@@ -17,20 +17,25 @@ import { plans } from "@/lib/plans";
 export default function PricingPage() {
     const { user, loading } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
     const { toast } = useToast();
     const router = useRouter();
 
-    const handlePlanClick = async (planId: string, isFree: boolean) => {
+    const handlePlanClick = async (planId: string) => {
         if (!user) {
-            router.push("/signup");
+            router.push(`/signup?plan=${planId}`);
             return;
         }
         
-        if (isFree) {
+        const plan = plans.find(p => p.id === planId);
+        if (!plan) return;
+
+        if (plan.price === 0) {
             router.push("/dashboard");
             return;
         }
-
+        
+        setSelectedPlan(planId);
         setIsLoading(true);
         const result = await createCheckoutSession(user.uid, planId);
         
@@ -43,6 +48,17 @@ export default function PricingPage() {
                 variant: "destructive",
             });
             setIsLoading(false);
+            setSelectedPlan(null);
+        }
+    }
+
+    const getPlanDescription = (planId: string) => {
+        switch (planId) {
+            case 'free': return "For individuals getting started.";
+            case 'starter': return "For solopreneurs and freelancers.";
+            case 'pro': return "For growing businesses & power users.";
+            case 'business': return "For established businesses and teams.";
+            default: return "";
         }
     }
 
@@ -72,7 +88,7 @@ export default function PricingPage() {
                 </nav>
             </header>
             <main className="flex-1">
-                <div className="container mx-auto max-w-5xl py-12 px-4">
+                <div className="container mx-auto max-w-7xl py-12 px-4">
                     <div className="text-center mb-16">
                         <h1 className="text-4xl font-bold tracking-tight font-headline sm:text-5xl">Find the perfect plan for your flow.</h1>
                         <p className="mt-4 text-lg text-muted-foreground">
@@ -80,21 +96,27 @@ export default function PricingPage() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                         {plans.map((plan) => (
-                            <Card key={plan.name} className={`flex flex-col ${plan.id === 'pro' ? 'border-primary shadow-lg' : ''}`}>
+                            <Card key={plan.id} className={`flex flex-col ${plan.id === 'pro' ? 'border-primary shadow-lg' : ''}`}>
                                 <CardHeader>
                                     <CardTitle className="font-headline">{plan.name}</CardTitle>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl font-bold font-headline">${plan.price}</span>
-                                        <span className="text-muted-foreground">/ month</span>
+                                     <div className="flex items-baseline gap-2">
+                                        {plan.price > 0 ? (
+                                            <>
+                                                <span className="text-4xl font-bold font-headline">${plan.price}</span>
+                                                <span className="text-muted-foreground">/ month</span>
+                                            </>
+                                        ) : (
+                                            <span className="text-4xl font-bold font-headline">Free</span>
+                                        )}
                                     </div>
-                                    <CardDescription>{plan.id === 'free' ? "For individuals getting started." : plan.id === 'pro' ? "For solopreneurs and freelancers." : "For small businesses and teams."}</CardDescription>
+                                    <CardDescription>{getPlanDescription(plan.id)}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-1">
                                     <ul className="space-y-3">
-                                        {plan.features.map((feature) => (
-                                            <li key={feature} className="flex items-center">
+                                        {plan.features.map((feature, index) => (
+                                            <li key={index} className="flex items-center">
                                                 <Check className="h-5 w-5 text-primary mr-2" />
                                                 <span>{feature}</span>
                                             </li>
@@ -105,10 +127,10 @@ export default function PricingPage() {
                                     <Button 
                                         className="w-full" 
                                         variant={plan.id === 'pro' ? 'default' : 'outline'}
-                                        onClick={() => handlePlanClick(plan.id, plan.id === 'free')}
+                                        onClick={() => handlePlanClick(plan.id)}
                                         disabled={isLoading || loading}
                                     >
-                                        {isLoading ? <Loader2 className="animate-spin" /> : (plan.id === 'free' ? 'Get Started' : 'Upgrade to ' + plan.name)}
+                                        {isLoading && selectedPlan === plan.id ? <Loader2 className="animate-spin" /> : (plan.price === 0 ? 'Get Started' : 'Upgrade to ' + plan.name)}
                                     </Button>
                                 </CardFooter>
                             </Card>
