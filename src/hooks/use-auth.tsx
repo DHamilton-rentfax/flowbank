@@ -3,10 +3,11 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/firebase/client";
+import { auth, db } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
 import { createUserDocument } from "@/lib/plans";
+import { doc, getDoc } from "firebase/firestore";
 
 interface AuthContextType {
   user: User | null;
@@ -27,7 +28,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Check if user document exists, if not wait a bit and recheck.
+        // This handles the small delay between user creation and firestore document creation.
+        const userDocRef = doc(db, "users", user.uid);
+        let docSnap = await getDoc(userDocRef);
+        if (!docSnap.exists()) {
+            await new Promise(resolve => setTimeout(resolve, 1500)); // wait 1.5s
+            docSnap = await getDoc(userDocRef);
+        }
+      }
       setUser(user);
       setLoading(false);
     });

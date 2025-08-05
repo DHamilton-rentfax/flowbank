@@ -1,7 +1,7 @@
 
 import { db } from '@/firebase/client';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import type { Plan, UserPlan } from './types';
+import { doc, setDoc, getDoc, writeBatch, collection } from 'firebase/firestore';
+import type { Plan, UserPlan, AllocationRule, Account } from './types';
 import { stripe } from './stripe';
 
 
@@ -55,6 +55,15 @@ export const plans: Plan[] = [
     }
 ];
 
+const initialRules: Omit<AllocationRule, 'id'>[] = [
+    { name: 'Operating Expenses', percentage: 50 },
+    { name: 'Taxes', percentage: 20 },
+    { name: 'Owner Compensation', percentage: 15 },
+    { name: 'Savings', percentage: 10 },
+    { name: 'Marketing', percentage: 5 },
+];
+
+
 export async function createUserDocument(userId: string, email: string, displayName?: string | null) {
     const userDocRef = doc(db, "users", userId);
     const userDocSnap = await getDoc(userDocRef);
@@ -83,6 +92,24 @@ export async function createUserDocument(userId: string, email: string, displayN
             } as UserPlan,
         };
 
-        await setDoc(userDocRef, userData);
+        const batch = writeBatch(db);
+
+        // 1. Set the main user document
+        batch.set(userDocRef, userData);
+
+        // 2. Create initial rules and accounts
+        initialRules.forEach((ruleData, index) => {
+            const ruleId = (index + 1).toString();
+            const rule: AllocationRule = { id: ruleId, ...ruleData };
+            const account: Account = { id: ruleId, name: rule.name, balance: 0 };
+            
+            const ruleDocRef = doc(db, "users", userId, "rules", ruleId);
+            batch.set(ruleDocRef, rule);
+
+            const accountDocRef = doc(db, "users", userId, "accounts", ruleId);
+            batch.set(accountDocRef, account);
+        });
+
+        await batch.commit();
     }
 }
