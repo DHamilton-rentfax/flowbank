@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bank, Loader2 } from "lucide-react";
+import { Landmark, Loader2 } from "lucide-react";
 import { usePlaidLink } from "react-plaid-link";
 import { createLinkToken, exchangePublicToken } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
@@ -84,7 +84,7 @@ export function PlaidIntegration() {
           {isLoading ? (
             <Loader2 className="mr-2 animate-spin" />
           ) : (
-            <Bank className="mr-2 h-4 w-4" />
+            <Landmark className="mr-2 h-4 w-4" />
           )}
           {plaidAccessToken ? "Account Connected" : isLoading ? "Linking..." : "Connect Bank Account"}
         </Button>

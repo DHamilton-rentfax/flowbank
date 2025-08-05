@@ -78,8 +78,8 @@ export default function DashboardLayout({
                   </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/reporting')}>
-                      <Link href="/reporting">
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/reporting')}>
+                      <Link href="/dashboard/reporting">
                           <BarChart3 />
                           <span>Reporting</span>
                       </Link>
@@ -94,8 +94,8 @@ export default function DashboardLayout({
                   </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')}>
-                      <Link href="/settings">
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/settings')}>
+                      <Link href="/dashboard/settings">
                           <Settings />
                           <span>Settings</span>
                       </Link>
