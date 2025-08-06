@@ -12,10 +12,30 @@ const firebaseConfig: FirebaseOptions = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const db = getFirestore(app);
+function getFirebaseApp() {
+    if (getApps().length > 0) {
+        return getApp();
+    }
+    
+    // Check if all required config keys are present
+    const requiredKeys: (keyof FirebaseOptions)[] = ['apiKey', 'authDomain', 'projectId'];
+    const missingKeys = requiredKeys.filter(key => !firebaseConfig[key]);
+
+    if (missingKeys.length > 0) {
+        console.error(`Firebase config is missing required keys: ${missingKeys.join(', ')}`);
+        // Return a dummy object or handle this case appropriately
+        // to avoid crashing the app if the config isn't ready.
+        return null;
+    }
+
+    return initializeApp(firebaseConfig);
+}
+
+const app = getFirebaseApp();
+
+// Initialize services only if the app was successfully initialized
+const auth = app ? getAuth(app) : null;
+const db = app ? getFirestore(app) : null;
 
 
 export { app, auth, db };
