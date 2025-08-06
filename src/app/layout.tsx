@@ -1,8 +1,9 @@
-
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
+import React from "react";
+import { ClientLayout } from "@/components/layout/client-layout";
 
 export const metadata: Metadata = {
   title: "FlowBank | Split. Stash. Scale your profits.",
@@ -14,13 +15,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-      </head>
+      <head />
       <body className="font-body antialiased">
         <AuthProvider>
-            {children}
+            <ClientLayout>
+                {children}
+            </ClientLayout>
             <Toaster />
         </AuthProvider>
       </body>
