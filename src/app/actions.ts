@@ -13,7 +13,7 @@ import { headers } from "next/headers";
 import { db } from "@/firebase/client";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth } from "@/firebase/client";
-import { plans, createUserDocument } from "@/lib/plans";
+import { plans, addOns, createUserDocument } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
 import { createAssessment } from "@/lib/recaptcha";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -222,6 +222,7 @@ export async function createCheckoutSession(userId: string, planId: string) {
             metadata: {
                 userId,
                 planId: plan.id,
+                type: 'plan'
             }
         });
 
@@ -232,6 +233,47 @@ export async function createCheckoutSession(userId: string, planId: string) {
         return { success: false, error: `Failed to create checkout session: ${errorMessage}` };
     }
 }
+
+export async function createAddOnCheckoutSession(userId: string, addOnId: string) {
+    try {
+        const userDocRef = doc(db, "users", userId);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) throw new Error("User not found");
+        
+        const userData = userDoc.data();
+        const stripeCustomerId = userData.stripeCustomerId;
+        const addOn = addOns.find(a => a.id === addOnId);
+        
+        if (!addOn) throw new Error("Add-on not found.");
+        
+        const origin = headers().get('origin') || process.env.NEXT_PUBLIC_SITE_URL;
+
+        const session = await stripe.checkout.sessions.create({
+            customer: stripeCustomerId,
+            payment_method_types: ['card'],
+            line_items: [{
+                price: addOn.stripePriceId,
+                quantity: 1,
+            }],
+            mode: 'subscription',
+            success_url: `${origin}/settings?tab=add-ons`,
+            cancel_url: `${origin}/settings?tab=add-ons`,
+            metadata: {
+                userId,
+                addOnId: addOn.id,
+                type: 'add-on',
+            }
+        });
+
+        return { success: true, url: session.url };
+    } catch (error) {
+        console.error("Error creating add-on checkout session:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: `Failed to create checkout session: ${errorMessage}` };
+    }
+}
+
 
 export async function createCustomerPortalSession(userId: string) {
     try {

@@ -16,7 +16,7 @@ export type AllocationRule = {
 };
 
 export type Transaction = {
-  id: string;
+  id:string;
   date: string;
   totalAmount: number;
   allocations: {
@@ -33,6 +33,14 @@ export interface Plan {
     stripePriceId?: string;
 }
 
+export interface AddOn {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    stripePriceId: string;
+}
+
 export interface UserPlan {
     id: string;
     name: string;
@@ -40,4 +48,5 @@ export interface UserPlan {
     stripeSubscriptionId?: string;
     stripeCustomerId?: string;
     currentPeriodEnd?: number;
+    addOns?: { [key: string]: boolean };
 }

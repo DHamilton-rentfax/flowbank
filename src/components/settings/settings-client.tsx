@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TwoFactorAuth } from "./two-factor-auth";
+import { AddOns } from "./add-ons";
 
 export function SettingsClient() {
   const { rules, updateRules: saveRules } = useApp();
@@ -31,9 +32,10 @@ export function SettingsClient() {
       <h1 className="text-3xl font-bold">Settings</h1>
       
       <Tabs defaultValue="profile">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile">Profile & Plan</TabsTrigger>
             <TabsTrigger value="allocations">Allocations</TabsTrigger>
+            <TabsTrigger value="add-ons">Add-ons</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="mt-6">
@@ -60,6 +62,9 @@ export function SettingsClient() {
                 <AIPlanGenerator onApplyRules={handleUpdateRules} />
                 </div>
             </div>
+        </TabsContent>
+         <TabsContent value="add-ons" className="mt-6">
+            <AddOns />
         </TabsContent>
         <TabsContent value="security" className="mt-6">
              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

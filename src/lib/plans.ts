@@ -1,7 +1,7 @@
 
 import { db } from '@/firebase/client';
 import { doc, setDoc, getDoc, writeBatch } from 'firebase/firestore';
-import type { Plan, UserPlan, AllocationRule, Account } from './types';
+import type { Plan, UserPlan, AllocationRule, Account, AddOn } from './types';
 import { stripe } from './stripe';
 import { nanoid } from './utils';
 
@@ -56,6 +56,30 @@ export const plans: Plan[] = [
     }
 ];
 
+export const addOns: AddOn[] = [
+    {
+        id: "smart_forecasting",
+        name: "Smart Forecasting",
+        description: "AI-powered cash flow predictions and future allocation planning based on your business habits and seasonal trends.",
+        price: 6,
+        stripePriceId: 'price_1PghZcGCq4vA4vNq0a1b2c3d' // Replace with your actual Stripe Price ID
+    },
+    {
+        id: "tax_vault",
+        name: "Tax Vault",
+        description: "Automatically calculate and reserve estimated tax payments in a secure sub-account.",
+        price: 5,
+        stripePriceId: 'price_1PghZcGCq4vA4vNq1b2c3d4e' // Replace with your actual Stripe Price ID
+    },
+    {
+        id: "instant_payouts",
+        name: "Instant Payouts",
+        description: "Access your allocated funds instantly, anytime — skip the standard 2-day wait.",
+        price: 9,
+        stripePriceId: 'price_1PghZcGCq4vA4vNq2c3d4e5f' // Replace with your actual Stripe Price ID
+    }
+];
+
 const initialRulesData: Omit<AllocationRule, 'id'>[] = [
     { name: 'Operating Expenses', percentage: 50 },
     { name: 'Taxes', percentage: 20 },
@@ -97,6 +121,7 @@ export async function createUserDocument(userId: string, email: string, displayN
         name: plan.name,
         status: 'active',
         stripeCustomerId: stripeCustomer.id,
+        addOns: {},
     };
 
     const userData = {

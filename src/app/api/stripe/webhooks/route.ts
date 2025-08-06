@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
 import { db } from "@/firebase/client";
-import { doc, setDoc } from "firebase/firestore";
-import { plans } from "@/lib/plans";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { plans, addOns } from "@/lib/plans";
 import type { UserPlan } from "@/lib/types";
 
 export async function POST(req: Request) {
@@ -28,40 +28,59 @@ export async function POST(req: Request) {
     }
 
     const session = event.data.object as Stripe.Checkout.Session;
+    const sessionType = session.metadata?.type;
 
     if (event.type === 'checkout.session.completed') {
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-        
         const userId = session.metadata?.userId;
-        const planId = session.metadata?.planId;
-
-        if (!userId || !planId) {
-            console.error("Webhook Error: Missing userId or planId in session metadata");
+        
+        if (!userId) {
+            console.error("Webhook Error: Missing userId in session metadata");
             return new NextResponse("Webhook Error: Missing metadata", { status: 400 });
         }
         
-        const plan = plans.find(p => p.id === planId);
-        if (!plan) {
-            console.error(`Webhook Error: Plan with id ${planId} not found.`);
-            return new NextResponse("Webhook Error: Plan not found", { status: 400 });
-        }
+        const userDocRef = doc(db, "users", userId);
 
-        const userPlan: UserPlan = {
-            id: plan.id,
-            name: plan.name,
-            status: 'active',
-            stripeSubscriptionId: subscription.id,
-            stripeCustomerId: subscription.customer as string,
-            currentPeriodEnd: subscription.current_period_end,
-        };
+        if (sessionType === 'plan') {
+            const planId = session.metadata?.planId;
+            if (!planId) {
+                return new NextResponse("Webhook Error: Missing planId for 'plan' type session", { status: 400 });
+            }
 
-        try {
-            const userDocRef = doc(db, "users", userId);
+            const plan = plans.find(p => p.id === planId);
+            if (!plan) {
+                return new NextResponse(`Webhook Error: Plan with id ${planId} not found.`, { status: 400 });
+            }
+
+            const userPlan: UserPlan = {
+                id: plan.id,
+                name: plan.name,
+                status: 'active',
+                stripeSubscriptionId: subscription.id,
+                stripeCustomerId: subscription.customer as string,
+                currentPeriodEnd: subscription.current_period_end,
+                addOns: {}, // Initialize addOns
+            };
+            
             await setDoc(userDocRef, { plan: userPlan }, { merge: true });
-            console.log(`Successfully updated plan for user ${userId} to ${plan.name}`);
-        } catch (error) {
-            console.error(`Database error updating user ${userId}:`, error);
-            return new NextResponse("Database error", { status: 500 });
+
+        } else if (sessionType === 'add-on') {
+            const addOnId = session.metadata?.addOnId;
+            if (!addOnId) {
+                return new NextResponse("Webhook Error: Missing addOnId for 'add-on' type session", { status: 400 });
+            }
+            
+            const addOn = addOns.find(a => a.id === addOnId);
+            if (!addOn) {
+                return new NextResponse(`Webhook Error: Add-on with id ${addOnId} not found.`, { status: 400 });
+            }
+            
+            const userDoc = await getDoc(userDocRef);
+            if(userDoc.exists()) {
+                const userPlan = userDoc.data().plan as UserPlan;
+                userPlan.addOns = { ...userPlan.addOns, [addOnId]: true };
+                await setDoc(userDocRef, { plan: userPlan }, { merge: true });
+            }
         }
     }
 
@@ -75,30 +94,40 @@ export async function POST(req: Request) {
              return new NextResponse("User not found", { status: 404 });
          }
          const userId = userQuery.docs[0].id;
-         const planId = subscription.items.data[0].price.id;
-         const plan = plans.find(p => p.stripePriceId === planId) || plans.find(p => p.id === 'free');
+         const userDocRef = doc(db, "users", userId);
+         const userDoc = await getDoc(userDocRef);
+         
+         if (userDoc.exists()) {
+            let userPlan = userDoc.data().plan as UserPlan;
+            const priceId = subscription.items.data[0].price.id;
+            
+            // Check if this subscription is for a main plan or an add-on
+            const plan = plans.find(p => p.stripePriceId === priceId);
+            const addOn = addOns.find(a => a.stripePriceId === priceId);
 
-         if (!plan) {
-             console.error(`Plan not found for price ID ${planId}`);
-             return new NextResponse("Plan not found", { status: 404 });
-         }
+            if (plan) {
+                 userPlan = {
+                    ...userPlan,
+                    id: plan.id,
+                    name: plan.name,
+                    status: subscription.status,
+                    stripeSubscriptionId: subscription.id,
+                    currentPeriodEnd: subscription.current_period_end,
+                 };
+            } else if (addOn) {
+                const currentAddOns = userPlan.addOns || {};
+                if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+                    delete currentAddOns[addOn.id];
+                } else {
+                    currentAddOns[addOn.id] = subscription.status === 'active';
+                }
+                userPlan.addOns = currentAddOns;
+            } else {
+                 console.error(`No plan or add-on found for price ID ${priceId}`);
+            }
 
-         const userPlan: UserPlan = {
-            id: plan.id,
-            name: plan.name,
-            status: subscription.status,
-            stripeSubscriptionId: subscription.id,
-            stripeCustomerId: subscription.customer as string,
-            currentPeriodEnd: subscription.current_period_end,
-         }
-
-        try {
-            const userDocRef = doc(db, "users", userId);
             await setDoc(userDocRef, { plan: userPlan }, { merge: true });
-        } catch(error) {
-             console.error(`Database error updating user ${userId} on subscription update:`, error);
-            return new NextResponse("Database error", { status: 500 });
-        }
+         }
     }
 
 
