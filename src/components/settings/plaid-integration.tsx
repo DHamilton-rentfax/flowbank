@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Landmark, Loader2 } from "lucide-react";
 import { usePlaidLink } from "react-plaid-link";
-import { createLinkToken, exchangePublicToken } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useApp } from "@/contexts/app-provider";
 
@@ -14,24 +13,22 @@ export function PlaidIntegration() {
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { plaidAccessToken, setPlaidAccessToken } = useApp();
+  const { plaidAccessToken, linkPlaidAccount, exchangePlaidPublicToken } = useApp();
 
   const getLinkToken = useCallback(async () => {
-    // We don't want to create a new link token if one has already been created
-    if(linkToken){
-      return;
-    }
-    const result = await createLinkToken();
-    if (result.success && result.linkToken) {
-      setLinkToken(result.linkToken);
+    setIsLoading(true);
+    const token = await linkPlaidAccount();
+    if (token) {
+      setLinkToken(token);
     } else {
         toast({
             title: "Plaid Error",
-            description: result.error || "Could not retrieve Plaid link token.",
+            description: "Could not retrieve Plaid link token.",
             variant: "destructive",
         });
     }
-  }, [toast, linkToken]);
+    setIsLoading(false);
+  }, [linkPlaidAccount, toast]);
 
   useEffect(() => {
     if (!plaidAccessToken) {
@@ -41,24 +38,23 @@ export function PlaidIntegration() {
 
   const onSuccess = useCallback(async (public_token: string) => {
     setIsLoading(true);
-    const result = await exchangePublicToken(public_token);
+    const success = await exchangePlaidPublicToken(public_token);
     setIsLoading(false);
 
-    if (result.success && result.accessToken) {
-      setPlaidAccessToken(result.accessToken);
+    if (success) {
       toast({
         title: "Success!",
-        description: result.message,
+        description: "Bank account linked successfully!",
         className: "bg-accent text-accent-foreground",
       });
     } else {
       toast({
         title: "Plaid Error",
-        description: result.error || "Could not link bank account.",
+        description: "Could not link bank account.",
         variant: "destructive",
       });
     }
-  }, [toast, setPlaidAccessToken]);
+  }, [toast, exchangePlaidPublicToken]);
 
   const { open, ready } = usePlaidLink({
     token: linkToken,

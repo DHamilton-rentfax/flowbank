@@ -132,7 +132,7 @@ export function UserProfile() {
             {isSendingReset && <Loader2 className="mr-2 animate-spin" />}
             Change Password
         </Button>
-         {userPlan && userPlan.id !== 'free' && (
+         {userPlan && userPlan.stripeSubscriptionId && (
              <Button variant="outline" className="w-full" onClick={handleManageSubscription} disabled={isManagingSubscription}>
                 {isManagingSubscription && <Loader2 className="mr-2 animate-spin" />}
                 Manage Subscription

@@ -15,9 +15,6 @@ import { auth as adminAuth } from "firebase-admin";
 import { plans, addOns, createUserDocument } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
 import { createAssessment } from "@/lib/recaptcha";
-import { getAuth } from "firebase/auth";
-import { app } from "@/firebase/client";
-
 
 const getUserId = async () => {
     const idToken = headers().get('Authorization')?.split('Bearer ')[1];
@@ -73,28 +70,21 @@ export async function getChatbotResponse(input: ChatInput) {
     }
 }
 
-export async function createLinkToken(accessToken?: string | null) {
-    const user = getAuth(app).currentUser;
-    if (!user) throw new Error("User not authenticated");
+export async function createLinkToken(userId: string) {
+    if (!userId) throw new Error("User not authenticated");
 
     try {
         const tokenRequest: any = {
           user: {
-            client_user_id: user.uid,
+            client_user_id: userId,
           },
           client_name: 'Flow Bank',
           country_codes: [CountryCode.Us],
           language: 'en',
           webhook: `${process.env.NEXT_PUBLIC_SITE_URL}/api/plaid/webhook`,
+          products: [Products.Auth, Products.Transactions],
         };
-
-        if (accessToken) {
-            tokenRequest.access_token = accessToken;
-            tokenRequest.products = [];
-        } else {
-            tokenRequest.products = [Products.Auth, Products.Transactions];
-        }
-
+        
         const response = await plaidClient.linkTokenCreate(tokenRequest);
     
         return {
@@ -107,7 +97,9 @@ export async function createLinkToken(accessToken?: string | null) {
       }
 }
 
-export async function exchangePublicToken(publicToken: string) {
+export async function exchangePublicToken(publicToken: string, userId: string) {
+    if (!userId) throw new Error("User not authenticated");
+
     try {
       const response = await plaidClient.itemPublicTokenExchange({
         public_token: publicToken,
@@ -115,11 +107,15 @@ export async function exchangePublicToken(publicToken: string) {
   
       const accessToken = response.data.access_token;
       const itemId = response.data.item_id;
+
+      // Save the access token to the user's document
+      await db.collection("users").doc(userId).set({ 
+        plaidAccessToken: accessToken,
+        plaidItemId: itemId 
+      }, { merge: true });
   
       return { 
         success: true, 
-        accessToken,
-        itemId,
         message: "Bank account linked successfully!" 
       };
     } catch (error) {
@@ -318,8 +314,11 @@ export async function createCustomerPortalSession(userId: string) {
 
 
 export async function setup2FA() {
-    const user = getAuth(app).currentUser;
-    if (!user || !user.email) {
+    const userId = await getUserId();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const email = userDoc.data()?.email;
+
+    if (!userId || !email) {
         throw new Error("User not authenticated or email is missing.");
     }
     
@@ -327,7 +326,7 @@ export async function setup2FA() {
         // Generate a new secret for the user.
         const totp = new OTPAuth.TOTP({
             issuer: 'FlowBank',
-            label: user.email,
+            label: email,
             algorithm: 'SHA1',
             digits: 6,
             period: 30,
@@ -335,6 +334,9 @@ export async function setup2FA() {
         });
 
         const uri = totp.toString();
+        
+        // Don't save the secret to the user doc yet.
+        // It should be saved only after the user successfully verifies the code.
 
         return { success: true, secret: totp.secret.base32, uri };
 
@@ -352,19 +354,19 @@ export async function verifyRecaptchaAndSignUp(email: string, password: string, 
             recaptchaAction: "signup" 
         });
 
-        // For now, we'll accept any score. In a real app, you'd check if the score is above a threshold.
-        if (score === null) {
-            throw new Error("reCAPTCHA verification failed. Please try again.");
+        if (score === null || score < 0.5) { // Stricter check
+            throw new Error("reCAPTCHA verification failed. Your activity looks suspicious. Please try again.");
         }
-
-        console.log("reCAPTCHA score:", score);
 
         const userRecord = await adminAuth().createUser({ email, password });
         const { uid } = userRecord;
 
         await createUserDocument(uid, email, null, planId);
+        
+        // Create a custom token for the client to sign in
+        const customToken = await adminAuth().createCustomToken(uid);
 
-        return { success: true, userId: uid };
+        return { success: true, customToken };
 
     } catch (error) {
         console.error("Sign up with reCAPTCHA failed:", error);
@@ -386,7 +388,7 @@ export async function handleInstantPayout() {
 
         // 1. Check if user is on unlimited plan
         const unlimitedAddOn = addOns.find(a => a.id === 'instant_payouts');
-        if (!unlimitedAddOn) throw new Error("Instant Payouts add-on not configured.");
+        if (!unlimitedAddOn || !unlimitedAddOn.stripePriceId) throw new Error("Instant Payouts add-on not configured.");
 
         const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'active' });
         const hasUnlimited = subscriptions.data.some(sub => 

@@ -27,7 +27,7 @@ export const plans: Plan[] = [
             "AI Plan Generator",
             "Email reports"
         ],
-        stripePriceId: 'price_1PgfTkGCq4vA4vNq7z4xYp7z' // Placeholder - Replace with your actual Stripe Price ID
+        stripePriceId: 'price_1PgfTkGCq4vA4vNq7z4xYp7z' // Example ID
     },
     {
         id: "pro",
@@ -39,7 +39,7 @@ export const plans: Plan[] = [
             "Automated income allocation",
             "Smart Forecasting (Add-on)"
         ],
-        stripePriceId: 'price_1Pge5VGCq4vA4vNqgA3jRk2d' // Replace with your actual Stripe Price ID
+        stripePriceId: 'price_1Pge5VGCq4vA4vNqgA3jRk2d' // Example ID
     },
     {
         id: "business",
@@ -51,7 +51,7 @@ export const plans: Plan[] = [
             "Multi-user access (coming soon)",
             "Priority support"
         ],
-        stripePriceId: 'price_1Pge5lGCq4vA4vNqlsO0vL6r' // Replace with your actual Stripe Price ID
+        stripePriceId: 'price_1Pge5lGCq4vA4vNqlsO0vL6r' // Example ID
     }
 ];
 
@@ -61,21 +61,21 @@ export const addOns: AddOn[] = [
         name: "Smart Forecasting",
         description: "AI-powered cash flow predictions and future allocation planning based on your business habits and seasonal trends.",
         price: 6,
-        stripePriceId: 'price_1PghZcGCq4vA4vNq0a1b2c3d' // Replace with your actual Stripe Price ID
+        stripePriceId: 'price_1PghZcGCq4vA4vNq0a1b2c3d' // Example ID
     },
     {
         id: "tax_vault",
         name: "Tax Vault",
         description: "Automatically calculate and reserve estimated tax payments in a secure sub-account.",
         price: 5,
-        stripePriceId: 'price_1PghZcGCq4vA4vNq1b2c3d4e' // Replace with your actual Stripe Price ID
+        stripePriceId: 'price_1PghZcGCq4vA4vNq1b2c3d4e' // Example ID
     },
     {
         id: "instant_payouts",
         name: "Instant Payouts",
         description: "Access your allocated funds instantly, anytime — skip the standard 2-day wait.",
         price: 9,
-        stripePriceId: 'price_1PghZcGCq4vA4vNq2c3d4e5f' // Replace with your actual Stripe Price ID
+        stripePriceId: 'price_1PghZcGCq4vA4vNq2c3d4e5f' // Example ID
     }
 ];
 

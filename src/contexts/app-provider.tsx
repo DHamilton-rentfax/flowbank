@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/firebase/client';
 import { doc, getDoc, setDoc, collection, writeBatch, query, orderBy, onSnapshot, getDocs, deleteDoc } from "firebase/firestore";
 import { initialRulesForNewUser } from '@/lib/plans';
+import { createLinkToken, exchangePublicToken } from '@/app/actions';
 
 // Define the shape of the context
 interface AppContextType {
@@ -19,7 +20,8 @@ interface AppContextType {
   updateRules: (newRules: AllocationRule[]) => void;
   updateAccount: (updatedAccount: Account) => void;
   plaidAccessToken: string | null;
-  setPlaidAccessToken: (token: string | null) => void;
+  linkPlaidAccount: () => Promise<string | null>;
+  exchangePlaidPublicToken: (publicToken: string) => Promise<boolean>;
   plaidCursor: string | null;
   updatePlaidCursor: (cursor: string) => void;
   loadingData: boolean;
@@ -103,15 +105,24 @@ export function AppProvider({ children }: AppProviderProps) {
   }, [user]);
 
   
-  const setPlaidAccessToken = useCallback(async (token: string | null) => {
-      if (!user) return;
-      setPlaidAccessTokenState(token);
-      // Reset cursor and transactions when a new token is set
-      setPlaidCursor(null);
-      setPlaidTransactions([]);
-      const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, { plaidAccessToken: token, plaidCursor: null }, { merge: true });
-  },[user]);
+  const linkPlaidAccount = useCallback(async () => {
+      if (!user) return null;
+      const result = await createLinkToken(user.uid);
+      if (result.success && result.linkToken) {
+          return result.linkToken;
+      }
+      return null;
+  }, [user]);
+
+  const exchangePlaidPublicToken = useCallback(async (publicToken: string) => {
+      if(!user) return false;
+      const result = await exchangePublicToken(publicToken, user.uid);
+      if(result.success) {
+          setPlaidAccessTokenState('linked'); // Use a non-null placeholder to update UI state
+          return true;
+      }
+      return false;
+  }, [user])
 
   const updatePlaidCursor = useCallback(async (cursor: string) => {
     if(!user) return;
@@ -224,7 +235,8 @@ export function AppProvider({ children }: AppProviderProps) {
     updateRules,
     updateAccount,
     plaidAccessToken,
-    setPlaidAccessToken,
+    linkPlaidAccount,
+    exchangePlaidPublicToken,
     plaidCursor,
     updatePlaidCursor,
     plaidTransactions,

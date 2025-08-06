@@ -22,7 +22,7 @@ export function Footer() {
                             <h4 className="font-semibold mb-3 font-headline">Product</h4>
                             <ul className="space-y-2 text-sm text-muted-foreground">
                                 <li><Link href="/" className="hover:text-primary transition-colors">Home</Link></li>
-                                <li><Link href="/pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
+                                <li><Link href={process.env.NEXT_PUBLIC_STRIPE_PRICING_TABLE_URL!} target="_blank" className="hover:text-primary transition-colors">Pricing</Link></li>
                                 <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
                                 <li><Link href="/faq" className="hover:text-primary transition-colors">FAQ</Link></li>
                             </ul>
