@@ -1,72 +1,45 @@
 
 'use server';
 
-import { RecaptchaEnterpriseServiceClient } from '@google-cloud/recaptcha-enterprise';
-
 interface CreateAssessmentParams {
   token: string;
-  recaptchaAction: string;
+  recaptchaAction: string; // This is kept for interface consistency but won't be used in v2 verification
 }
 
 export async function createAssessment({
   token,
-  recaptchaAction,
 }: CreateAssessmentParams): Promise<number | null> {
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
   const projectID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const recaptchaKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-  // The reCAPTCHA secret key is used for server-side validation, but the Google Cloud library uses service account authentication.
-  // The library doesn't directly take the secret key. It relies on the application's default credentials.
-  // We'll proceed assuming the service account has the necessary permissions.
-
-  if (!projectID || !recaptchaKey) {
+  
+  if (!projectID || !recaptchaKey || !secretKey) {
+    console.error("reCAPTCHA environment variables are not set.");
     throw new Error("reCAPTCHA environment variables are not set.");
   }
-
-  // Create the reCAPTCHA client.
-  const client = new RecaptchaEnterpriseServiceClient();
-  const projectPath = client.projectPath(projectID);
-
-  // Build the assessment request.
-  const request = {
-    assessment: {
-      event: {
-        token: token,
-        siteKey: recaptchaKey,
-        userIpAddress: undefined
-      },
-    },
-    parent: projectPath,
-  };
-
+  
   try {
-    const [response] = await client.createAssessment(request);
+    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `secret=${secretKey}&response=${token}`,
+    });
 
-    // Check if the token is valid.
-    if (!response.tokenProperties?.valid) {
-      console.log(`The CreateAssessment call failed because the token was: ${response.tokenProperties?.invalidReason}`);
-      return null;
-    }
+    const data = await response.json();
 
-    // Check if the expected action was executed.
-    if (response.tokenProperties?.action === recaptchaAction) {
-      if (response.riskAnalysis?.score === undefined || response.riskAnalysis?.score === null) {
-        console.log("Risk analysis score not found in response.");
-        return null;
-      }
-      
-      console.log(`The reCAPTCHA score is: ${response.riskAnalysis.score}`);
-      response.riskAnalysis.reasons.forEach((reason) => {
-        console.log(reason);
-      });
-
-      return response.riskAnalysis.score;
+    if (data.success) {
+      console.log('reCAPTCHA verification successful.');
+      // Return a high score for success, as v2 doesn't provide a score.
+      // The calling function checks for a score > 0.5.
+      return 1.0; 
     } else {
-      console.log(`The action attribute in your reCAPTCHA tag (${response.tokenProperties?.action}) does not match the action you are expecting to score (${recaptchaAction})`);
+      console.error('reCAPTCHA verification failed:', data['error-codes']);
       return null;
     }
   } catch (error) {
-    console.error("Error creating reCAPTCHA assessment:", error);
+    console.error("Error verifying reCAPTCHA token:", error);
     return null;
   }
 }
-
