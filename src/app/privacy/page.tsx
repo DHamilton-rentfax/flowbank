@@ -61,7 +61,7 @@ export default function PrivacyPolicyPage() {
                         <p>We use administrative, technical, and physical security measures to help protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts, no security measures are perfect or impenetrable.</p>
 
                         <h2>6. Contact Us</h2>
-                        <p>If you have questions or comments about this Privacy Policy, please contact us at: <a href="mailto:support@flowbank.app">support@flowbank.app</a>.</p>
+                        <p>If you have questions or comments about this Privacy Policy, please contact us at: <a href="mailto:support@flowbank.ai">support@flowbank.ai</a>.</p>
                     </div>
                 </div>
             </main>

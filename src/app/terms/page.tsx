@@ -55,7 +55,7 @@ export default function TermsOfServicePage() {
                         <p>These Terms shall be governed and construed in accordance with the laws of the jurisdiction in which our company is based, without regard to its conflict of law provisions.</p>
                         
                         <h2>7. Contact Us</h2>
-                        <p>If you have any questions about these Terms, please contact us at: <a href="mailto:support@flowbank.app">support@flowbank.app</a>.</p>
+                        <p>If you have any questions about these Terms, please contact us at: <a href="mailto:support@flowbank.ai">support@flowbank.ai</a>.</p>
                     </div>
                 </div>
             </main>
