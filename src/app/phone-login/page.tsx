@@ -1,7 +1,5 @@
 
-"use client";
-
-import { AuthForm } from "@/components/auth/auth-form";
+import { PhoneAuthForm } from "@/components/auth/phone-auth-form";
 import { Logo } from "@/components/icons";
 import Link from "next/link";
 import { Users, Banknote, ShieldCheck, Zap } from "lucide-react";
@@ -29,7 +27,7 @@ const adFeatures = [
     }
 ]
 
-export default function LoginPage() {
+export default function PhoneLoginPage() {
   return (
     <div className="flex min-h-screen w-full">
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4">
@@ -40,27 +38,21 @@ export default function LoginPage() {
                     <h1 className="text-2xl font-semibold">FlowBank</h1>
                 </Link>
             </div>
-            <AuthForm mode="login" />
+            <PhoneAuthForm />
             <p className="mt-4 text-center text-sm text-muted-foreground">
-                <Link href="/phone-login" className="font-medium text-primary hover:underline">
-                    Sign in with phone number
+                <Link href="/login" className="font-medium text-primary hover:underline">
+                    Sign in with email
                 </Link>
-            </p>
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
-                Sign up
-            </Link>
             </p>
         </div>
       </div>
       <div className="hidden lg:flex w-1/2 flex-col items-start justify-center bg-sidebar p-12 text-sidebar-foreground">
         <div className="max-w-md">
             <h2 className="text-3xl font-bold font-headline mb-4">
-                Unlock Your Business's Full Potential
+                Secure & Simple Sign-In
             </h2>
             <p className="text-muted-foreground mb-8">
-                Go beyond basic allocation. Upgrade to a Pro plan to access powerful features designed to automate your finances and accelerate growth.
+                Access your account quickly and securely with phone authentication. No password required.
             </p>
             <div className="space-y-4">
                 {adFeatures.map((feature, index) => (
@@ -81,3 +73,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
