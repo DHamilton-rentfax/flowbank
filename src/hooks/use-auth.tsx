@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithCustomToken } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken } from "firebase/auth";
 import { auth, db } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
