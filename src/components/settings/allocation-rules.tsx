@@ -40,6 +40,11 @@ export function AllocationRules({ rules, setRules, onSave }: AllocationRulesProp
         title: "Rule Limit Reached",
         description: `Upgrade your plan to add more than ${ruleLimit} allocation rule(s).`,
         variant: "destructive",
+        action: (
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/pricing">Upgrade</Link>
+          </Button>
+        )
       });
       return;
     }

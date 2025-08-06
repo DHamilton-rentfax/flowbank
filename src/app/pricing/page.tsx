@@ -56,9 +56,9 @@ export default function PricingPage() {
     const getPlanDescription = (plan: Plan) => {
         switch (plan.id) {
             case 'free': return "For individuals getting started.";
-            case 'starter': return "For solopreneurs and freelancers.";
-            case 'pro': return "For growing businesses & power users.";
-            case 'business': return "For established businesses and teams.";
+            case 'starter': return "Get started with simple income allocation.";
+            case 'pro': return "For entrepreneurs who want full control.";
+            case 'business': return "For established businesses ready to scale.";
             default: return "";
         }
     }
@@ -97,7 +97,7 @@ export default function PricingPage() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-stretch">
                         {plans.map((plan) => (
                             <Card key={plan.id} className={`flex flex-col ${plan.id === 'pro' ? 'border-primary shadow-lg' : ''}`}>
                                 <CardHeader>
@@ -117,8 +117,8 @@ export default function PricingPage() {
                                 <CardContent className="flex-1">
                                     <ul className="space-y-3">
                                         {plan.features.map((feature, index) => (
-                                            <li key={index} className="flex items-center">
-                                                <Check className="h-5 w-5 text-primary mr-2" />
+                                            <li key={index} className="flex items-start">
+                                                <Check className="h-5 w-5 text-primary mr-2 mt-0.5 shrink-0" />
                                                 <span>{feature}</span>
                                             </li>
                                         ))}
