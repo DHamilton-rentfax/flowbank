@@ -452,3 +452,38 @@ export async function handleInstantPayout() {
         return { success: false, error: errorMessage };
     }
 }
+
+export async function createTestCharge() {
+    try {
+        const userId = await getUserId();
+        const userDocRef = db.collection("users").doc(userId);
+        const userDoc = await userDocRef.get();
+        
+        if (!userDoc.exists) throw new Error("User not found.");
+        
+        const userData = userDoc.data()!;
+        const customerId = userData.stripeCustomerId;
+
+        const paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
+        if (paymentMethods.data.length === 0) {
+            throw new Error("No payment method on file. Please add a card in your settings.");
+        }
+
+        await stripe.paymentIntents.create({
+            amount: 100, // $1.00
+            currency: 'usd',
+            customer: customerId,
+            payment_method: paymentMethods.data[0].id,
+            off_session: true,
+            confirm: true,
+            description: "Test charge from FlowBank"
+        });
+
+        return { success: true, message: "Successfully created a $1.00 test charge." };
+
+    } catch (error) {
+        console.error("Error creating test charge:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
