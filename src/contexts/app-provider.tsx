@@ -5,8 +5,8 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import type { Account, AllocationRule, Transaction, UserPlan } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/firebase/client';
-import { doc, getDoc, setDoc, collection, writeBatch, query, orderBy, onSnapshot, getDocs } from "firebase/firestore";
-import { createUserDocument, initialRulesForNewUser } from '@/lib/plans';
+import { doc, getDoc, setDoc, collection, writeBatch, query, orderBy, onSnapshot, getDocs, deleteDoc } from "firebase/firestore";
+import { initialRulesForNewUser } from '@/lib/plans';
 
 // Define the shape of the context
 interface AppContextType {
@@ -135,29 +135,33 @@ export function AppProvider({ children }: AppProviderProps) {
     const accountsSnap = await getDocs(accountsRef);
     const existingAccounts = accountsSnap.docs.map(d => d.data() as Account);
 
-
-    // Delete old rules first to handle deletions
+    // Get all current rules from state to find which to delete
     const rulesCollectionRef = collection(db, "users", user.uid, "rules");
     const oldRulesSnap = await getDocs(rulesCollectionRef);
+    
     oldRulesSnap.docs.forEach(doc => {
         if (!newRules.some(r => r.id === doc.id)) {
             batch.delete(doc.ref);
+            // Also delete corresponding account
+            const accountDocRef = doc(db, "users", user.uid, "accounts", doc.id);
+            batch.delete(accountDocRef);
         }
     });
-    
+
     // Set new rules and create/update corresponding accounts
     newRules.forEach(rule => {
         const ruleDocRef = doc(db, "users", user.uid, "rules", rule.id);
         batch.set(ruleDocRef, rule);
         
         const accountDocRef = doc(db, "users", user.uid, "accounts", rule.id);
-        const existingAccount = existingAccounts.find(acc => acc.name === rule.name);
+        const existingAccount = existingAccounts.find(acc => acc.name === rule.name && acc.id !== rule.id); // check for same name but different id
+        const currentAccount = existingAccounts.find(acc => acc.id === rule.id);
         
         batch.set(accountDocRef, {
             id: rule.id,
             name: rule.name,
-            balance: existingAccount?.balance || 0,
-            goal: existingAccount?.goal || null,
+            balance: currentAccount?.balance || existingAccount?.balance || 0,
+            goal: currentAccount?.goal || existingAccount?.goal || null,
         }, { merge: true });
     });
     
@@ -171,21 +175,18 @@ export function AppProvider({ children }: AppProviderProps) {
     const batch = writeBatch(db);
 
     const newAllocations: { ruleId: string; amount: number }[] = [];
-    const currentAccounts = [...accounts]; // Create a mutable copy
     
     rules.forEach(rule => {
       const allocationAmount = amount * (rule.percentage / 100);
       newAllocations.push({ ruleId: rule.id, amount: allocationAmount });
 
-      const accountIndex = currentAccounts.findIndex(acc => acc.id === rule.id);
+      const accountIndex = accounts.findIndex(acc => acc.id === rule.id);
 
       if (accountIndex !== -1) {
-        const accountToUpdate = currentAccounts[accountIndex];
+        const accountToUpdate = accounts[accountIndex];
         const updatedBalance = accountToUpdate.balance + allocationAmount;
         const accountDocRef = doc(db, "users", user.uid, "accounts", accountToUpdate.id);
         batch.update(accountDocRef, { balance: updatedBalance });
-        // Update local state immediately for responsiveness
-        currentAccounts[accountIndex] = { ...accountToUpdate, balance: updatedBalance };
       }
     });
 
@@ -200,7 +201,6 @@ export function AppProvider({ children }: AppProviderProps) {
     batch.set(newTransactionRef, newTransaction);
     
     await batch.commit();
-    setAccounts(currentAccounts); // Update state after commit
   }, [user, rules, accounts]);
   
   const setPlaidTransactionsWithPersistence = useCallback(async (newTransactions: any[]) => {

@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail } from "firebase/auth";
-import { auth, db } from "@/firebase/client";
+import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithCustomToken } from "firebase/auth";
+import { auth } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
 import { verifyRecaptchaAndSignUp } from "@/app/actions";
@@ -79,8 +79,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signUpWithEmail = async (email: string, password: string, token: string, planId?: string | null) => {
-    return await verifyRecaptchaAndSignUp(email, password, token, planId);
+ const signUpWithEmail = async (email: string, password: string, token: string, planId?: string | null) => {
+    const result = await verifyRecaptchaAndSignUp(email, password, token, planId);
+    if (result.success && result.customToken) {
+        await signInWithCustomToken(auth, result.customToken);
+    }
+    return result;
   }
 
   return (

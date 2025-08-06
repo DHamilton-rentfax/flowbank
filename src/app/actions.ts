@@ -10,13 +10,24 @@ import { Products, TransactionsSyncRequest } from "plaid";
 import { CountryCode } from "plaid";
 import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
-import { db } from "@/firebase/client";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { auth } from "@/firebase/client";
+import { db } from "@/firebase/server";
+import { auth as adminAuth } from "firebase-admin";
 import { plans, addOns, createUserDocument } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
 import { createAssessment } from "@/lib/recaptcha";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth } from "firebase/auth";
+import { app } from "@/firebase/client";
+
+
+const getUserId = async () => {
+    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
+    if (!idToken) {
+        throw new Error("User not authenticated");
+    }
+    const decodedToken = await adminAuth().verifyIdToken(idToken);
+    return decodedToken.uid;
+};
+
 
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
     try {
@@ -63,7 +74,7 @@ export async function getChatbotResponse(input: ChatInput) {
 }
 
 export async function createLinkToken(accessToken?: string | null) {
-    const user = auth.currentUser;
+    const user = getAuth(app).currentUser;
     if (!user) throw new Error("User not authenticated");
 
     try {
@@ -171,8 +182,8 @@ export async function createStripeConnectedAccount(userId: string, email: string
         });
 
         // Save the Stripe account ID to the user's document in Firestore
-        const userDocRef = doc(db, "users", userId);
-        await setDoc(userDocRef, { stripeAccountId: account.id }, { merge: true });
+        const userDocRef = db.collection("users").doc(userId);
+        await userDocRef.set({ stripeAccountId: account.id }, { merge: true });
 
         const origin = headers().get('origin');
         const accountLink = await stripe.accountLinks.create({
@@ -193,14 +204,14 @@ export async function createStripeConnectedAccount(userId: string, email: string
 
 export async function createCheckoutSession(userId: string, planId: string) {
     try {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await getDoc(userDocRef);
+        const userDocRef = db.collection("users").doc(userId);
+        const userDoc = await userDocRef.get();
 
-        if (!userDoc.exists()) {
+        if (!userDoc.exists) {
             throw new Error("User not found");
         }
         const user = userDoc.data();
-        const stripeCustomerId = user.stripeCustomerId;
+        const stripeCustomerId = user!.stripeCustomerId;
         const plan = plans.find(p => p.id === planId);
 
         if (!plan || !plan.stripePriceId) {
@@ -236,13 +247,13 @@ export async function createCheckoutSession(userId: string, planId: string) {
 
 export async function createAddOnCheckoutSession(userId: string, addOnId: string) {
     try {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await getDoc(userDocRef);
+        const userDocRef = db.collection("users").doc(userId);
+        const userDoc = await userDocRef.get();
 
-        if (!userDoc.exists()) throw new Error("User not found");
+        if (!userDoc.exists) throw new Error("User not found");
         
         const userData = userDoc.data();
-        const stripeCustomerId = userData.stripeCustomerId;
+        const stripeCustomerId = userData!.stripeCustomerId;
         const addOn = addOns.find(a => a.id === addOnId);
         
         if (!addOn) throw new Error("Add-on not found.");
@@ -277,14 +288,15 @@ export async function createAddOnCheckoutSession(userId: string, addOnId: string
 
 export async function createCustomerPortalSession(userId: string) {
     try {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await getDoc(userDocRef);
+        const userDocRef = db.collection("users").doc(userId);
+        const userDoc = await userDocRef.get();
 
-        if (!userDoc.exists()) {
+        if (!userDoc.exists) {
             throw new Error("User not found");
         }
-
-        const stripeCustomerId = userDoc.data().stripeCustomerId;
+        
+        const userData = userDoc.data();
+        const stripeCustomerId = userData!.stripeCustomerId;
         if (!stripeCustomerId) {
             throw new Error("User does not have a Stripe customer ID.");
         }
@@ -306,7 +318,7 @@ export async function createCustomerPortalSession(userId: string) {
 
 
 export async function setup2FA() {
-    const user = auth.currentUser;
+    const user = getAuth(app).currentUser;
     if (!user || !user.email) {
         throw new Error("User not authenticated or email is missing.");
     }
@@ -347,15 +359,93 @@ export async function verifyRecaptchaAndSignUp(email: string, password: string, 
 
         console.log("reCAPTCHA score:", score);
 
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const { user } = userCredential;
+        const userRecord = await adminAuth().createUser({ email, password });
+        const { uid } = userRecord;
 
-        await createUserDocument(user.uid, user.email!, null, planId);
+        await createUserDocument(uid, email, null, planId);
 
-        return { success: true, userId: user.uid };
+        return { success: true, userId: uid };
 
     } catch (error) {
         console.error("Sign up with reCAPTCHA failed:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function handleInstantPayout() {
+    try {
+        const userId = await getUserId();
+        const userDocRef = db.collection("users").doc(userId);
+        const userDoc = await userDocRef.get();
+        
+        if (!userDoc.exists) throw new Error("User not found.");
+        
+        const userData = userDoc.data()!;
+        const customerId = userData.stripeCustomerId;
+
+        // 1. Check if user is on unlimited plan
+        const unlimitedAddOn = addOns.find(a => a.id === 'instant_payouts');
+        if (!unlimitedAddOn) throw new Error("Instant Payouts add-on not configured.");
+
+        const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'active' });
+        const hasUnlimited = subscriptions.data.some(sub => 
+            sub.items.data.some(item => item.price.id === unlimitedAddOn.stripePriceId)
+        );
+
+        if (hasUnlimited) {
+            return { success: true, charged: false, upgraded: false, message: "Unlimited plan is active. No charge needed." };
+        }
+
+        // 2. Log payout use
+        const now = new Date();
+        const month = `${now.getFullYear()}-${now.getMonth() + 1}`;
+        const payoutLogRef = db.collection("payout_logs").doc(userId);
+        const logSnap = await payoutLogRef.get();
+        
+        let usageCount = 0;
+        if (logSnap.exists) {
+            usageCount = (logSnap.data()?.[month] || 0) + 1;
+            await payoutLogRef.update({ [month]: usageCount });
+        } else {
+            usageCount = 1;
+            await payoutLogRef.set({ [month]: 1 });
+        }
+        
+        // 3. Charge $2
+        const paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
+        if (paymentMethods.data.length === 0) {
+            throw new Error("No payment method on file. Please add a card in your settings.");
+        }
+
+        await stripe.paymentIntents.create({
+            amount: 200, // $2.00
+            currency: 'usd',
+            customer: customerId,
+            payment_method: paymentMethods.data[0].id,
+            off_session: true,
+            confirm: true,
+        });
+
+        // 4. Auto-upgrade after 3 uses
+        if (usageCount >= 3) {
+            await stripe.subscriptions.create({
+                customer: customerId,
+                items: [{ price: unlimitedAddOn.stripePriceId }],
+                proration_behavior: 'none', // Don't prorate
+            });
+            // Update user's plan in Firestore
+            const userPlan = userData.plan || {};
+            userPlan.addOns = { ...userPlan.addOns, 'instant_payouts': true };
+            await userDocRef.update({ plan: userPlan });
+
+            return { success: true, charged: true, upgraded: true, message: "Charged $2.00 and auto-upgraded to unlimited payouts!" };
+        }
+
+        return { success: true, charged: true, upgraded: false, message: `Charged $2.00. You've used instant payouts ${usageCount} time(s) this month.` };
+
+    } catch (error) {
+        console.error("Error handling instant payout:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }

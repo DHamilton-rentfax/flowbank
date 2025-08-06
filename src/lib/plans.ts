@@ -1,6 +1,5 @@
 
-import { db } from '@/firebase/client';
-import { doc, setDoc, getDoc, writeBatch } from 'firebase/firestore';
+import { db } from './firebase/server';
 import type { Plan, UserPlan, AllocationRule, Account, AddOn } from './types';
 import { stripe } from './stripe';
 import { nanoid } from './utils';
@@ -97,7 +96,7 @@ export const initialRulesForNewUser = (): AllocationRule[] => {
 
 
 export async function createUserDocument(userId: string, email: string, displayName?: string | null, planId?: string | null) {
-    const userDocRef = doc(db, "users", userId);
+    const userDocRef = db.collection("users").doc(userId);
     
     // Don't check if the document exists. 
     // This function should only be called once on signup, so we can assume it doesn't.
@@ -132,7 +131,7 @@ export async function createUserDocument(userId: string, email: string, displayN
         plan: userPlan,
     };
 
-    const batch = writeBatch(db);
+    const batch = db.batch();
 
     // 1. Set the main user document
     batch.set(userDocRef, userData);
@@ -142,10 +141,10 @@ export async function createUserDocument(userId: string, email: string, displayN
     newRules.forEach((rule) => {
         const account: Account = { id: rule.id, name: rule.name, balance: 0 };
         
-        const ruleDocRef = doc(db, "users", userId, "rules", rule.id);
+        const ruleDocRef = db.collection("users").doc(userId).collection("rules").doc(rule.id);
         batch.set(ruleDocRef, rule);
 
-        const accountDocRef = doc(db, "users", userId, "accounts", rule.id);
+        const accountDocRef = db.collection("users").doc(userId).collection("accounts").doc(rule.id);
         batch.set(accountDocRef, account);
     });
 
