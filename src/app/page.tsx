@@ -1,7 +1,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Logo, StripeLogo, PlaidLogo, Zap, Shuffle, BarChartBig, Link2, Bot, ShieldCheck, Banknote } from "@/components/icons";
+import { Logo, StripeLogo, PlaidLogo, Zap, Shuffle, BarChartBig, Link2, Bot, ShieldCheck, Banknote, FirebaseLogo, GoogleAiLogo } from "@/components/icons";
 import { Footer } from "@/components/layout/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
@@ -113,9 +113,11 @@ export default function LandingPage() {
                 </div>
                  <div className="mt-16 text-center">
                     <p className="text-sm text-muted-foreground font-semibold mb-4">POWERED BY INDUSTRY LEADERS</p>
-                    <div className="flex justify-center items-center gap-8">
+                    <div className="flex justify-center items-center gap-8 md:gap-12 flex-wrap">
                         <StripeLogo className="h-8 text-muted-foreground" />
                         <PlaidLogo className="h-12 text-muted-foreground" />
+                        <FirebaseLogo className="h-8 text-muted-foreground" />
+                        <GoogleAiLogo className="h-6 text-muted-foreground" />
                     </div>
                  </div>
             </div>

@@ -58,6 +58,42 @@ export function PlaidLogo(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function FirebaseLogo(props: SVGProps<SVGSVGElement>) {
+    return (
+        <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            <path d="M6.333 19.333L15.667 4h-4L4 16l2.333 3.333z" fill="#FFC24A"/>
+            <path d="M6.333 19.333L12.5 9.333l-3.334 7.667L6.333 19.333z" fill="#FFA712"/>
+            <path d="M11.667 4l-5.334 15.333L8.5 22l11.5-18h-8.333z" fill="#F4BD62"/>
+            <path d="M11.667 4L8.5 22l.833-2.333L16.5 4h-4.833z" fill="#FFCA28"/>
+        </svg>
+    )
+}
+
+export function GoogleAiLogo(props: SVGProps<SVGSVGElement>) {
+    return (
+        <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            <path d="M12 5.545L9.955 7.59 7.91 5.545 5.864 7.59 3.818 5.545 6.41 3h3.545l2.045 2.045zm0 12.91L14.045 16.41l2.046 2.045L18.136 16.41l2.046 2.045L17.59 21h-3.545L12 18.455zm-6.182-6.728a2.182 2.182 0 114.364 0 2.182 2.182 0 01-4.364 0z" fill="#4285F4"/>
+            <path d="M12 11.727a2.182 2.182 0 114.364 0 2.182 2.182 0 01-4.364 0zm6.182-6.182a2.182 2.182 0 114.364 0 2.182 2.182 0 01-4.364 0z" fill="#34A853"/>
+            <path d="M18.182 11.727a2.182 2.182 0 114.364 0 2.182 2.182 0 01-4.364 0z" fill="#FBBC04"/>
+        </svg>
+    )
+}
+
+
 export function Zap(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
