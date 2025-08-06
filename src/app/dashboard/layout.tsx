@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Home, Settings, BarChart3, LogOut, PenSquare, MessageSquare, CreditCard } from "lucide-react";
+import { Home, Settings, BarChart3, LogOut, PenSquare, MessageSquare, CreditCard, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -101,6 +101,14 @@ export default function DashboardLayout({
                       </Link>
                   </SidebarMenuButton>
               </SidebarMenuItem>
+               <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/feedback')}>
+                      <Link href="/dashboard/feedback">
+                          <MessageSquare />
+                          <span>Feedback</span>
+                      </Link>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/settings')}>
                       <Link href="/dashboard/settings">
@@ -137,7 +145,7 @@ export default function DashboardLayout({
              <Popover>
                 <PopoverTrigger asChild>
                      <Button className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg">
-                        <MessageSquare />
+                        <HelpCircle />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 h-96 p-0 mr-4 mb-2" side="top" align="end">

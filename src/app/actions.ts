@@ -556,3 +556,28 @@ export async function createPaymentLink(description: string, amount: number) {
         return { success: false, error: errorMessage };
     }
 }
+
+export async function submitFeedback(feedback: string) {
+    try {
+        const userId = await getUserId();
+        const userDoc = await db.collection('users').doc(userId).get();
+        const userEmail = userDoc.data()?.email || 'unknown';
+
+        // In a real app, you would save this to a database or send it to a support tool.
+        // For now, we'll just log it to the server console.
+        console.log(`Feedback from ${userEmail} (${userId}):`);
+        console.log(feedback);
+
+        // You could also use a Genkit flow to summarize or categorize feedback.
+
+        return { 
+            success: true, 
+            message: "Thank you for your feedback! We've received it and will review it shortly." 
+        };
+
+    } catch (error) {
+        console.error("Error submitting feedback:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
