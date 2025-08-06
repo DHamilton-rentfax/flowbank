@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithCustomToken, createUserWithEmailAndPassword } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithCustomToken } from "firebase/auth";
 import { auth, db } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,7 @@ interface AuthContextType {
   updateUserProfile: (updates: { displayName?: string; photoURL?: string; }) => Promise<void>;
   sendPasswordReset: () => Promise<void>;
   signUpWithEmail: (email: string, password: string, token: string, planId?: string | null) => Promise<any>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,10 +32,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      if (user) {
+        router.push("/dashboard");
+      }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [router]);
   
   const logout = async () => {
     try {
@@ -81,11 +85,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
  const signUpWithEmail = async (email: string, password: string, token: string, planId?: string | null) => {
-    return await verifyRecaptchaAndSignUp(email, password, token, planId);
+    const result = await verifyRecaptchaAndSignUp(email, password, token, planId);
+    if (result.success && result.customToken) {
+      await signInWithCustomToken(auth, result.customToken);
+    } else {
+      throw new Error(result.error || "Sign up failed.");
+    }
+  }
+
+  const loginWithEmail = async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout, updateUserProfile, sendPasswordReset, signUpWithEmail }}>
+    <AuthContext.Provider value={{ user, loading, logout, updateUserProfile, sendPasswordReset, signUpWithEmail, loginWithEmail }}>
       {children}
     </AuthContext.Provider>
   );

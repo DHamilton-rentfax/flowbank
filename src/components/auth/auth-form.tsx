@@ -15,12 +15,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { 
-  signInWithEmailAndPassword,
-  type AuthError
-} from "firebase/auth";
-import { auth } from "@/firebase/client";
-import { useRouter } from "next/navigation";
 import ReCAPTCHA from "react-google-recaptcha";
 
 
@@ -34,10 +28,8 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
-  const { signUpWithEmail } = useAuth();
+  const { loginWithEmail, signUpWithEmail } = useAuth();
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const title = mode === "login" ? "Welcome Back" : "Create an Account";
@@ -51,7 +43,6 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
     console.error("Firebase Auth Error:", error);
     let message = "An unknown error occurred.";
     
-    // Handle both Firebase AuthError and custom errors from our server action
     const errorCode = error.code || error.name;
 
     switch (errorCode) {
@@ -85,43 +76,33 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mode === 'signup' && !recaptchaToken) {
-        toast({
-            title: "Verification Required",
-            description: "Please complete the reCAPTCHA challenge.",
-            variant: "destructive",
-        });
-        return;
-    }
     setIsLoading(true);
 
     try {
       if (mode === 'signup') {
-        const result = await signUpWithEmail(email, password, recaptchaToken!, planId);
-        if (!result.success) {
-            throw new Error(result.error);
+        const token = await recaptchaRef.current?.executeAsync();
+        if (!token) {
+          throw new Error("reCAPTCHA verification failed. Please try again.");
         }
+        await signUpWithEmail(email, password, token, planId);
          toast({
           title: "Account Created!",
-          description: "You've been successfully signed up.",
+          description: "You've been successfully signed up. Redirecting...",
           className: "bg-accent text-accent-foreground",
         });
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        await loginWithEmail(email, password);
          toast({
           title: "Logged In!",
           description: "Welcome back.",
           className: "bg-accent text-accent-foreground",
         });
       }
-      router.push("/dashboard");
     } catch (error) {
-      handleAuthError(error as AuthError);
+      handleAuthError(error as Error);
     } finally {
       setIsLoading(false);
-      // Reset reCAPTCHA for security
       recaptchaRef.current?.reset();
-      setRecaptchaToken(null);
     }
   };
   
@@ -173,16 +154,13 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
               </div>
             </div>
             {mode === 'signup' && (
-                <div className="flex justify-center mt-4">
-                    <ReCAPTCHA
-                        ref={recaptchaRef}
-                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                        onChange={setRecaptchaToken}
-                        action="signup"
-                    />
-                </div>
+                <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                    size="invisible"
+                />
             )}
-            <Button type="submit" className="w-full mt-4" disabled={isLoading || (mode === 'signup' && !recaptchaToken)}>
+            <Button type="submit" className="w-full mt-4" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 animate-spin" />}
               {buttonText}
             </Button>
