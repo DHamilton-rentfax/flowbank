@@ -1,5 +1,5 @@
 
-import { db } from './firebase/server';
+import { db } from '@/firebase/server';
 import type { Plan, UserPlan, AllocationRule, Account, AddOn } from './types';
 import { stripe } from './stripe';
 import { nanoid } from './utils';
