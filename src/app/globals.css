@@ -14,20 +14,20 @@ body {
     --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
-    --primary: 205 65% 42%; /* Deep Blue #2274A5 */
+    --primary: 214 70% 59%; /* #4A90E2 cool blue */
     --primary-foreground: 0 0% 100%;
     --secondary: 184 79% 62%; /* Aqua #51E1ED */
     --secondary-foreground: 224 71% 4%;
     --muted: 210 40% 90%;
     --muted-foreground: 215 28% 45%;
-    --accent: 210 40% 90%;
+    --accent: 112 53% 58%; /* #67C25A vibrant green */
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 205 65% 42%;
-    --chart-1: 205 65% 42%;
+    --ring: 214 70% 59%;
+    --chart-1: 214 70% 59%;
     --chart-2: 184 79% 62%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
@@ -49,20 +49,20 @@ body {
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
-    --primary: 184 79% 62%;
+    --primary: 214 70% 59%;
     --primary-foreground: 224 71% 4%;
     --secondary: 205 65% 42%;
     --secondary-foreground: 0 0% 98%;
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+    --accent: 112 53% 58%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217 33% 22%;
     --input: 217 33% 22%;
-    --ring: 184 79% 62%;
-    --chart-1: 184 79% 62%;
+    --ring: 214 70% 59%;
+    --chart-1: 214 70% 59%;
     --chart-2: 205 65% 42%;
     --sidebar-background: 0 0% 13%;
     --sidebar-foreground: 0 0% 98%;
