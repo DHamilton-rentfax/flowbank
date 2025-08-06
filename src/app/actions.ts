@@ -366,8 +366,8 @@ export async function verifyRecaptchaAndSignUp(email: string, password: string, 
             recaptchaAction: "signup" 
         });
 
-        if (score === null || score < 0.5) { // Stricter check
-            throw new Error("reCAPTCHA verification failed. Your activity looks suspicious. Please try again.");
+        if (score === null) {
+            throw new Error("reCAPTCHA verification failed. Please try again.");
         }
 
         const userRecord = await adminAuth().createUser({ email, password });

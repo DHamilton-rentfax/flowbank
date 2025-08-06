@@ -80,9 +80,9 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
-        const token = await recaptchaRef.current?.executeAsync();
+        const token = recaptchaRef.current?.getValue();
         if (!token) {
-          throw new Error("reCAPTCHA verification failed. Please try again.");
+          throw new Error("reCAPTCHA verification failed. Please check the box.");
         }
         await signUpWithEmail(email, password, token, planId);
          toast({
@@ -154,11 +154,12 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
               </div>
             </div>
             {mode === 'signup' && (
-                <ReCAPTCHA
-                    ref={recaptchaRef}
-                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                    size="invisible"
-                />
+                <div className="flex justify-center">
+                    <ReCAPTCHA
+                        ref={recaptchaRef}
+                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                    />
+                </div>
             )}
             <Button type="submit" className="w-full mt-4" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 animate-spin" />}
