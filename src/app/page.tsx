@@ -16,7 +16,7 @@ const howItWorks = [
     {
         step: 2,
         title: "Define Your Rules",
-        description: "Create custom, percentage-based rules for allocating your income. Not sure where to start? Our AI can generate a plan for you."
+        description: "Create custom rules based on percentages or fixed dollar amounts. Not sure where to start? Our AI can generate a plan for you."
     },
     {
         step: 3,
