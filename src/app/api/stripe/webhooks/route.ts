@@ -3,10 +3,12 @@ import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
-import { db } from "@/firebase/client";
+import { db as adminDb } from "@/firebase/server";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { plans, addOns } from "@/lib/plans";
 import type { UserPlan } from "@/lib/types";
+import { db } from "@/firebase/client";
+
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
             return new NextResponse("Webhook Error: Missing metadata", { status: 400 });
         }
         
-        const userDocRef = doc(db, "users", userId);
+        const userDocRef = adminDb.collection("users").doc(userId);
 
         if (sessionType === 'plan') {
             const planId = session.metadata?.planId;
@@ -62,7 +64,7 @@ export async function POST(req: Request) {
                 addOns: {}, // Initialize addOns
             };
             
-            await setDoc(userDocRef, { plan: userPlan }, { merge: true });
+            await userDocRef.set({ plan: userPlan }, { merge: true });
 
         } else if (sessionType === 'add-on') {
             const addOnId = session.metadata?.addOnId;
@@ -75,11 +77,11 @@ export async function POST(req: Request) {
                 return new NextResponse(`Webhook Error: Add-on with id ${addOnId} not found.`, { status: 400 });
             }
             
-            const userDoc = await getDoc(userDocRef);
-            if(userDoc.exists()) {
-                const userPlan = userDoc.data().plan as UserPlan;
+            const userDoc = await userDocRef.get();
+            if(userDoc.exists) {
+                const userPlan = userDoc.data()!.plan as UserPlan;
                 userPlan.addOns = { ...userPlan.addOns, [addOnId]: true };
-                await setDoc(userDocRef, { plan: userPlan }, { merge: true });
+                await userDocRef.set({ plan: userPlan }, { merge: true });
             }
         }
     }
@@ -88,17 +90,17 @@ export async function POST(req: Request) {
          const subscription = event.data.object as Stripe.Subscription;
          const customerId = subscription.customer as string;
 
-         const userQuery = await db.collection('users').where('stripeCustomerId', '==', customerId).get();
+         const userQuery = await adminDb.collection('users').where('stripeCustomerId', '==', customerId).get();
          if (userQuery.empty) {
              console.error(`No user found with Stripe customer ID ${customerId}`);
              return new NextResponse("User not found", { status: 404 });
          }
          const userId = userQuery.docs[0].id;
-         const userDocRef = doc(db, "users", userId);
-         const userDoc = await getDoc(userDocRef);
+         const userDocRef = adminDb.collection("users").doc(userId);
+         const userDoc = await userDocRef.get();
          
          if (userDoc.exists()) {
-            let userPlan = userDoc.data().plan as UserPlan;
+            let userPlan = userDoc.data()!.plan as UserPlan;
             const priceId = subscription.items.data[0].price.id;
             
             // Check if this subscription is for a main plan or an add-on
@@ -126,7 +128,7 @@ export async function POST(req: Request) {
                  console.error(`No plan or add-on found for price ID ${priceId}`);
             }
 
-            await setDoc(userDocRef, { plan: userPlan }, { merge: true });
+            await userDocRef.set({ plan: userPlan }, { merge: true });
          }
     }
 
