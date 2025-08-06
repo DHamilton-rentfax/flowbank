@@ -12,5 +12,5 @@ configureGenkit({
     }),
   ],
   logLevel: 'debug',
-  enableTracingAndMetrics: true,
+  enableTracingAndMetrics: false,
 });
