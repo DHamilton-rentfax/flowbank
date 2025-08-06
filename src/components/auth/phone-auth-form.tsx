@@ -37,7 +37,7 @@ export function PhoneAuthForm() {
   useEffect(() => {
     // This effect sets up the reCAPTCHA verifier instance when the component mounts.
     // It will be invisible and attached to the button.
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
             size: "invisible",
             callback: (response: any) => {
@@ -55,8 +55,9 @@ export function PhoneAuthForm() {
     }
     setIsLoading(true);
     try {
-      if (window.recaptchaVerifier) {
-        const result = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+      const verifier = window.recaptchaVerifier;
+      if (verifier) {
+        const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
         setConfirmationResult(result);
         setOtpSent(true);
         toast({ title: "OTP Sent!", description: "A one-time password has been sent to your phone." });
@@ -66,9 +67,13 @@ export function PhoneAuthForm() {
     } catch (err: any) {
       toast({ title: "Error sending OTP", description: err.message, variant: "destructive" });
       // Reset reCAPTCHA on error
-      window.recaptchaVerifier?.render().then((widgetId) => {
-          (window as any).grecaptcha.reset(widgetId);
-      });
+       if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.render().then((widgetId) => {
+            if ((window as any).grecaptcha) {
+                (window as any).grecaptcha.reset(widgetId);
+            }
+        });
+       }
     } finally {
         setIsLoading(false);
     }

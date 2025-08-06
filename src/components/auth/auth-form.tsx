@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,6 +31,12 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
   const { toast } = useToast();
   const { loginWithEmail, signUpWithEmail } = useAuth();
   const recaptchaRef = useRef<ReCAPTCHA>(null);
+  const [recaptchaKey, setRecaptchaKey] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    // Retrieve key from window object set in ClientLayout
+    setRecaptchaKey((window as any).recaptchaSiteKey);
+  }, []);
 
   const title = mode === "login" ? "Welcome Back" : "Create an Account";
   const description =
@@ -155,11 +161,11 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
                 </Button>
               </div>
             </div>
-            {mode === 'signup' && (
+            {mode === 'signup' && recaptchaKey && (
                 <div className="flex justify-center">
                     <ReCAPTCHA
                         ref={recaptchaRef}
-                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                        sitekey={recaptchaKey}
                     />
                 </div>
             )}
