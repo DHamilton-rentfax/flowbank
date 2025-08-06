@@ -80,8 +80,7 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
-        const token = await recaptchaRef.current?.executeAsync();
-        recaptchaRef.current?.reset();
+        const token = recaptchaRef.current?.getValue();
         if (!token) {
           throw new Error("reCAPTCHA verification failed. Please check the box.");
         }
@@ -103,6 +102,9 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
       handleAuthError(error as Error);
     } finally {
       setIsLoading(false);
+      if (mode === 'signup') {
+        recaptchaRef.current?.reset();
+      }
     }
   };
   
@@ -158,7 +160,6 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
                     <ReCAPTCHA
                         ref={recaptchaRef}
                         sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                        size="invisible"
                     />
                 </div>
             )}
