@@ -167,6 +167,19 @@ export async function findIncomeTransactions(input: IdentifyIncomeInput) {
 
 export async function createStripeConnectedAccount(userId: string, email: string) {
     try {
+        const userDocRef = db.collection("users").doc(userId);
+        const userDoc = await userDocRef.get();
+        if (userDoc.exists && userDoc.data()?.stripeAccountId) {
+            const accountId = userDoc.data()!.stripeAccountId;
+            const accountLink = await stripe.accountLinks.create({
+                account: accountId,
+                refresh_url: `${headers().get('origin')}/settings`,
+                return_url: `${headers().get('origin')}/settings`,
+                type: 'account_onboarding',
+            });
+            return { success: true, url: accountLink.url };
+        }
+
         const account = await stripe.accounts.create({
             type: 'express',
             country: 'US',
@@ -178,7 +191,6 @@ export async function createStripeConnectedAccount(userId: string, email: string
         });
 
         // Save the Stripe account ID to the user's document in Firestore
-        const userDocRef = db.collection("users").doc(userId);
         await userDocRef.set({ stripeAccountId: account.id }, { merge: true });
 
         const origin = headers().get('origin');
@@ -483,6 +495,63 @@ export async function createTestCharge() {
 
     } catch (error) {
         console.error("Error creating test charge:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function createPaymentLink(description: string, amount: number) {
+    try {
+        const userId = await getUserId();
+        const userDocRef = db.collection("users").doc(userId);
+        const userDoc = await userDocRef.get();
+        
+        if (!userDoc.exists) throw new Error("User not found.");
+        
+        const userData = userDoc.data()!;
+        const stripeAccountId = userData.stripeAccountId;
+
+        if (!stripeAccountId) {
+            throw new Error("Stripe account not connected. Please connect your Stripe account in settings.");
+        }
+
+        // Create a product for the payment
+        const product = await stripe.products.create({
+            name: description,
+        });
+
+        // Create a price for the product
+        const price = await stripe.prices.create({
+            product: product.id,
+            unit_amount: amount * 100, // Amount in cents
+            currency: 'usd',
+        });
+
+        // Create the payment link
+        const paymentLink = await stripe.paymentLinks.create({
+            line_items: [{ price: price.id, quantity: 1 }],
+            transfer_data: {
+                destination: stripeAccountId,
+            },
+        });
+
+        // Save the payment link to Firestore
+        const paymentLinkData = {
+            id: paymentLink.id,
+            userId,
+            description,
+            amount,
+            url: paymentLink.url,
+            createdAt: new Date().toISOString(),
+            status: 'active'
+        };
+        await db.collection("users").doc(userId).collection("payment_links").doc(paymentLink.id).set(paymentLinkData);
+
+
+        return { success: true, url: paymentLink.url };
+
+    } catch (error) {
+        console.error("Error creating payment link:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }

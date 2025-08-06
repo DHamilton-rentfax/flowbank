@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Home, Settings, BarChart3, LogOut, PenSquare, MessageSquare } from "lucide-react";
+import { Home, Settings, BarChart3, LogOut, PenSquare, MessageSquare, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,14 @@ export default function DashboardLayout({
                       <Link href="/dashboard">
                           <Home />
                           <span>Dashboard</span>
+                      </Link>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/payments')}>
+                      <Link href="/dashboard/payments">
+                          <CreditCard />
+                          <span>Payments</span>
                       </Link>
                   </SidebarMenuButton>
               </SidebarMenuItem>

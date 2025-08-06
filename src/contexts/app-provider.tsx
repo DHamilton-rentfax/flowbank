@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { Account, AllocationRule, Transaction, UserPlan } from '@/lib/types';
+import type { Account, AllocationRule, Transaction, UserPlan, PaymentLink } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/firebase/client';
 import { doc, getDoc, setDoc, collection, writeBatch, query, orderBy, onSnapshot, getDocs, deleteDoc } from "firebase/firestore";
@@ -14,6 +14,7 @@ interface AppContextType {
   accounts: Account[];
   rules: AllocationRule[];
   transactions: Transaction[];
+  paymentLinks: PaymentLink[];
   plaidTransactions: any[];
   setPlaidTransactions: (transactions: any[] | ((prev: any[]) => any[])) => void;
   addIncome: (amount: number) => void;
@@ -41,6 +42,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rules, setRules] = useState<AllocationRule[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [paymentLinks, setPaymentLinks] = useState<PaymentLink[]>([]);
   const [plaidAccessToken, setPlaidAccessTokenState] = useState<string | null>(null);
   const [plaidCursor, setPlaidCursor] = useState<string | null>(null);
   const [plaidTransactions, setPlaidTransactions] = useState<any[]>([]);
@@ -86,7 +88,10 @@ export function AppProvider({ children }: AppProviderProps) {
         }),
         onSnapshot(query(collection(db, "users", user.uid, "plaid_transactions"), orderBy("date", "desc")), (snapshot) => {
           setPlaidTransactions(snapshot.docs.map(doc => doc.data()));
-        })
+        }),
+        onSnapshot(query(collection(db, "users", user.uid, "payment_links"), orderBy("createdAt", "desc")), (snapshot) => {
+          setPaymentLinks(snapshot.docs.map(doc => doc.data() as PaymentLink));
+        }),
       ];
 
       return () => {
@@ -97,6 +102,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setAccounts([]);
       setRules([]);
       setTransactions([]);
+      setPaymentLinks([]);
       setPlaidAccessTokenState(null);
       setPlaidCursor(null);
       setUserPlan(null);
@@ -231,6 +237,7 @@ export function AppProvider({ children }: AppProviderProps) {
     accounts,
     rules,
     transactions,
+    paymentLinks,
     addIncome,
     updateRules,
     updateAccount,

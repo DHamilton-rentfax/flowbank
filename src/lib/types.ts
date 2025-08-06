@@ -49,4 +49,15 @@ export interface UserPlan {
     stripeCustomerId?: string;
     currentPeriodEnd?: number;
     addOns?: { [key: string]: boolean };
+    paymentLinks?: number;
+}
+
+export interface PaymentLink {
+    id: string;
+    userId: string;
+    description: string;
+    amount: number;
+    url: string;
+    createdAt: string;
+    status: 'active' | 'archived';
 }
