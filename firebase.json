@@ -1,5 +1,7 @@
+
 {
   "hosting": {
+    "site": "flowbank-ai",
     "public": "out",
     "ignore": [
       "firebase.json",
