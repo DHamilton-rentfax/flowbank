@@ -15,6 +15,17 @@ const nextConfig = {
       },
     ],
   },
+  webpack: (
+    config,
+    { isServer }
+  ) => {
+    // Treat handlebars as an external dependency
+    if (!isServer) {
+        config.externals.push('handlebars');
+    }
+
+    return config
+  },
 };
 
 module.exports = nextConfig;
