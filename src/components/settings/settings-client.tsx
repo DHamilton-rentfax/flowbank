@@ -4,7 +4,7 @@
 import { useApp } from "@/contexts/app-provider";
 import { AllocationRules } from "./allocation-rules";
 import { AIPlanGenerator } from "./ai-plan-generator";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { AllocationRule } from "@/lib/types";
 import { PlaidIntegration } from "./plaid-integration";
 import { UserProfile } from "./user-profile";
@@ -18,6 +18,12 @@ import { AddOns } from "./add-ons";
 export function SettingsClient() {
   const { rules, updateRules: saveRules } = useApp();
   const [currentRules, setCurrentRules] = useState<AllocationRule[]>(rules);
+
+  // This effect synchronizes the local state with the context state
+  // when the context data is loaded from Firestore.
+  useEffect(() => {
+    setCurrentRules(rules);
+  }, [rules]);
 
   const handleUpdateRules = (newRules: AllocationRule[]) => {
     setCurrentRules(newRules);

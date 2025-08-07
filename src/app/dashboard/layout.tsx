@@ -15,7 +15,11 @@ import { AppProvider, useApp } from "@/contexts/app-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Chat } from "@/components/chatbot/chat";
 
-function DashboardNav() {
+function DashboardNav({
+    children,
+  }: {
+    children: React.ReactNode;
+  }) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const { userPlan } = useApp();
@@ -120,11 +124,11 @@ function DashboardNav() {
          <SidebarInset>
             <header className="flex items-center justify-between p-4 border-b">
                  <SidebarTrigger />
-                 <h1 className="text-xl font-semibold capitalize">{pathname.substring(1).split('/').pop()?.replace('-', ' ') || 'Dashboard'}</h1>
+                 <h1 className="text-xl font-semibold capitalize">{pathname.substring(pathname.lastIndexOf('/') + 1).replace('-', ' ') || 'Dashboard'}</h1>
                  <div></div>
             </header>
             <main className="p-4 sm:p-6 lg:p-8">
-              <slot></slot>
+              {children}
             </main>
              <Popover>
                 <PopoverTrigger asChild>
