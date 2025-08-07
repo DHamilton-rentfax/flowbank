@@ -68,16 +68,14 @@ function DashboardNav() {
                       </Link>
                   </SidebarMenuButton>
               </SidebarMenuItem>
-              {userRole === 'admin' && (
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/reporting')}>
-                        <Link href="/dashboard/reporting">
-                            <BarChart3 />
-                            <span>Reporting</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
+              <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/reporting')}>
+                      <Link href="/dashboard/reporting">
+                          <BarChart3 />
+                          <span>Reporting</span>
+                      </Link>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
               {['admin', 'editor'].includes(userRole) && (
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/blog')}>
