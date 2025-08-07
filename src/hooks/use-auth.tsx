@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordRese
 import { auth, initializeFirebase } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
-import { verifyRecaptchaAndSignUp } from "@/app/actions";
+import { signUpUser } from "@/app/actions";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { createUserDocument } from "@/lib/plans";
 
@@ -16,7 +16,7 @@ interface AuthContextType {
   logout: () => void;
   updateUserProfile: (updates: { displayName?: string; photoURL?: string; }) => Promise<void>;
   sendPasswordReset: () => Promise<void>;
-  signUpWithEmail: (email: string, password: string, token: string, planId?: string | null) => Promise<any>;
+  signUpWithEmail: (email: string, password: string, planId?: string | null) => Promise<any>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
 }
 
@@ -84,8 +84,8 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
     }
   }
 
- const signUpWithEmail = async (email: string, password: string, token: string, planId?: string | null) => {
-    const result = await verifyRecaptchaAndSignUp(email, password, token, planId);
+ const signUpWithEmail = async (email: string, password: string, planId?: string | null) => {
+    const result = await signUpUser(email, password, planId);
     if (result.success && result.customToken) {
       await signInWithCustomToken(auth, result.customToken);
     } else {

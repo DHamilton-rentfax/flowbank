@@ -15,8 +15,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import ReCAPTCHA from "react-google-recaptcha";
-
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -30,13 +28,6 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { loginWithEmail, signUpWithEmail } = useAuth();
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
-  const [recaptchaKey, setRecaptchaKey] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    // Retrieve key from window object set in ClientLayout
-    setRecaptchaKey((window as any).recaptchaSiteKey);
-  }, []);
 
   const title = mode === "login" ? "Welcome Back" : "Create an Account";
   const description =
@@ -86,11 +77,7 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
-        const token = recaptchaRef.current?.getValue();
-        if (!token) {
-          throw new Error("reCAPTCHA verification failed. Please check the box.");
-        }
-        await signUpWithEmail(email, password, token, planId);
+        await signUpWithEmail(email, password, planId);
          toast({
           title: "Account Created!",
           description: "You've been successfully signed up. Redirecting...",
@@ -108,9 +95,6 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
       handleAuthError(error as Error);
     } finally {
       setIsLoading(false);
-      if (mode === 'signup') {
-        recaptchaRef.current?.reset();
-      }
     }
   };
   
@@ -161,14 +145,6 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
                 </Button>
               </div>
             </div>
-            {mode === 'signup' && recaptchaKey && (
-                <div className="flex justify-center">
-                    <ReCAPTCHA
-                        ref={recaptchaRef}
-                        sitekey={recaptchaKey}
-                    />
-                </div>
-            )}
             <Button type="submit" className="w-full mt-4" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 animate-spin" />}
               {buttonText}

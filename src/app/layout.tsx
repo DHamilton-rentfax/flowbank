@@ -26,15 +26,12 @@ export default function RootLayout({
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   };
 
-  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className="font-body antialiased" suppressHydrationWarning={true}>
         <AuthProvider firebaseConfig={firebaseConfig}>
-            <ClientLayout recaptchaSiteKey={recaptchaSiteKey}>
+            <ClientLayout>
                 {children}
             </ClientLayout>
             <Toaster />

@@ -14,7 +14,6 @@ import { db } from "@/firebase/server";
 import { auth as adminAuth } from "firebase-admin";
 import { plans, addOns, createUserDocument } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
-import { createAssessment } from "@/lib/recaptcha";
 
 const getUserId = async () => {
     const idToken = headers().get('Authorization')?.split('Bearer ')[1];
@@ -359,17 +358,8 @@ export async function setup2FA() {
     }
 }
 
-export async function verifyRecaptchaAndSignUp(email: string, password: string, token: string, planId?: string | null) {
+export async function signUpUser(email: string, password: string, planId?: string | null) {
     try {
-        const score = await createAssessment({
-            token,
-            recaptchaAction: "signup" 
-        });
-
-        if (score === null) {
-            throw new Error("reCAPTCHA verification failed. Please try again.");
-        }
-
         const userRecord = await adminAuth().createUser({ email, password });
         const { uid } = userRecord;
 
@@ -381,7 +371,7 @@ export async function verifyRecaptchaAndSignUp(email: string, password: string, 
         return { success: true, customToken };
 
     } catch (error) {
-        console.error("Sign up with reCAPTCHA failed:", error);
+        console.error("Sign up failed:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }
