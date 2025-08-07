@@ -10,49 +10,29 @@ export const plans: Plan[] = [
         id: "free",
         name: "Free",
         price: 0,
-        features: [
-            "1 connected bank account",
-            "1 allocation rule",
-            "Manual income allocation",
-            "Community support"
-        ],
-        stripePriceId: "price_1PgfTkGCq4vA4vNq7z4xYp7z" // Replace with your actual free plan price ID if you have one
+        features: [], // Features are now defined on the pricing page
+        stripePriceId: undefined 
     },
     {
         id: "starter",
         name: "Starter",
-        price: 9,
-        features: [
-            "Basic income split",
-            "Up to 5 allocation categories",
-            "AI Plan Generator",
-            "Email reports"
-        ],
-        stripePriceId: 'price_1PgfTkGCq4vA4vNq7z4xYp7z' // Example ID
+        price: 12,
+        features: [],
+        stripePriceId: 'price_1Pge5VGCq4vA4vNqgA3jRk2d' // Replace with your actual Starter plan price ID
     },
     {
         id: "pro",
         name: "Pro",
-        price: 19,
-        features: [
-            "Custom percentage rules",
-            "Connect multiple accounts",
-            "Automated income allocation",
-            "Smart Forecasting (Add-on)"
-        ],
-        stripePriceId: 'price_1Pge5VGCq4vA4vNqgA3jRk2d' // Example ID
+        price: 29,
+        features: [],
+        stripePriceId: 'price_1Pge5lGCq4vA4vNqlsO0vL6r' // Replace with your actual Pro plan price ID
     },
     {
         id: "business",
         name: "Business",
-        price: 39,
-        features: [
-            "API access & webhooks",
-            "Advanced reporting & exports",
-            "Multi-user access (coming soon)",
-            "Priority support"
-        ],
-        stripePriceId: 'price_1Pge5lGCq4vA4vNqlsO0vL6r' // Example ID
+        price: 59,
+        features: [],
+        stripePriceId: 'price_1PghZcGCq4vA4vNqABCDEF12' // Replace with your actual Business plan price ID
     }
 ];
 
