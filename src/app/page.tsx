@@ -77,7 +77,7 @@ export default function LandingPage() {
         </Link>
         <nav className="hidden md:flex items-center gap-2">
           <Button variant="ghost" asChild>
-            <Link href={process.env.NEXT_PUBLIC_STRIPE_PRICING_TABLE_URL!} target="_blank">Pricing</Link>
+            <Link href="/pricing">Pricing</Link>
           </Button>
           <Button variant="ghost" asChild>
             <Link href="/blog">Blog</Link>

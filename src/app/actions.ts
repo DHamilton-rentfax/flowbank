@@ -47,6 +47,7 @@ export async function createUserDocument(userId: string, email: string, displayN
         status: 'active',
         stripeCustomerId: stripeCustomer.id,
         addOns: {},
+        role: 'user', // Default role for new signups
     };
 
     const userData = {

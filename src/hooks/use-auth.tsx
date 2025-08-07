@@ -8,7 +8,7 @@ import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
 import { signUpUser } from "@/app/actions";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { createUserDocument } from "@/lib/plans";
+import { createUserDocument } from "@/app/actions";
 
 interface AuthContextType {
   user: User | null;

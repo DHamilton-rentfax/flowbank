@@ -15,7 +15,8 @@ export const plans: Plan[] = [
             "1 allocation rule",
             "Manual income allocation",
             "Community support"
-        ]
+        ],
+        stripePriceId: "price_1PgfTkGCq4vA4vNq7z4xYp7z" // Replace with your actual free plan price ID if you have one
     },
     {
         id: "starter",

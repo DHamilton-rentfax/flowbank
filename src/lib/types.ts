@@ -1,4 +1,5 @@
 
+
 export type Account = {
   id: string;
   name: string;
@@ -50,6 +51,7 @@ export interface UserPlan {
     currentPeriodEnd?: number;
     addOns?: { [key: string]: boolean };
     paymentLinks?: number;
+    role?: 'admin' | 'editor' | 'user';
 }
 
 export interface PaymentLink {
