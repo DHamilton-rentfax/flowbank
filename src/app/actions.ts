@@ -12,8 +12,9 @@ import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import { db } from "@/firebase/server";
 import { auth as adminAuth } from "firebase-admin";
-import { plans, addOns, createUserDocument } from "@/lib/plans";
+import { plans, addOns, initialRulesForNewUser } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
+import type { Account, UserPlan } from "@/lib/types";
 
 const getUserId = async () => {
     const idToken = headers().get('Authorization')?.split('Bearer ')[1];
@@ -23,6 +24,55 @@ const getUserId = async () => {
     const decodedToken = await adminAuth().verifyIdToken(idToken);
     return decodedToken.uid;
 };
+
+export async function createUserDocument(userId: string, email: string, displayName?: string | null, planId?: string | null) {
+    const userDocRef = db.collection("users").doc(userId);
+    
+    const selectedPlanId = planId || 'free';
+    const plan = plans.find(p => p.id === selectedPlanId);
+
+    if (!plan) throw new Error(`Plan with ID "${selectedPlanId}" not found.`);
+    
+    const stripeCustomer = await stripe.customers.create({
+        email,
+        name: displayName || email,
+        metadata: {
+            firebaseUID: userId,
+        },
+    });
+
+    const userPlan: UserPlan = {
+        id: plan.id,
+        name: plan.name,
+        status: 'active',
+        stripeCustomerId: stripeCustomer.id,
+        addOns: {},
+    };
+
+    const userData = {
+        email,
+        displayName: displayName || email,
+        createdAt: new Date().toISOString(),
+        stripeCustomerId: stripeCustomer.id,
+        plan: userPlan,
+    };
+
+    const batch = db.batch();
+    batch.set(userDocRef, userData);
+
+    const newRules = initialRulesForNewUser();
+    newRules.forEach((rule) => {
+        const account: Account = { id: rule.id, name: rule.name, balance: 0 };
+        
+        const ruleDocRef = db.collection("users").doc(userId).collection("rules").doc(rule.id);
+        batch.set(ruleDocRef, rule);
+
+        const accountDocRef = db.collection("users").doc(userId).collection("accounts").doc(rule.id);
+        batch.set(accountDocRef, account);
+    });
+
+    await batch.commit();
+}
 
 
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
