@@ -4,6 +4,7 @@
 import { suggestAllocationPlan, type SuggestAllocationPlanInput } from "@/ai/flows/suggest-allocation-plan";
 import { identifyIncome, type IdentifyIncomeInput } from "@/ai/flows/identify-income";
 import { chat, type ChatInput } from "@/ai/flows/chatbot";
+import { getFinancialCoaching, type FinancialCoachInput } from "@/ai/flows/financial-coach-flow";
 import { z } from "zod";
 import { plaidClient } from "@/lib/plaid";
 import { Products, TransactionsSyncRequest } from "plaid";
@@ -115,6 +116,17 @@ export async function getChatbotResponse(input: ChatInput) {
         return { success: true, response: result.response };
     } catch (error) {
         console.error("Error getting chatbot response:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getAIFinancialCoach(input: FinancialCoachInput) {
+    try {
+        const result = await getFinancialCoaching(input);
+        return { success: true, advice: result };
+    } catch (error) {
+        console.error("Error getting AI financial coaching:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }
