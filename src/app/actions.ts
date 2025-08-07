@@ -144,7 +144,7 @@ export async function createLinkToken(userId: string) {
           country_codes: [CountryCode.Us],
           language: 'en',
           webhook: `${process.env.NEXT_PUBLIC_SITE_URL}/api/plaid/webhook`,
-          products: [Products.Auth, Products.Transactions],
+          products: [Products.Auth, Products.Transactions, Products.Investments],
         };
         
         const response = await plaidClient.linkTokenCreate(tokenRequest);
