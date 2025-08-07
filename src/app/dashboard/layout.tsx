@@ -11,25 +11,17 @@ import { Home, Settings, BarChart3, LogOut, PenSquare, MessageSquare, CreditCard
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { AppProvider } from "@/contexts/app-provider";
+import { AppProvider, useApp } from "@/contexts/app-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Chat } from "@/components/chatbot/chat";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { user, loading, logout } = useAuth();
-  const router = useRouter();
+function DashboardNav() {
+  const { user, logout } = useAuth();
   const pathname = usePathname();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
+  const { userPlan } = useApp();
   
+  const userRole = userPlan?.role || 'user';
+
   const getInitials = (name: string | null | undefined, email: string | null | undefined) => {
     if (name) {
         return name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
@@ -50,16 +42,7 @@ export default function DashboardLayout({
     return "User";
   }
 
-  if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
   return (
-    <AppProvider>
       <SidebarProvider>
         <Sidebar>
             <SidebarHeader>
@@ -77,7 +60,7 @@ export default function DashboardLayout({
                       </Link>
                   </SidebarMenuButton>
               </SidebarMenuItem>
-               <SidebarMenuItem>
+              <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/payments')}>
                       <Link href="/dashboard/payments">
                           <CreditCard />
@@ -85,23 +68,27 @@ export default function DashboardLayout({
                       </Link>
                   </SidebarMenuButton>
               </SidebarMenuItem>
+              {userRole === 'admin' && (
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/reporting')}>
+                        <Link href="/dashboard/reporting">
+                            <BarChart3 />
+                            <span>Reporting</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {['admin', 'editor'].includes(userRole) && (
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/blog')}>
+                        <Link href="/dashboard/blog">
+                            <PenSquare />
+                            <span>Blog</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/reporting')}>
-                      <Link href="/dashboard/reporting">
-                          <BarChart3 />
-                          <span>Reporting</span>
-                      </Link>
-                  </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/blog')}>
-                      <Link href="/dashboard/blog">
-                          <PenSquare />
-                          <span>Blog</span>
-                      </Link>
-                  </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/feedback')}>
                       <Link href="/dashboard/feedback">
                           <MessageSquare />
@@ -121,8 +108,7 @@ export default function DashboardLayout({
             <SidebarFooter>
                <div className="flex items-center gap-2 p-2 rounded-md bg-sidebar-accent">
                  <Avatar className="h-9 w-9">
-                    {/* Placeholder for user avatar */}
-                    <AvatarFallback>{getInitials(user.displayName, user.email)}</AvatarFallback>
+                    <AvatarFallback>{getInitials(user?.displayName, user?.email)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
                     <p className="text-sm font-medium truncate">{getDisplayName()}</p>
@@ -133,14 +119,14 @@ export default function DashboardLayout({
                </div>
             </SidebarFooter>
         </Sidebar>
-        <SidebarInset>
+         <SidebarInset>
             <header className="flex items-center justify-between p-4 border-b">
                  <SidebarTrigger />
                  <h1 className="text-xl font-semibold capitalize">{pathname.substring(1).split('/').pop()?.replace('-', ' ') || 'Dashboard'}</h1>
                  <div></div>
             </header>
             <main className="p-4 sm:p-6 lg:p-8">
-              {children}
+              <slot></slot>
             </main>
              <Popover>
                 <PopoverTrigger asChild>
@@ -154,6 +140,37 @@ export default function DashboardLayout({
             </Popover>
         </SidebarInset>
       </SidebarProvider>
+  );
+}
+
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+  
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <AppProvider>
+        <DashboardNav>
+            {children}
+        </DashboardNav>
     </AppProvider>
   );
 }
