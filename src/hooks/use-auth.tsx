@@ -32,13 +32,11 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
     initializeFirebase(firebaseConfig);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
-      if (user) {
-        router.push("/dashboard");
-      }
+      // We remove the auto-redirect from here to control it more granularly
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [router, firebaseConfig]);
+  }, [firebaseConfig]);
   
   const logout = async () => {
     try {
@@ -88,6 +86,7 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
     const result = await signUpUser(email, password, planId);
     if (result.success && result.customToken) {
       await signInWithCustomToken(auth, result.customToken);
+      router.push('/dashboard');
     } else {
       throw new Error(result.error || "Sign up failed.");
     }
@@ -95,6 +94,7 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
 
   const loginWithEmail = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
+    router.push('/dashboard');
   }
 
   return (

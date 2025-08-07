@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -28,6 +29,7 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { loginWithEmail, signUpWithEmail } = useAuth();
+  const router = useRouter();
 
   const title = mode === "login" ? "Welcome Back" : "Create an Account";
   const description =
@@ -87,7 +89,7 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
         await loginWithEmail(email, password);
          toast({
           title: "Logged In!",
-          description: "Welcome back.",
+          description: "Welcome back. Redirecting...",
           className: "bg-accent text-accent-foreground",
         });
       }
