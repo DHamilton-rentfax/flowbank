@@ -1,103 +1,239 @@
-import Image from "next/image";
 
-export default function Home() {
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Logo, StripeLogo, PlaidLogo, Zap, Shuffle, BarChartBig, Link2, Bot, ShieldCheck, Banknote, FirebaseLogo, GoogleAiLogo } from "@/components/icons";
+import { Footer } from "@/components/layout/footer";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
+import Image from 'next/image';
+
+const howItWorks = [
+    {
+        step: 1,
+        title: "Connect Your Revenue",
+        description: "Securely link your Stripe account to capture incoming payments, or connect your bank accounts with Plaid to monitor income deposits."
+    },
+    {
+        step: 2,
+        title: "Define Your Rules",
+        description: "Create custom rules based on percentages or fixed dollar amounts. Not sure where to start? Our AI can generate a plan for you."
+    },
+    {
+        step: 3,
+        title: "Automate Your Cash Flow",
+        description: "FlowBank automatically detects income and allocates it to your virtual accounts, giving you a real-time view of your finances."
+    }
+];
+
+const features = [
+    {
+        icon: <Shuffle />,
+        title: "Automated Allocations",
+        description: "Inspired by Profit First, our system automatically divides your income into virtual accounts based on your rules."
+    },
+    {
+        icon: <Link2 />,
+        title: "Payment Links",
+        description: "Generate and share Stripe payment links directly from your dashboard to get paid by clients with ease."
+    },
+    {
+        icon: <Bot />,
+        title: "AI-Powered Plans",
+        description: "Tell our AI about your business, and it will generate a tailored allocation plan to get you started in seconds."
+    },
+    {
+        icon: <BarChartBig />,
+        title: "Insightful Reporting",
+        description: "Visualize your allocation history and rule breakdown with simple, clear charts and reports."
+    }
+]
+
+const addOns = [
+    {
+        icon: <Zap />,
+        title: "Instant Payouts",
+        description: "Access your funds immediately with our pay-per-use or unlimited monthly plan."
+    },
+     {
+        icon: <Banknote />,
+        title: "Tax Vault",
+        description: "Automatically set aside a percentage of your income for taxes so you're never caught off guard."
+    },
+    {
+        icon: <ShieldCheck />,
+        title: "Smart Forecasting",
+        description: "Leverage AI to predict future cash flow and make smarter financial decisions."
+    }
+]
+
+
+export default function LandingPage() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="flex flex-col min-h-screen bg-background">
+      <header className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2">
+          <Logo className="size-8 text-primary" />
+          <h1 className="text-2xl font-bold font-headline">FlowBank</h1>
+        </Link>
+        <nav className="hidden md:flex items-center gap-2">
+          <Button variant="ghost" asChild>
+            <Link href={process.env.NEXT_PUBLIC_STRIPE_PRICING_TABLE_URL!} target="_blank">Pricing</Link>
+          </Button>
+          <Button variant="ghost" asChild>
+            <Link href="/blog">Blog</Link>
+          </Button>
+           <Button variant="ghost" asChild>
+            <Link href="/faq">FAQ</Link>
+          </Button>
+           <Button variant="ghost" asChild>
+            <Link href="/login">Sign In</Link>
+          </Button>
+           <Button asChild>
+            <Link href="/signup">Get Started</Link>
+          </Button>
+        </nav>
+      </header>
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="py-20 md:py-32">
+            <div className="container mx-auto px-4 sm:px-6 text-center">
+                <h1 className="text-4xl font-bold tracking-tight sm:text-6xl font-headline">
+                    Your Money, <span className="text-primary">Perfectly Allocated.</span>
+                </h1>
+                <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">
+                    FlowBank is the smart financial engine for entrepreneurs. Automate your income splitting, get paid by clients, and achieve financial clarity without the spreadsheets.
+                </p>
+                <div className="mt-10 flex justify-center gap-4">
+                    <Button asChild size="lg">
+                    <Link href="/signup">
+                        Get Started for Free
+                        <ArrowRight className="ml-2" />
+                    </Link>
+                    </Button>
+                </div>
+                 <div className="mt-16 text-center">
+                    <p className="text-sm text-muted-foreground font-semibold mb-4">POWERED BY INDUSTRY LEADERS</p>
+                    <div className="flex justify-center items-center gap-8 md:gap-12 flex-wrap">
+                        <StripeLogo className="h-8 text-muted-foreground" />
+                        <PlaidLogo className="h-12 text-muted-foreground" />
+                        <FirebaseLogo className="h-8 text-muted-foreground" />
+                        <GoogleAiLogo className="h-6 text-muted-foreground" />
+                    </div>
+                 </div>
+            </div>
+        </section>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+        {/* How It Works Section */}
+        <section id="how-it-works" className="py-20 md:py-24 bg-card border-y">
+             <div className="container mx-auto px-4 sm:px-6">
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">Three Steps to Financial Autopilot</h2>
+                    <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">Go from financial stress to streamlined success in minutes.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {howItWorks.map((item) => (
+                        <div key={item.step} className="text-center">
+                            <div className="flex items-center justify-center">
+                                <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold font-headline">{item.step}</div>
+                            </div>
+                            <h3 className="text-xl font-bold font-headline mt-6 mb-2">{item.title}</h3>
+                            <p className="text-muted-foreground">{item.description}</p>
+                        </div>
+                    ))}
+                </div>
+             </div>
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="py-20 md:py-24">
+             <div className="container mx-auto px-4 sm:px-6">
+                 <div className="text-center mb-16">
+                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">A Smarter Way to Manage Money</h2>
+                    <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">FlowBank is more than just an app—it's your dedicated financial system.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {features.map((feature, index) => (
+                        <Card key={index} className="text-center p-6">
+                           <div className="flex justify-center mb-4">
+                             <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                                {feature.icon}
+                             </div>
+                           </div>
+                           <h3 className="text-lg font-bold font-headline mb-2">{feature.title}</h3>
+                           <p className="text-muted-foreground text-sm">{feature.description}</p>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        </section>
+        
+        {/* Testimonial Section */}
+        <section className="py-20 md:py-24 bg-card border-y">
+            <div className="container mx-auto px-4 sm:px-6">
+                <div className="max-w-3xl mx-auto text-center">
+                     <Image 
+                        src="https://placehold.co/100x100.png"
+                        alt="Customer photo"
+                        width={100}
+                        height={100}
+                        className="rounded-full mx-auto mb-4"
+                        data-ai-hint="happy person"
+                     />
+                    <blockquote className="text-xl md:text-2xl font-medium">
+                        "FlowBank completely changed how I handle my business finances. I used to spend hours in spreadsheets, and now it's all automated. I finally have clarity and peace of mind."
+                    </blockquote>
+                    <cite className="mt-4 block font-semibold not-italic">
+                        Sarah Johnson, Founder of SJ Creative
+                    </cite>
+                </div>
+            </div>
+        </section>
+
+         {/* Add-ons Section */}
+        <section id="add-ons" className="py-20 md:py-24">
+             <div className="container mx-auto px-4 sm:px-6">
+                 <div className="text-center mb-16">
+                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">Supercharge Your Finances</h2>
+                    <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">Elevate your financial toolkit with powerful, optional add-ons.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                     {addOns.map((addOn, index) => (
+                        <div key={index} className="flex items-start gap-4">
+                           <div className="w-10 h-10 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0 mt-1">
+                             {addOn.icon}
+                           </div>
+                           <div>
+                            <h3 className="text-lg font-bold font-headline">{addOn.title}</h3>
+                            <p className="text-muted-foreground">{addOn.description}</p>
+                           </div>
+                        </div>
+                     ))}
+                </div>
+            </div>
+        </section>
+        
+        {/* Final CTA Section */}
+        <section className="py-20 md:py-32">
+            <div className="container mx-auto px-4 sm:px-6 text-center">
+                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">
+                    Ready to Take Control of Your Cash Flow?
+                </h2>
+                <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">
+                    Stop guessing and start allocating. Join hundreds of entrepreneurs who trust FlowBank to automate their finances and build a more profitable business.
+                </p>
+                <div className="mt-10 flex justify-center">
+                    <Button asChild size="lg">
+                    <Link href="/signup">
+                        Sign Up and Start for Free
+                        <ArrowRight className="ml-2" />
+                    </Link>
+                    </Button>
+                </div>
+            </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      <Footer />
     </div>
   );
 }
