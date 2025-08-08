@@ -1,8 +1,9 @@
 // src/firebase/server.ts
 // Server-only Firebase Admin helpers. Never import this from a "use client" file.
-import { initializeApp, getApp, getApps, App, cert } from "firebase-admin/app";
-import { getFirestore, Firestore } from "firebase-admin/firestore";
-import { getAuth, Auth } from "firebase-admin/auth";
+import 'server-only';
+import { initializeApp, getApp, getApps, App, cert } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getAuth, Auth } from 'firebase-admin/auth';
 
 let _app: App | null = null;
 let _db: Firestore | null = null;
