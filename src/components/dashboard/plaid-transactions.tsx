@@ -30,6 +30,19 @@ export function PlaidTransactions() {
 
   const isPaidUser = userPlan?.id !== 'free';
 
+  const handleAllocate = useCallback((amount: number, id: string, isAuto: boolean = false) => {
+    // Plaid amounts for credits are negative, so we use Math.abs
+    addIncome(Math.abs(amount));
+    setAllocatedTransactionIds(prev => [...prev, id]);
+    if (!isAuto) {
+        toast({
+            title: "Success",
+            description: `${formatCurrency(Math.abs(amount))} allocated successfully.`,
+            className: "bg-accent text-accent-foreground",
+        });
+    }
+  }, [addIncome, toast]);
+  
   const analyzeAndSetIncome = useCallback(async (transactions: any[]) => {
       if (transactions.length === 0) return;
       const result = await findIncomeTransactions({ transactions });
@@ -49,7 +62,7 @@ export function PlaidTransactions() {
               }
           }
       }
-  }, [isPaidUser, allocatedTransactionIds]);
+  }, [isPaidUser, allocatedTransactionIds, handleAllocate, toast]);
 
   useEffect(() => {
       // Analyze transactions that are already loaded on initial mount
@@ -58,18 +71,7 @@ export function PlaidTransactions() {
       }
   }, [plaidTransactions, analyzeAndSetIncome]);
 
-  const handleAllocate = (amount: number, id: string, isAuto: boolean = false) => {
-    // Plaid amounts for credits are negative, so we use Math.abs
-    addIncome(Math.abs(amount));
-    setAllocatedTransactionIds(prev => [...prev, id]);
-    if (!isAuto) {
-        toast({
-            title: "Success",
-            description: `${formatCurrency(Math.abs(amount))} allocated successfully.`,
-            className: "bg-accent text-accent-foreground",
-        });
-    }
-  }
+
 
   const handleSyncAndAnalyze = async () => {
     if (!plaidAccessToken) {
