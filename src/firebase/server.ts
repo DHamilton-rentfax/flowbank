@@ -24,6 +24,8 @@ function getAdminApp() {
   return initializeApp();
 }
 
+// Export the function to be used lazily, and export db/auth for other server components
+// that can safely initialize at the module level.
 const db = getAdminApp().firestore();
 const auth = getAdminApp().auth();
 

@@ -3,8 +3,6 @@ import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
-import { getAdminApp } from "@/firebase/server";
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { plans, addOns } from "@/lib/plans";
 import type { UserPlan } from "@/lib/types";
 
@@ -28,10 +26,13 @@ export async function POST(req: Request) {
         console.error(`Webhook signature verification failed: ${err.message}`);
         return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
     }
+    
+    // Lazy-load Firebase Admin here (NOT at top-level)
+    const { getAdminApp } = await import("@/firebase/server");
+    const adminDb = getAdminApp().firestore();
 
     const session = event.data.object as Stripe.Checkout.Session;
     const sessionType = session.metadata?.type;
-    const adminDb = getAdminApp().firestore();
 
     if (event.type === 'checkout.session.completed') {
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
