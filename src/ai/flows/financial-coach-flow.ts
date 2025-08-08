@@ -1,4 +1,3 @@
-'use server';
 
 /**
  * @fileOverview An AI financial coach that analyzes transactions and provides recommendations.

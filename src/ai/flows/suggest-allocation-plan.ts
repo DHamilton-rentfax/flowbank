@@ -1,5 +1,4 @@
 // src/ai/flows/suggest-allocation-plan.ts
-'use server';
 
 /**
  * @fileOverview This file defines a Genkit flow for suggesting allocation plans tailored to a user's business type.

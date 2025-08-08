@@ -1,5 +1,4 @@
 // src/ai/flows/identify-income.ts
-'use server';
 
 /**
  * @fileOverview This file defines a Genkit flow for identifying income transactions from a list of Plaid transactions.
