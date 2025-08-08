@@ -22,16 +22,17 @@ const pricingTiers = [
         price: "$0",
         priceSuffix: "",
         description: "For individuals testing the waters of smart finance.",
-        features: {
-            "Income Allocation Rules": "2 rules",
-            "Allocation Buckets": "3 buckets",
-            "Automated Stripe Payouts": false,
-            "Transaction History": "30 days",
-            "AI Financial Coach": "Basic tips only",
-            "Reporting & Analytics": false,
-            "Team Accounts": false,
-            "API Access": false,
-        },
+        features: [
+            { text: "Up to 2 allocation rules", included: true },
+            { text: "Up to 3 virtual 'buckets' for your money", included: true },
+            { text: "Manually allocate income deposits", included: true },
+            { text: "View the last 30 days of transactions", included: true },
+            { text: "Basic AI financial tips", included: true },
+            { text: "Automated Stripe payouts", included: false },
+            { text: "Advanced reporting & analytics", included: false },
+            { text: "Team accounts", included: false },
+            { text: "API Access", included: false },
+        ],
         buttonText: "Get Started",
         highlight: false,
     },
@@ -41,16 +42,16 @@ const pricingTiers = [
         price: "$12",
         priceSuffix: "/ month",
         description: "For side-hustlers and freelancers getting serious.",
-        features: {
-            "Income Allocation Rules": "5 rules",
-            "Allocation Buckets": "5 buckets",
-            "Automated Stripe Payouts": true,
-            "Transaction History": "90 days",
-            "AI Financial Coach": "Basic + savings suggestions",
-            "Reporting & Analytics": "Basic income/expense charts",
-            "Team Accounts": false,
-            "API Access": false,
-        },
+        features: [
+            { text: "Up to 5 allocation rules", included: true },
+            { text: "Up to 5 virtual 'buckets'", included: true },
+            { text: "Automatically split income from Stripe", included: true },
+            { text: "View the last 90 days of transactions", included: true },
+            { text: "AI Coach with savings recommendations", included: true },
+            { text: "Basic income and expense reporting", included: true },
+            { text: "Team accounts", included: false },
+            { text: "API Access", included: false },
+        ],
         buttonText: "Choose Starter",
         highlight: false,
     },
@@ -60,16 +61,16 @@ const pricingTiers = [
         price: "$29",
         priceSuffix: "/ month",
         description: "The ultimate toolkit for solo entrepreneurs.",
-        features: {
-            "Income Allocation Rules": "Unlimited rules",
-            "Allocation Buckets": "Unlimited",
-            "Automated Stripe Payouts": true,
-            "Transaction History": "1 year",
-            "AI Financial Coach": "Full AI coaching",
-            "Reporting & Analytics": "Advanced analytics",
-            "Team Accounts": false,
-            "API Access": false,
-        },
+        features: [
+            { text: "Unlimited allocation rules", included: true },
+            { text: "Unlimited virtual 'buckets'", included: true },
+            { text: "Automatically split income from Stripe", included: true },
+            { text: "View your full transaction history (1 year)", included: true },
+            { text: "Full AI Coach: spending, savings, investment & tax advice", included: true },
+            { text: "Advanced analytics and goal tracking", included: true },
+            { text: "Team accounts", included: false },
+            { text: "API Access", included: false },
+        ],
         buttonText: "Choose Pro",
         highlight: true,
     },
@@ -79,16 +80,16 @@ const pricingTiers = [
         price: "$59",
         priceSuffix: "/ month",
         description: "For established businesses that need to scale.",
-        features: {
-            "Income Allocation Rules": "Unlimited rules",
-            "Allocation Buckets": "Unlimited",
-            "Automated Stripe Payouts": true,
-            "Transaction History": "Unlimited",
-            "AI Financial Coach": "Full AI + custom strategy",
-            "Reporting & Analytics": "Advanced + export",
-            "Team Accounts": true,
-            "API Access": true,
-        },
+        features: [
+            { text: "Unlimited allocation rules & buckets", included: true },
+            { text: "Automated income splitting", included: true },
+            { text: "Unlimited transaction history", included: true },
+            { text: "Full AI Coach with custom business strategy analysis", included: true },
+            { text: "Advanced analytics with CSV data export", included: true },
+            { text: "Invite team members (multi-user support)", included: true },
+            { text: "Full API access for custom integrations", included: true },
+            { text: "Priority support queue", included: true },
+        ],
         buttonText: "Contact Sales",
         highlight: false,
     }
@@ -144,17 +145,10 @@ function PricingCard({ tier }: { tier: typeof pricingTiers[0]}) {
             </CardHeader>
             <CardContent className="flex-1 py-6 space-y-4">
                  <ul className="space-y-3">
-                    {Object.entries(tier.features).map(([feature, value]) => (
-                        <li key={feature} className="flex items-start">
-                           {typeof value === 'boolean' ? (
-                             value ? <CheckCircle2 className="mr-2 mt-1 h-5 w-5 text-accent" /> : <XCircle className="mr-2 mt-1 h-5 w-5 text-muted-foreground" />
-                           ) : (
-                             <CheckCircle2 className="mr-2 mt-1 h-5 w-5 text-accent" />
-                           )}
-                           <span className="flex-1 text-sm">
-                             <span className="font-medium">{feature}:</span>
-                             <span className="text-muted-foreground ml-1">{typeof value === 'boolean' ? '' : value}</span>
-                           </span>
+                    {tier.features.map((feature, index) => (
+                        <li key={index} className="flex items-start">
+                           {feature.included ? <CheckCircle2 className="mr-2 mt-1 h-5 w-5 text-accent shrink-0" /> : <XCircle className="mr-2 mt-1 h-5 w-5 text-muted-foreground shrink-0" />}
+                           <span className="text-sm text-muted-foreground">{feature.text}</span>
                         </li>
                     ))}
                  </ul>
@@ -204,7 +198,7 @@ export default function PricingPage() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
                 {pricingTiers.map((tier) => (
                     <PricingCard key={tier.id} tier={tier} />
                 ))}
