@@ -7,7 +7,6 @@ import { getAdminApp } from "@/firebase/server";
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { plans, addOns } from "@/lib/plans";
 import type { UserPlan } from "@/lib/types";
-import { db } from "@/firebase/client";
 
 export const dynamic = "force-dynamic";
 
