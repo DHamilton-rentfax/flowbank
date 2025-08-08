@@ -1,4 +1,3 @@
-
 // src/firebase/server.ts
 // Server-only Firebase Admin helpers. Never import this from a "use client" file.
 import { initializeApp, getApp, getApps, App, cert } from "firebase-admin/app";
@@ -10,29 +9,27 @@ let _db: Firestore | null = null;
 let _auth: Auth | null = null;
 
 function makeApp(): App {
-  // 1) Prefer explicit JSON creds (dev/workstation)
-  const credsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-  if (credsJson) {
+  const json = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  if (json) {
     try {
-      const creds = JSON.parse(credsJson);
+      console.log("[admin] using GOOGLE_APPLICATION_CREDENTIALS_JSON");
+      return initializeApp({ credential: cert(JSON.parse(json)) });
+    } catch (e) {
+      console.error("[admin] bad GOOGLE_APPLICATION_CREDENTIALS_JSON:", e);
+    }
+  }
+  const path = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (path) {
+    try {
+      console.log("[admin] using GOOGLE_APPLICATION_CREDENTIALS file:", path);
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const creds = require(path);
       return initializeApp({ credential: cert(creds) });
     } catch (e) {
-      console.error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON; falling back to ADC:", e);
+      console.error("[admin] bad GOOGLE_APPLICATION_CREDENTIALS file:", e);
     }
   }
-
-  // 2) Optional: support file path if you prefer
-  const credsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (credsPath) {
-    try {
-      const json = require(credsPath);
-      return initializeApp({ credential: cert(json) });
-    } catch (e) {
-      console.error("Invalid GOOGLE_APPLICATION_CREDENTIALS file; falling back to ADC:", e);
-    }
-  }
-
-  // 3) ADC (works on Firebase App Hosting / GCP)
+  console.log("[admin] using ADC");
   return initializeApp();
 }
 
