@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/icons";
+import { Logo, Bot, Shuffle, BarChartBig, Link2 } from "@/components/icons";
 import { Footer } from "@/components/layout/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { CheckCircle2, XCircle } from "lucide-react";
@@ -94,6 +94,29 @@ const pricingTiers = [
         highlight: false,
     }
 ];
+
+const featureHighlights = [
+    {
+        icon: <Shuffle />,
+        title: "Automated Allocations",
+        description: "Inspired by Profit First, our system automatically divides your income into virtual accounts based on your rules."
+    },
+    {
+        icon: <Link2 />,
+        title: "Payment Links",
+        description: "Generate and share Stripe payment links directly from your dashboard to get paid by clients with ease."
+    },
+    {
+        icon: <Bot />,
+        title: "AI-Powered Plans",
+        description: "Tell our AI about your business, and it will generate a tailored allocation plan to get you started in seconds."
+    },
+    {
+        icon: <BarChartBig />,
+        title: "Insightful Reporting",
+        description: "Visualize your allocation history and rule breakdown with simple, clear charts and reports."
+    }
+]
 
 function PricingCard({ tier }: { tier: typeof pricingTiers[0]}) {
     const { user } = useAuth();
@@ -190,7 +213,7 @@ export default function PricingPage() {
         </nav>
       </header>
        <main className="flex-1">
-         <div className="container mx-auto max-w-6xl py-12 px-4">
+         <div className="container mx-auto max-w-7xl py-12 px-4">
             <div className="text-center mb-12">
                 <h1 className="text-4xl font-bold tracking-tight">Find the Plan That's Right for You</h1>
                 <p className="mt-2 text-lg text-muted-foreground">
@@ -198,11 +221,31 @@ export default function PricingPage() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
                 {pricingTiers.map((tier) => (
                     <PricingCard key={tier.id} tier={tier} />
                 ))}
             </div>
+
+            <section id="features" className="py-20 md:py-24">
+                 <div className="text-center mb-16">
+                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">Every Feature You Need to Succeed</h2>
+                    <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">FlowBank is more than just an app—it's your dedicated financial system designed for clarity and growth.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {featureHighlights.map((feature, index) => (
+                        <Card key={index} className="text-center p-6 border-transparent shadow-none">
+                           <div className="flex justify-center mb-4">
+                             <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                                {feature.icon}
+                             </div>
+                           </div>
+                           <h3 className="text-lg font-bold font-headline mb-2">{feature.title}</h3>
+                           <p className="text-muted-foreground text-sm">{feature.description}</p>
+                        </Card>
+                    ))}
+                </div>
+            </section>
          </div>
        </main>
        <Footer />
