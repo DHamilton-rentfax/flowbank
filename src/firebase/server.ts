@@ -1,71 +1,39 @@
-// src/firebase/server.ts
-import 'server-only';
-import { initializeApp, getApp, getApps, App, cert } from 'firebase-admin/app';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
-import { getAuth, Auth } from 'firebase-admin/auth';
+
+import "server-only";
+import { cert, getApp, getApps, initializeApp, App } from "firebase-admin/app";
+import { getAuth, Auth } from "firebase-admin/auth";
+import { getFirestore, Firestore } from "firebase-admin/firestore";
 
 let _app: App | null = null;
-let _db: Firestore | null = null;
 let _auth: Auth | null = null;
-
-function fromJsonEnv() {
-  const json = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-  if (!json) return null;
-  try {
-    const parsed = JSON.parse(json);
-    if (!parsed.private_key || !parsed.client_email) {
-      console.error('[admin] Malformed GOOGLE_APPLICATION_CREDENTIALS_JSON: Missing private_key or client_email.');
-      return null;
-    }
-    // Handle the escaped newlines in the private key.
-    parsed.private_key = String(parsed.private_key).replace(/\\n/g, '\n');
-    console.log('[admin] Initializing with GOOGLE_APPLICATION_CREDENTIALS_JSON');
-    return cert(parsed);
-  } catch (e) {
-    console.error('[admin] Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON:', e);
-    return null;
-  }
-}
-
-function fromSplitEnv() {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  if (!projectId || !clientEmail || !privateKey) return null;
-
-  // Handle the escaped newlines in the private key.
-  privateKey = privateKey.replace(/\\n/g, '\n');
-  console.log('[admin] Initializing with split FIREBASE_* environment variables');
-  return cert({ projectId, clientEmail, privateKey });
-}
+let _db: Firestore | null = null;
 
 function makeApp(): App {
-  // Check for credentials in environment variables first.
-  const credential = fromJsonEnv() || fromSplitEnv();
-
-  if (credential) {
-    return initializeApp({ credential });
+  // Try JSON env
+  const json = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  if (json) {
+    const parsed = JSON.parse(json);
+    parsed.private_key = String(parsed.private_key).replace(/\\n/g, "\n");
+    console.log("[admin] using JSON env");
+    return initializeApp({ credential: cert(parsed) });
   }
-
-  // If no env vars, fall back to Application Default Credentials (for production on GCP/Firebase).
-  console.warn('[admin] No explicit credentials found in environment. Falling back to Application Default Credentials.');
+  // Try split envs
+  const pid = process.env.FIREBASE_PROJECT_ID;
+  const email = process.env.FIREBASE_CLIENT_EMAIL;
+  let key = process.env.FIREBASE_PRIVATE_KEY;
+  if (pid && email && key) {
+    key = key.replace(/\\n/g, "\n");
+    console.log("[admin] using split envs");
+    return initializeApp({ credential: cert({ projectId: pid, clientEmail: email, privateKey: key }) });
+  }
+  console.warn("[admin] falling back to ADC (likely to fail in dev)");
   return initializeApp();
 }
 
 export function getAdminApp(): App {
   if (_app) return _app;
-  _app = getApps().length > 0 ? getApp() : makeApp();
+  _app = getApps().length ? getApp() : makeApp();
   return _app;
 }
-
-export function getAdminDb(): Firestore {
-  if (_db) return _db;
-  _db = getFirestore(getAdminApp());
-  return _db;
-}
-
-export function getAdminAuth(): Auth {
-  if (_auth) return _auth;
-  _auth = getAuth(getAdminApp());
-  return _auth;
-}
+export function getAdminAuth(): Auth { return (_auth ||= getAuth(getAdminApp())); }
+export function getAdminDb(): Firestore { return (_db ||= getFirestore(getAdminApp())); }

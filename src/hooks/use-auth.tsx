@@ -7,8 +7,6 @@ import { auth } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
 import { signUpUser } from "@/app/actions";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { createUserDocument } from "@/app/actions";
 
 interface AuthContextType {
   user: User | null;
@@ -32,7 +30,7 @@ const createSession = async (idToken: string) => {
     if (!res.ok) {
         const errorText = await res.text();
         console.error("sessionLogin failed:", res.status, errorText);
-        throw new Error("Failed to create session");
+        throw new Error(`sessionLogin failed: ${res.status} ${errorText}`);
     }
 }
 
