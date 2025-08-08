@@ -16,8 +16,6 @@ export interface Post {
     views: number;
 }
 
-const postsCollection = collection(db, 'blog_posts');
-
 const samplePosts: Omit<Post, 'id'>[] = [
     {
         slug: 'how-to-automate-your-finances-and-save-10-hours-every-month',
@@ -324,6 +322,7 @@ const samplePosts: Omit<Post, 'id'>[] = [
 
 // Function to get all posts, sorted by date
 export async function getAllPosts(): Promise<Post[]> {
+    const postsCollection = collection(db, 'blog_posts');
     const q = query(postsCollection, orderBy("date", "desc"));
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
@@ -340,6 +339,7 @@ export async function getAllPosts(): Promise<Post[]> {
 
 // Function to get a single post by its slug
 export async function getPostBySlug(slug: string): Promise<Post | undefined> {
+    const postsCollection = collection(db, 'blog_posts');
     const q = query(postsCollection, where("slug", "==", slug), limit(1));
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
@@ -351,6 +351,7 @@ export async function getPostBySlug(slug: string): Promise<Post | undefined> {
 
 // Function to create a new post
 export async function createPost(post: Omit<Post, 'id'>): Promise<string> {
+    const postsCollection = collection(db, 'blog_posts');
     const existingPost = await getPostBySlug(post.slug);
     if (existingPost) {
         throw new Error("A post with this slug already exists.");
