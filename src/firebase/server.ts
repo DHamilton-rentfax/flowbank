@@ -1,7 +1,7 @@
 // src/firebase/server.ts
-// Server-only Firebase Admin helpers. Never import this from a "use client" file.
+// Server-only Firebase Admin helpers. Never import this from "use client" file.
 import 'server-only';
-import { initializeApp, getApp, getApps, App, cert } from 'firebase-admin/app';
+import { initializeApp, getApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth, Auth } from 'firebase-admin/auth';
 
@@ -10,8 +10,9 @@ let _db: Firestore | null = null;
 let _auth: Auth | null = null;
 
 function makeApp(): App {
-    // If that fails, fall back to Application Default Credentials (for production)
-    return initializeApp();
+  // Use Application Default Credentials.
+  // This is the standard and recommended way for Firebase/Google Cloud environments.
+  return initializeApp();
 }
 
 export function getAdminApp(): App {
@@ -21,9 +22,13 @@ export function getAdminApp(): App {
 }
 
 export function getAdminDb(): Firestore {
-  return (_db ||= getFirestore(getAdminApp()));
+  if (_db) return _db;
+  _db = getFirestore(getAdminApp());
+  return _db;
 }
 
 export function getAdminAuth(): Auth {
-  return (_auth ||= getAuth(getAdminApp()));
+  if (_auth) return _auth;
+  _auth = getAuth(getAdminApp());
+  return _auth;
 }
