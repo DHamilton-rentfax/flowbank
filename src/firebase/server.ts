@@ -1,4 +1,3 @@
-
 // src/firebase/server.ts
 // Server-only Firebase Admin helpers. Never import this from a "use client" file.
 import { initializeApp, getApp, getApps, cert, App } from "firebase-admin/app";
@@ -11,26 +10,29 @@ let _auth: Auth | null = null;
 
 export function getAdminApp(): App {
   if (_app) return _app;
-  if (getApps().length) {
-    _app = getApp();
-    return _app;
-  }
+  if (getApps().length) return (_app = getApp());
 
+  // If any of the required cert fields are missing, fall back to ADC immediately
   const projectId = process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  if (privateKey?.includes("\\n")) {
-    privateKey = privateKey.replace(/\\n/g, "\n");
+  // Only use a cert if ALL values look valid
+  const canUseCert = Boolean(projectId && clientEmail && privateKey);
+
+  if (canUseCert) {
+    if (privateKey!.includes("\\n")) privateKey = privateKey!.replace(/\\n/g, "\n");
+    try {
+      _app = initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
+      return _app;
+    } catch (e) {
+      // If the cert is bad, log and fall back to ADC
+      console.error("Admin cert init failed; falling back to ADC:", e);
+    }
   }
 
-  if (projectId && clientEmail && privateKey) {
-    _app = initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
-  } else {
-    // Use ADC on Firebase Hosting / GCP
-    _app = initializeApp();
-  }
-
+  // ADC (works out of the box on Firebase App Hosting)
+  _app = initializeApp();
   return _app;
 }
 
@@ -45,5 +47,3 @@ export function getAdminAuth(): Auth {
   _auth = getAuth(getAdminApp());
   return _auth;
 }
-
-    
