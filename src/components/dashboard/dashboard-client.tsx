@@ -9,15 +9,33 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui
 import { formatCurrency } from "@/lib/utils";
 import { PlaidTransactions } from "./plaid-transactions";
 import { DollarSign, Banknote } from "lucide-react";
+import type { Account, AllocationRule, Transaction, UserPlan } from "@/lib/types";
 
-export function DashboardClient() {
-  const { accounts, addIncome, plaidAccessToken, loadingData } = useApp();
+interface DashboardClientProps {
+    initialData: {
+        userPlan: UserPlan;
+        rules: AllocationRule[];
+        accounts: Account[];
+        transactions: Transaction[];
+    } | null;
+}
 
+export function DashboardClient({ initialData }: DashboardClientProps) {
+  const { 
+    accounts: contextAccounts, 
+    addIncome, 
+    plaidAccessToken, 
+    loadingData 
+  } = useApp();
+
+  // Use server-provided data initially, then switch to client-side context state
+  const accounts = initialData && !loadingData ? initialData.accounts : contextAccounts;
+  
   const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
 
-  // This prevents a flash of empty content while data is loading from Firestore
-  if (loadingData) {
-    return <div>Loading...</div>
+  // Show a more detailed skeleton or a simplified view if initialData is not available
+  if (loadingData && !initialData) {
+    return <div>Loading dashboard...</div>
   }
 
   return (
