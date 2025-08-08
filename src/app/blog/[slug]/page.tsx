@@ -15,18 +15,24 @@ import { Footer } from '@/components/layout/footer';
 export default function BlogPostPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   const [post, setPost] = useState<Post | null | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (slug) {
-      const fetchPost = async () => {
-          const foundPost = await getPostBySlug(slug);
-          setPost(foundPost);
+      async function fetchPost() {
+        setIsLoading(true);
+        const foundPost = await getPostBySlug(slug);
+        setPost(foundPost || null); // Set to null if not found
+        setIsLoading(false);
       }
       fetchPost();
+    } else {
+        setIsLoading(false);
+        setPost(null);
     }
   }, [slug]);
 
-  if (post === undefined) {
+  if (isLoading || post === undefined) {
     return (
         <div className="container mx-auto max-w-3xl py-12 px-4">
             <header className="mb-8">

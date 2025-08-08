@@ -105,26 +105,23 @@ export default function BlogIndexPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // States for infinite scroll, though we might not need it if we load all upfront
   const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const loader = useRef(null);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-        setIsLoading(true);
-        const fetchedPosts = await getAllPosts();
-        setPosts(fetchedPosts);
-        setIsLoading(false);
+    async function fetchPosts() {
+      setIsLoading(true);
+      const fetchedPosts = await getAllPosts();
+      setPosts(fetchedPosts);
+      setIsLoading(false);
     }
     fetchPosts();
   }, []);
   
-  // This effect sets up the initial posts to be displayed.
   useEffect(() => {
     if (posts.length > 0) {
-        // The first post is featured, next 3 are trending
         const remainingPosts = posts.slice(4); 
         setDisplayedPosts(remainingPosts.slice(0, POSTS_PER_PAGE));
         setPage(1);
@@ -133,7 +130,7 @@ export default function BlogIndexPage() {
   }, [posts]);
   
   const loadMore = useCallback(() => {
-    if (!hasMore) return;
+    if (!hasMore || isLoading) return;
     
     const remainingPosts = posts.slice(4);
     const nextPage = page + 1;
@@ -142,10 +139,11 @@ export default function BlogIndexPage() {
     setDisplayedPosts(newPosts);
     setPage(nextPage);
     setHasMore(newPosts.length < remainingPosts.length);
-  }, [page, posts, hasMore]);
+  }, [page, posts, hasMore, isLoading]);
   
-  // Intersection observer for infinite scroll
   useEffect(() => {
+    if (!loader.current || isLoading) return;
+    
     const observer = new IntersectionObserver((entities) => {
         const target = entities[0];
         if (target.isIntersecting && hasMore) {
@@ -167,7 +165,7 @@ export default function BlogIndexPage() {
         observer.unobserve(currentLoader);
       }
     };
-  }, [loadMore, hasMore]);
+  }, [loadMore, hasMore, isLoading]);
 
   const featuredPost = posts[0];
   const trendingPosts = posts.slice(1, 4);
