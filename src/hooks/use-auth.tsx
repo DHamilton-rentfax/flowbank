@@ -30,6 +30,8 @@ const createSession = async (idToken: string) => {
     });
 
     if (!res.ok) {
+        const errorText = await res.text();
+        console.error("sessionLogin failed:", res.status, errorText);
         throw new Error("Failed to create session");
     }
 }
@@ -105,7 +107,7 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
     const result = await signUpUser(email, password, planId);
     if (result.success && result.customToken) {
       const userCredential = await signInWithCustomToken(auth, result.customToken);
-      const idToken = await getIdToken(userCredential.user);
+      const idToken = await getIdToken(userCredential.user, true);
       await createSession(idToken);
       router.push('/dashboard');
     } else {
@@ -115,7 +117,7 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
 
   const loginWithEmail = async (email: string, password: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const idToken = await getIdToken(userCredential.user);
+    const idToken = await getIdToken(userCredential.user, true);
     await createSession(idToken);
     router.push('/dashboard');
   }
