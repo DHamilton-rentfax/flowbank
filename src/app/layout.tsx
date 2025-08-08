@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
 import React from "react";
 import { ClientLayout } from "@/components/layout/client-layout";
+import { Header } from "@/components/layout/header";
 
 export const metadata: Metadata = {
   title: "FlowBank | Split. Stash. Scale your profits.",
@@ -32,7 +33,10 @@ export default function RootLayout({
       <body className="font-body antialiased" suppressHydrationWarning={true}>
         <AuthProvider firebaseConfig={firebaseConfig}>
             <ClientLayout>
-                {children}
+                <Header />
+                <main className="pt-16">
+                  {children}
+                </main>
             </ClientLayout>
             <Toaster />
         </AuthProvider>
