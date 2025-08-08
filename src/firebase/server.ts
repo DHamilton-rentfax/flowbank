@@ -1,6 +1,5 @@
 
 // src/firebase/server.ts
-// Server-only Firebase Admin helpers. Never import this from "use client" file.
 import 'server-only';
 import { initializeApp, getApp, getApps, App, cert } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
