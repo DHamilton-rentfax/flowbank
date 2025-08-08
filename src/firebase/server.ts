@@ -1,4 +1,3 @@
-
 // src/firebase/server.ts
 // Server-only Firebase Admin helpers. Never import this from a "use client" file.
 import { initializeApp, getApp, getApps, App, cert } from "firebase-admin/app";
