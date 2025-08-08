@@ -11,8 +11,7 @@ import { Products, TransactionsSyncRequest } from "plaid";
 import { CountryCode } from "plaid";
 import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
-import { db } from "@/firebase/server";
-import { auth as adminAuth } from "firebase-admin";
+import { getAdminDb, getAdminAuth } from "@/firebase/server";
 import { plans, addOns, initialRulesForNewUser } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
 import type { Account, UserPlan, UserData, UserRole } from "@/lib/types";
@@ -22,11 +21,12 @@ const getUserId = async () => {
     if (!idToken) {
         throw new Error("User not authenticated");
     }
-    const decodedToken = await adminAuth().verifyIdToken(idToken);
+    const decodedToken = await getAdminAuth().verifyIdToken(idToken);
     return decodedToken.uid;
 };
 
 export async function createUserDocument(userId: string, email: string, displayName?: string | null, planId?: string | null) {
+    const db = getAdminDb();
     const userDocRef = db.collection("users").doc(userId);
     
     const selectedPlanId = planId || 'free';
@@ -173,7 +173,7 @@ export async function exchangePublicToken(publicToken: string, userId: string) {
       const itemId = response.data.item_id;
 
       // Save the access token to the user's document
-      await db.collection("users").doc(userId).set({ 
+      await getAdminDb().collection("users").doc(userId).set({ 
         plaidAccessToken: accessToken,
         plaidItemId: itemId 
       }, { merge: true });
@@ -231,7 +231,7 @@ export async function findIncomeTransactions(input: IdentifyIncomeInput) {
 
 export async function createStripeConnectedAccount(userId: string, email: string) {
     try {
-        const userDocRef = db.collection("users").doc(userId);
+        const userDocRef = getAdminDb().collection("users").doc(userId);
         const userDoc = await userDocRef.get();
         if (userDoc.exists && userDoc.data()?.stripeAccountId) {
             const accountId = userDoc.data()!.stripeAccountId;
@@ -276,7 +276,7 @@ export async function createStripeConnectedAccount(userId: string, email: string
 
 export async function createCheckoutSession(userId: string, planId: string) {
     try {
-        const userDocRef = db.collection("users").doc(userId);
+        const userDocRef = getAdminDb().collection("users").doc(userId);
         const userDoc = await userDocRef.get();
 
         if (!userDoc.exists) {
@@ -319,7 +319,7 @@ export async function createCheckoutSession(userId: string, planId: string) {
 
 export async function createAddOnCheckoutSession(userId: string, addOnId: string) {
     try {
-        const userDocRef = db.collection("users").doc(userId);
+        const userDocRef = getAdminDb().collection("users").doc(userId);
         const userDoc = await userDocRef.get();
 
         if (!userDoc.exists) throw new Error("User not found");
@@ -360,7 +360,7 @@ export async function createAddOnCheckoutSession(userId: string, addOnId: string
 
 export async function createCustomerPortalSession(userId: string) {
     try {
-        const userDocRef = db.collection("users").doc(userId);
+        const userDocRef = getAdminDb().collection("users").doc(userId);
         const userDoc = await userDocRef.get();
 
         if (!userDoc.exists) {
@@ -391,7 +391,7 @@ export async function createCustomerPortalSession(userId: string) {
 
 export async function setup2FA() {
     const userId = await getUserId();
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await getAdminDb().collection('users').doc(userId).get();
     const email = userDoc.data()?.email;
 
     if (!userId || !email) {
@@ -425,13 +425,14 @@ export async function setup2FA() {
 
 export async function signUpUser(email: string, password: string, planId?: string | null) {
     try {
-        const userRecord = await adminAuth().createUser({ email, password });
+        const auth = getAdminAuth();
+        const userRecord = await auth.createUser({ email, password });
         const { uid } = userRecord;
 
         await createUserDocument(uid, email, null, planId);
         
         // Create a custom token for the client to sign in
-        const customToken = await adminAuth().createCustomToken(uid);
+        const customToken = await auth.createCustomToken(uid);
 
         return { success: true, customToken };
 
@@ -445,6 +446,7 @@ export async function signUpUser(email: string, password: string, planId?: strin
 export async function handleInstantPayout() {
     try {
         const userId = await getUserId();
+        const db = getAdminDb();
         const userDocRef = db.collection("users").doc(userId);
         const userDoc = await userDocRef.get();
         
@@ -523,7 +525,7 @@ export async function handleInstantPayout() {
 export async function createTestCharge() {
     try {
         const userId = await getUserId();
-        const userDocRef = db.collection("users").doc(userId);
+        const userDocRef = getAdminDb().collection("users").doc(userId);
         const userDoc = await userDocRef.get();
         
         if (!userDoc.exists) throw new Error("User not found.");
@@ -558,6 +560,7 @@ export async function createTestCharge() {
 export async function createPaymentLink(description: string, amount: number) {
     try {
         const userId = await getUserId();
+        const db = getAdminDb();
         const userDocRef = db.collection("users").doc(userId);
         const userDoc = await userDocRef.get();
         
@@ -615,7 +618,7 @@ export async function createPaymentLink(description: string, amount: number) {
 export async function submitFeedback(feedback: string) {
     try {
         const userId = await getUserId();
-        const userDoc = await db.collection('users').doc(userId).get();
+        const userDoc = await getAdminDb().collection('users').doc(userId).get();
         const userEmail = userDoc.data()?.email || 'unknown';
 
         // In a real app, you would save this to a database or send it to a support tool.
@@ -640,6 +643,7 @@ export async function submitFeedback(feedback: string) {
 export async function getAllUsers(): Promise<{ success: boolean; users?: UserData[]; error?: string }> {
     try {
         const currentUserId = await getUserId();
+        const db = getAdminDb();
         const currentUserDoc = await db.collection('users').doc(currentUserId).get();
         const currentUserData = currentUserDoc.data();
 
@@ -670,6 +674,7 @@ export async function getAllUsers(): Promise<{ success: boolean; users?: UserDat
 export async function updateUserRole(targetUserId: string, newRole: UserRole): Promise<{ success: boolean; error?: string }> {
      try {
         const currentUserId = await getUserId();
+        const db = getAdminDb();
         const currentUserDoc = await db.collection('users').doc(currentUserId).get();
         const currentUserData = currentUserDoc.data();
 
@@ -700,3 +705,5 @@ export async function updateUserRole(targetUserId: string, newRole: UserRole): P
         return { success: false, error: errorMessage };
     }
 }
+
+    

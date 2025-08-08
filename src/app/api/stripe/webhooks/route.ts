@@ -5,6 +5,7 @@ import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
 import { plans, addOns } from "@/lib/plans";
 import type { UserPlan } from "@/lib/types";
+import { getAdminDb } from "@/firebase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +28,7 @@ export async function POST(req: Request) {
         return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
     }
     
-    // Lazy-load Firebase Admin here (NOT at top-level)
-    const { getAdminApp } = await import("@/firebase/server");
-    const adminDb = getAdminApp().firestore();
+    const adminDb = getAdminDb();
 
     const session = event.data.object as Stripe.Checkout.Session;
     const sessionType = session.metadata?.type;
@@ -137,3 +136,5 @@ export async function POST(req: Request) {
 
     return new NextResponse(null, { status: 200 });
 }
+
+    
