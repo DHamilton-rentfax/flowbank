@@ -10,14 +10,15 @@ import { PlaidIntegration } from "./plaid-integration";
 import { UserProfile } from "./user-profile";
 import { StripeConnect } from "./stripe-connect";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { TwoFactorAuth } from "./two-factor-auth";
 import { AddOns } from "./add-ons";
+import { UserManagement } from "./user-management";
 
 export function SettingsClient() {
-  const { rules, updateRules: saveRules } = useApp();
+  const { rules, updateRules: saveRules, userPlan } = useApp();
   const [currentRules, setCurrentRules] = useState<AllocationRule[]>(rules);
+
+  const isAdmin = userPlan?.role === 'admin';
 
   // This effect synchronizes the local state with the context state
   // when the context data is loaded from Firestore.
@@ -38,11 +39,12 @@ export function SettingsClient() {
       <h1 className="text-3xl font-bold">Settings</h1>
       
       <Tabs defaultValue="profile">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="profile">Profile & Plan</TabsTrigger>
             <TabsTrigger value="allocations">Allocations</TabsTrigger>
             <TabsTrigger value="add-ons">Add-ons</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
+            {isAdmin && <TabsTrigger value="admin">Admin</TabsTrigger>}
         </TabsList>
         <TabsContent value="profile" className="mt-6">
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -79,6 +81,11 @@ export function SettingsClient() {
                 </div>
              </div>
         </TabsContent>
+         {isAdmin && (
+            <TabsContent value="admin" className="mt-6">
+                <UserManagement />
+            </TabsContent>
+         )}
       </Tabs>
     </div>
   );

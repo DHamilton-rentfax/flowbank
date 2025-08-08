@@ -42,6 +42,8 @@ export interface AddOn {
     stripePriceId: string;
 }
 
+export type UserRole = 'admin' | 'editor' | 'user';
+
 export interface UserPlan {
     id: string;
     name: string;
@@ -51,7 +53,15 @@ export interface UserPlan {
     currentPeriodEnd?: number;
     addOns?: { [key: string]: boolean };
     paymentLinks?: number;
-    role?: 'admin' | 'editor' | 'user';
+    role?: UserRole;
+}
+
+export interface UserData {
+    uid: string;
+    email: string;
+    displayName: string;
+    role: UserRole;
+    plan: UserPlan;
 }
 
 export interface PaymentLink {

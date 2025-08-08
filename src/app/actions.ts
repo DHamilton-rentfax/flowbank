@@ -15,7 +15,7 @@ import { db } from "@/firebase/server";
 import { auth as adminAuth } from "firebase-admin";
 import { plans, addOns, initialRulesForNewUser } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
-import type { Account, UserPlan } from "@/lib/types";
+import type { Account, UserPlan, UserData, UserRole } from "@/lib/types";
 
 const getUserId = async () => {
     const idToken = headers().get('Authorization')?.split('Bearer ')[1];
@@ -42,13 +42,15 @@ export async function createUserDocument(userId: string, email: string, displayN
         },
     });
 
+    const userRole = email === 'urbndesignz@gmail.com' ? 'admin' : 'user';
+
     const userPlan: UserPlan = {
         id: plan.id,
         name: plan.name,
         status: 'active',
         stripeCustomerId: stripeCustomer.id,
         addOns: {},
-        role: 'user', // Default role for new signups
+        role: userRole, 
     };
 
     const userData = {
@@ -630,6 +632,70 @@ export async function submitFeedback(feedback: string) {
 
     } catch (error) {
         console.error("Error submitting feedback:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getAllUsers(): Promise<{ success: boolean; users?: UserData[]; error?: string }> {
+    try {
+        const currentUserId = await getUserId();
+        const currentUserDoc = await db.collection('users').doc(currentUserId).get();
+        const currentUserData = currentUserDoc.data();
+
+        if (currentUserData?.plan?.role !== 'admin') {
+            throw new Error("Permission denied. You must be an admin to view all users.");
+        }
+
+        const usersSnapshot = await db.collection('users').get();
+        const users = usersSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                uid: doc.id,
+                email: data.email,
+                displayName: data.displayName,
+                role: data.plan?.role || 'user',
+                plan: data.plan
+            }
+        });
+
+        return { success: true, users: users as UserData[] };
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function updateUserRole(targetUserId: string, newRole: UserRole): Promise<{ success: boolean; error?: string }> {
+     try {
+        const currentUserId = await getUserId();
+        const currentUserDoc = await db.collection('users').doc(currentUserId).get();
+        const currentUserData = currentUserDoc.data();
+
+        if (currentUserData?.plan?.role !== 'admin') {
+            throw new Error("Permission denied. You must be an admin to change user roles.");
+        }
+
+        if (currentUserId === targetUserId) {
+            throw new Error("Admins cannot change their own role.");
+        }
+
+        const targetUserDocRef = db.collection('users').doc(targetUserId);
+        const targetUserDoc = await targetUserDocRef.get();
+
+        if (!targetUserDoc.exists) {
+            throw new Error("Target user not found.");
+        }
+
+        const targetUserData = targetUserDoc.data();
+        const updatedPlan = { ...targetUserData!.plan, role: newRole };
+
+        await targetUserDocRef.update({ plan: updatedPlan });
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating user role:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }

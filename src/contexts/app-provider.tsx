@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { Account, AllocationRule, Transaction, UserPlan, PaymentLink } from '@/lib/types';
+import type { Account, AllocationRule, Transaction, UserPlan, PaymentLink, UserData } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/firebase/client';
 import { doc, getDoc, setDoc, collection, writeBatch, query, orderBy, onSnapshot, getDocs, deleteDoc } from "firebase/firestore";
@@ -27,6 +27,7 @@ interface AppContextType {
   updatePlaidCursor: (cursor: string) => void;
   loadingData: boolean;
   userPlan: UserPlan | null;
+  allUsers: UserData[];
 }
 
 // Create the context with a default value
@@ -48,6 +49,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [plaidTransactions, setPlaidTransactions] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
+  const [allUsers, setAllUsers] = useState<UserData[]>([]);
 
 
   // Load data from Firestore
@@ -64,6 +66,17 @@ export function AppProvider({ children }: AppProviderProps) {
             setPlaidAccessTokenState(data.plaidAccessToken || null);
             setPlaidCursor(data.plaidCursor || null);
             setUserPlan(data.plan || null);
+
+            if (data.plan?.role === 'admin') {
+                // If user is admin, subscribe to all users collection
+                const usersCollectionRef = collection(db, "users");
+                const unsubscribeUsers = onSnapshot(usersCollectionRef, (snapshot) => {
+                    const usersList = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserData));
+                    setAllUsers(usersList);
+                });
+                return () => unsubscribeUsers();
+            }
+
           }
         }),
         onSnapshot(collection(db, "users", user.uid, "rules"), (snapshot) => {
@@ -95,7 +108,7 @@ export function AppProvider({ children }: AppProviderProps) {
       ];
 
       return () => {
-        unsubscribeAll.forEach(unsub => unsub());
+        unsubscribeAll.forEach(unsub => unsub && unsub());
       }
     } else if (!user) {
       // Clear data if user logs out
@@ -106,6 +119,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setPlaidAccessTokenState(null);
       setPlaidCursor(null);
       setUserPlan(null);
+      setAllUsers([]);
       setLoadingData(true); // Set to true until a user is available
     }
   }, [user]);
@@ -263,7 +277,8 @@ export function AppProvider({ children }: AppProviderProps) {
         }
     },
     loadingData,
-    userPlan
+    userPlan,
+    allUsers,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
