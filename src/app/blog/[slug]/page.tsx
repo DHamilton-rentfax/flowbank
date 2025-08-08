@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { getPostBySlug, type Post } from "@/lib/blog";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -12,8 +12,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Footer } from '@/components/layout/footer';
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+export default function BlogPostPage() {
+  const params = useParams();
+  const slug = params.slug as string;
   const [post, setPost] = useState<Post | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
 
