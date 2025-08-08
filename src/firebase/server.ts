@@ -8,46 +8,54 @@ let _app: App | null = null;
 let _db: Firestore | null = null;
 let _auth: Auth | null = null;
 
-function makeApp(): App {
+function fromJsonEnv() {
   const json = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-  if (json) {
-    try {
-      console.log("[admin] using GOOGLE_APPLICATION_CREDENTIALS_JSON");
-      return initializeApp({ credential: cert(JSON.parse(json)) });
-    } catch (e) {
-      console.error("[admin] bad GOOGLE_APPLICATION_CREDENTIALS_JSON:", e);
-    }
+  if (!json) return null;
+  try {
+    const parsed = JSON.parse(json);
+    if (!parsed.private_key || !parsed.client_email) throw new Error('Missing keys');
+    // Some UIs double-escape newlines; fix just in case
+    parsed.private_key = String(parsed.private_key).replace(/\\n/g, '\n');
+    console.log('[admin] using GOOGLE_APPLICATION_CREDENTIALS_JSON');
+    return cert(parsed);
+  } catch (e) {
+    console.error('[admin] bad GOOGLE_APPLICATION_CREDENTIALS_JSON:', e);
+    return null;
   }
-  const path = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (path) {
-    try {
-      console.log("[admin] using GOOGLE_APPLICATION_CREDENTIALS file:", path);
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const creds = require(path);
-      return initializeApp({ credential: cert(creds) });
-    } catch (e) {
-      console.error("[admin] bad GOOGLE_APPLICATION_CREDENTIALS file:", e);
-    }
-  }
-  console.log("[admin] using ADC");
+}
+
+function fromSplitEnv() {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (!projectId || !clientEmail || !privateKey) return null;
+  privateKey = privateKey.replace(/\\n/g, '\n');
+  console.log('[admin] using FIREBASE_* envs');
+  return cert({ projectId, clientEmail, privateKey });
+}
+
+function makeApp(): App {
+  const jsonCred = fromJsonEnv();
+  if (jsonCred) return initializeApp({ credential: jsonCred });
+
+  const splitCred = fromSplitEnv();
+  if (splitCred) return initializeApp({ credential: splitCred });
+
+  // Last resort: ADC (works on App Hosting/Cloud Run; flaky locally)
+  console.warn('[admin] falling back to ADC');
   return initializeApp();
 }
 
 export function getAdminApp(): App {
   if (_app) return _app;
-  if (getApps().length) return (_app = getApp());
-  _app = makeApp();
-  return _app;
+  _app = getApps().length ? getApp() : makeApp();
+  return _app!;
 }
 
 export function getAdminDb(): Firestore {
-  if (_db) return _db;
-  _db = getFirestore(getAdminApp());
-  return _db;
+  return (_db ||= getFirestore(getAdminApp()));
 }
 
 export function getAdminAuth(): Auth {
-  if (_auth) return _auth;
-  _auth = getAuth(getAdminApp());
-  return _auth;
+  return (_auth ||= getAuth(getAdminApp()));
 }
