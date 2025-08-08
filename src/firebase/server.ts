@@ -25,11 +25,10 @@ const serviceAccount = {
 };
 
 function makeApp(): App {
-  // Try to use hardcoded credentials first (for local dev)
   try {
     return initializeApp({ credential: cert(serviceAccount) });
   } catch (e) {
-    console.warn("[admin] Failed to initialize with hardcoded credentials. Falling back to ADC.", e);
+    console.error("Failed to initialize with hardcoded credentials. Falling back to ADC.", e);
     // If that fails, fall back to Application Default Credentials (for production)
     return initializeApp();
   }
