@@ -32,8 +32,7 @@ body {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 13%; /* Charcoal #333333 */
+    --sidebar-background: 0 0% 13%; /* Charcoal #212121 */
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 184 79% 62%;
     --sidebar-primary-foreground: 224 71% 4%;
