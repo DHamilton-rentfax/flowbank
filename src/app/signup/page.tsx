@@ -45,7 +45,9 @@ function SignupContent() {
               <h1 className="text-2xl font-semibold">FlowBank</h1>
             </Link>
           </div>
-          <AuthForm mode="signup" planId={planId} />
+          <Suspense fallback={<div>Loading form...</div>}>
+            <AuthForm mode="signup" planId={planId} />
+          </Suspense>
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link

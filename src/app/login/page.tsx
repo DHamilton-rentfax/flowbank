@@ -1,10 +1,29 @@
 
 "use client";
 
-import { AuthForm } from "@/components/auth/auth-form";
 import { Logo } from "@/components/icons";
 import Link from "next/link";
 import { Users, Banknote, ShieldCheck, Zap } from "lucide-react";
+import dynamic from 'next/dynamic';
+import { Skeleton } from "@/components/ui/skeleton";
+import { Suspense } from "react";
+
+const AuthForm = dynamic(() => import('@/components/auth/auth-form').then(mod => mod.AuthForm), {
+    loading: () => (
+      <div className="space-y-4">
+        <div className="space-y-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-10 w-full" />
+        </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-10 w-full" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+      </div>
+    ),
+    ssr: false
+});
 
 const adFeatures = [
     {
@@ -40,12 +59,9 @@ export default function LoginPage() {
                     <h1 className="text-2xl font-semibold">FlowBank</h1>
                 </Link>
             </div>
-            <AuthForm mode="login" />
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-                <Link href="/phone-login" className="font-medium text-primary hover:underline">
-                    Sign in with phone number
-                </Link>
-            </p>
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <AuthForm mode="login" />
+            </Suspense>
             <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link href="/signup" className="font-medium text-primary hover:underline">
