@@ -20,8 +20,8 @@ body {
     --secondary-foreground: 224 71% 4%;
     --muted: 210 40% 90%;
     --muted-foreground: 215 28% 45%;
-    --accent: 112 53% 58%; /* #67C25A vibrant green */
-    --accent-foreground: 222 47% 11%;
+    --accent: 214 70% 59%; /* Changed from green to match primary blue */
+    --accent-foreground: 0 0% 100%; /* Changed to be legible on blue */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 214 32% 91%;
@@ -55,8 +55,8 @@ body {
     --secondary-foreground: 0 0% 98%;
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
-    --accent: 112 53% 58%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 214 70% 59%; /* Changed from green to match primary blue */
+    --accent-foreground: 224 71% 4%; /* Changed to be legible on blue */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217 33% 22%;
