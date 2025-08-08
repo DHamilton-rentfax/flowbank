@@ -13,7 +13,14 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AppProvider, useApp } from "@/contexts/app-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Chat } from "@/components/chatbot/chat";
+import dynamic from "next/dynamic";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const Chat = dynamic(() => import('@/components/chatbot/chat').then(mod => mod.Chat), {
+    loading: () => <div className="flex justify-center items-center h-full"><p>Loading Chat...</p></div>,
+    ssr: false
+});
+
 
 function DashboardNav({
     children,
