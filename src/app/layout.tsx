@@ -19,12 +19,12 @@ export default function RootLayout({
 }>) {
 
   const firebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    apiKey: "AIzaSyDzJuxDWtnLYrBVz6VwN_VcIdRyBhHz8uY",
+    authDomain: "flow-bank-app.firebaseapp.com",
+    projectId: "flow-bank-app",
+    storageBucket: "flow-bank-app.appspot.com",
+    messagingSenderId: "192553978727",
+    appId: "1:192553978727:web:8a97d6b6c01d5d919a3dc2"
   };
 
   return (

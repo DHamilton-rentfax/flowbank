@@ -1,45 +1,13 @@
 
 import { NextResponse } from "next/server";
 import { getAuth } from "firebase-admin/auth";
-import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAdminApp } from "@/firebase/server";
 
 export const runtime = "nodejs";
 
-function initAdmin() {
-  if (getApps().length) {
-    return;
-  }
-
-  // Try to initialize from split environment variables first
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  
-  if (projectId && clientEmail && privateKey) {
-     initializeApp({ credential: cert({ projectId, clientEmail, privateKey: privateKey.replace(/\\n/g, "\n") }) });
-     return;
-  }
-
-  // Then try the full JSON environment variable
-  const credsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-  if (credsJson) {
-      try {
-          const creds = JSON.parse(credsJson);
-          creds.private_key = String(creds.private_key).replace(/\\n/g, '\n');
-          initializeApp({ credential: cert(creds) });
-          return;
-      } catch (e) {
-           console.error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON; falling back to ADC:", e);
-      }
-  }
-  
-  // Finally, fall back to Application Default Credentials
-  initializeApp();
-}
-
 export async function POST(req: Request) {
   try {
-    initAdmin();
+    getAdminApp(); // Ensure the app is initialized
     const { idToken } = await req.json();
     if (!idToken) {
       return NextResponse.json({ ok: false, error: "Missing idToken" }, { status: 400 });
