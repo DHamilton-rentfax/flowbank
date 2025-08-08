@@ -3,7 +3,7 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken, getIdToken } from "firebase/auth";
-import { auth, initializeFirebase } from "@/firebase/client";
+import { auth } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
 import { signUpUser } from "@/app/actions";
@@ -44,20 +44,19 @@ const clearSession = async () => {
 }
 
 
-export function AuthProvider({ children, firebaseConfig }: { children: ReactNode, firebaseConfig: any }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
-    initializeFirebase(firebaseConfig);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [firebaseConfig]);
+  }, []);
   
   const logout = async () => {
     try {

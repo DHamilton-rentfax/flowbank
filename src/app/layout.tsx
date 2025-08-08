@@ -18,20 +18,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDzJuxDWtnLYrBVz6VwN_VcIdRyBhHz8uY",
-    authDomain: "flow-bank-app.firebaseapp.com",
-    projectId: "flow-bank-app",
-    storageBucket: "flow-bank-app.appspot.com",
-    messagingSenderId: "192553978727",
-    appId: "1:192553978727:web:8a97d6b6c01d5d919a3dc2"
-  };
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className="font-body antialiased" suppressHydrationWarning={true}>
-        <AuthProvider firebaseConfig={firebaseConfig}>
+        <AuthProvider>
             <ClientLayout>
                 <Header />
                 <main className="pt-16">
