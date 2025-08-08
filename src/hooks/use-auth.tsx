@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken, getIdToken } from "firebase/auth";
 import { auth, initializeFirebase } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const createSession = async (idToken: string) => {
+    const res = await fetch("/api/auth/sessionLogin", { 
+        method: "POST", 
+        body: JSON.stringify({ idToken }), 
+        headers: { "Content-Type": "application/json" } 
+    });
+
+    if (!res.ok) {
+        throw new Error("Failed to create session");
+    }
+}
+
+const clearSession = async () => {
+     const res = await fetch("/api/auth/sessionLogout", { method: "POST" });
+     if (!res.ok) {
+        throw new Error("Failed to clear session");
+    }
+}
+
+
 export function AuthProvider({ children, firebaseConfig }: { children: ReactNode, firebaseConfig: any }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +52,6 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
     initializeFirebase(firebaseConfig);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
-      // We remove the auto-redirect from here to control it more granularly
       setLoading(false);
     });
     return () => unsubscribe();
@@ -41,6 +60,7 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
   const logout = async () => {
     try {
       await signOut(auth);
+      await clearSession();
       router.push("/login");
       toast({
         title: "Logged Out",
@@ -62,7 +82,6 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
     }
     try {
         await updateProfile(auth.currentUser, updates);
-        // Manually create a new user object to trigger re-render
         setUser(auth.currentUser ? { ...auth.currentUser } : null);
     } catch (error) {
         console.error("Error updating profile:", error);
@@ -85,7 +104,9 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
  const signUpWithEmail = async (email: string, password: string, planId?: string | null) => {
     const result = await signUpUser(email, password, planId);
     if (result.success && result.customToken) {
-      await signInWithCustomToken(auth, result.customToken);
+      const userCredential = await signInWithCustomToken(auth, result.customToken);
+      const idToken = await getIdToken(userCredential.user);
+      await createSession(idToken);
       router.push('/dashboard');
     } else {
       throw new Error(result.error || "Sign up failed.");
@@ -93,7 +114,9 @@ export function AuthProvider({ children, firebaseConfig }: { children: ReactNode
   }
 
   const loginWithEmail = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const idToken = await getIdToken(userCredential.user);
+    await createSession(idToken);
     router.push('/dashboard');
   }
 

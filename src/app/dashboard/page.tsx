@@ -2,24 +2,22 @@
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { getDoc, doc, collection, getDocs, query, orderBy } from "firebase/firestore";
 import { getAdminDb, getAdminAuth } from "@/firebase/server";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 
 const getUserId = async () => {
-    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
-    if (!idToken) {
-        // This is a temporary workaround for when the user is authenticated but the token isn't passed in SSR.
-        // In a real app, you would handle this more gracefully, perhaps with a redirect or middleware.
-        try {
-            const users = await getAdminAuth().listUsers(1);
-            if (users.users.length > 0) return users.users[0].uid;
-        } catch (e) {
-             console.error("Could not get user for server-side rendering.", e);
-        }
+    const sessionCookie = cookies().get("__session")?.value;
+    if (!sessionCookie) {
         return null;
     }
-    const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-    return decodedToken.uid;
+    try {
+        const decodedToken = await getAdminAuth().verifySessionCookie(sessionCookie, true);
+        return decodedToken.uid;
+    } catch (error) {
+        console.error("Error verifying session cookie:", error);
+        return null;
+    }
 };
 
 
@@ -50,12 +48,9 @@ export default async function DashboardPage() {
     const userId = await getUserId();
     
     if (!userId) {
-        // Handle case where user cannot be identified on the server
-        return <DashboardClient initialData={null} />;
+        redirect("/login");
     }
     
     const initialData = await getInitialData(userId);
     return <DashboardClient initialData={initialData} />;
 }
-
-    
