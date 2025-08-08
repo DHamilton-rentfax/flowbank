@@ -3,12 +3,13 @@ import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
-import { db as adminDb } from "@/firebase/server";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { getAdminApp } from "@/firebase/server";
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { plans, addOns } from "@/lib/plans";
 import type { UserPlan } from "@/lib/types";
 import { db } from "@/firebase/client";
 
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
 
     const session = event.data.object as Stripe.Checkout.Session;
     const sessionType = session.metadata?.type;
+    const adminDb = getAdminApp().firestore();
 
     if (event.type === 'checkout.session.completed') {
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
