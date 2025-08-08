@@ -1,4 +1,3 @@
-
 // src/firebase/server.ts
 import 'server-only';
 import { initializeApp, getApp, getApps, App, cert } from 'firebase-admin/app';
@@ -14,13 +13,16 @@ function fromJsonEnv() {
   if (!json) return null;
   try {
     const parsed = JSON.parse(json);
-    if (!parsed.private_key || !parsed.client_email) throw new Error('Missing keys');
-    // Some UIs double-escape newlines; fix just in case
+    if (!parsed.private_key || !parsed.client_email) {
+      console.error('[admin] Malformed GOOGLE_APPLICATION_CREDENTIALS_JSON: Missing private_key or client_email.');
+      return null;
+    }
+    // Handle the escaped newlines in the private key.
     parsed.private_key = String(parsed.private_key).replace(/\\n/g, '\n');
-    console.log('[admin] using GOOGLE_APPLICATION_CREDENTIALS_JSON');
+    console.log('[admin] Initializing with GOOGLE_APPLICATION_CREDENTIALS_JSON');
     return cert(parsed);
   } catch (e) {
-    console.error('[admin] bad GOOGLE_APPLICATION_CREDENTIALS_JSON:', e);
+    console.error('[admin] Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON:', e);
     return null;
   }
 }
@@ -30,33 +32,40 @@ function fromSplitEnv() {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   if (!projectId || !clientEmail || !privateKey) return null;
+
+  // Handle the escaped newlines in the private key.
   privateKey = privateKey.replace(/\\n/g, '\n');
-  console.log('[admin] using FIREBASE_* envs');
+  console.log('[admin] Initializing with split FIREBASE_* environment variables');
   return cert({ projectId, clientEmail, privateKey });
 }
 
 function makeApp(): App {
-  const jsonCred = fromJsonEnv();
-  if (jsonCred) return initializeApp({ credential: jsonCred });
+  // Check for credentials in environment variables first.
+  const credential = fromJsonEnv() || fromSplitEnv();
 
-  const splitCred = fromSplitEnv();
-  if (splitCred) return initializeApp({ credential: splitCred });
+  if (credential) {
+    return initializeApp({ credential });
+  }
 
-  // Last resort: ADC (works on App Hosting/Cloud Run; flaky locally)
-  console.warn('[admin] falling back to ADC');
+  // If no env vars, fall back to Application Default Credentials (for production on GCP/Firebase).
+  console.warn('[admin] No explicit credentials found in environment. Falling back to Application Default Credentials.');
   return initializeApp();
 }
 
 export function getAdminApp(): App {
   if (_app) return _app;
-  _app = getApps().length ? getApp() : makeApp();
-  return _app!;
+  _app = getApps().length > 0 ? getApp() : makeApp();
+  return _app;
 }
 
 export function getAdminDb(): Firestore {
-  return (_db ||= getFirestore(getAdminApp()));
+  if (_db) return _db;
+  _db = getFirestore(getAdminApp());
+  return _db;
 }
 
 export function getAdminAuth(): Auth {
-  return (_auth ||= getAuth(getAdminApp()));
+  if (_auth) return _auth;
+  _auth = getAuth(getAdminApp());
+  return _auth;
 }
