@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons";
 import { useState }from "react";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Menu, X } from "lucide-react";
 
 const navLinks = [
@@ -57,19 +57,20 @@ export function Header() {
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                        <SheetHeader className="border-b pb-4 flex-row justify-between items-center">
+                            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                            <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2">
+                                <Logo className="size-8 text-primary" />
+                                <span className="text-xl font-bold">FlowBank</span>
+                            </Link>
+                            <SheetClose asChild>
+                                <Button variant="ghost" size="icon">
+                                    <X />
+                                    <span className="sr-only">Close menu</span>
+                                </Button>
+                            </SheetClose>
+                        </SheetHeader>
                         <div className="flex flex-col h-full">
-                            <div className="flex items-center justify-between border-b pb-4">
-                                <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2">
-                                    <Logo className="size-8 text-primary" />
-                                    <span className="text-xl font-bold">FlowBank</span>
-                                </Link>
-                                <SheetClose asChild>
-                                    <Button variant="ghost" size="icon">
-                                        <X />
-                                        <span className="sr-only">Close menu</span>
-                                    </Button>
-                                </SheetClose>
-                            </div>
                             <nav className="flex flex-col gap-4 py-6 flex-1">
                                 {navLinks.map(link => (
                                     <SheetClose asChild key={link.href}>
