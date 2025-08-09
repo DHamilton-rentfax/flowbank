@@ -57,10 +57,21 @@ export interface UserPlan {
     role?: UserRole;
 }
 
+export interface UserAddress {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+}
+
 export interface UserData {
     uid: string;
     email: string;
     displayName: string;
+    phone?: string;
+    businessName?: string;
+    address?: UserAddress;
     role: UserRole;
     plan: UserPlan;
 }

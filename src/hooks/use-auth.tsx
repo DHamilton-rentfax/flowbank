@@ -7,6 +7,17 @@ import { auth } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
 import { signUpUser } from "@/app/actions";
+import type { UserAddress } from "@/lib/types";
+
+interface SignUpParams {
+    email: string;
+    password: string;
+    displayName: string;
+    phone: string;
+    businessName?: string;
+    address: UserAddress;
+    planId?: string | null;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -14,7 +25,7 @@ interface AuthContextType {
   logout: () => void;
   updateUserProfile: (updates: { displayName?: string; photoURL?: string; }) => Promise<void>;
   sendPasswordReset: () => Promise<void>;
-  signUpWithEmail: (email: string, password: string, planId?: string | null) => Promise<any>;
+  signUpWithEmail: (params: SignUpParams) => Promise<any>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
 }
 
@@ -100,8 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
- const signUpWithEmail = async (email: string, password: string, planId?: string | null) => {
-    const result = await signUpUser(email, password, planId);
+ const signUpWithEmail = async (params: SignUpParams) => {
+    const result = await signUpUser(params);
     if (result.success && result.customToken) {
       const userCredential = await signInWithCustomToken(auth, result.customToken);
       const idToken = await getIdToken(userCredential.user, true);

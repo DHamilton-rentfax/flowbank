@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import type { UserAddress } from "@/lib/types";
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -25,6 +26,17 @@ interface AuthFormProps {
 export function AuthForm({ mode, planId }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [address, setAddress] = useState<UserAddress>({
+      street: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "US"
+  });
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -79,7 +91,15 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
-        await signUpWithEmail(email, password, planId);
+        await signUpWithEmail({
+          email, 
+          password, 
+          displayName,
+          phone,
+          businessName,
+          address,
+          planId
+        });
          toast({
           title: "Account Created!",
           description: "You've been successfully signed up. Redirecting...",
@@ -111,6 +131,19 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
       <CardContent>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4">
+            {mode === 'signup' && (
+                <>
+                    <div className="grid gap-2">
+                        <Label htmlFor="displayName">Full Name</Label>
+                        <Input id="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} required disabled={isLoading} />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} required disabled={isLoading} />
+                    </div>
+                </>
+            )}
+
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -147,6 +180,29 @@ export function AuthForm({ mode, planId }: AuthFormProps) {
                 </Button>
               </div>
             </div>
+
+            {mode === 'signup' && (
+                <>
+                     <div className="grid gap-2">
+                        <Label htmlFor="businessName">Business Name (Optional)</Label>
+                        <Input id="businessName" value={businessName} onChange={e => setBusinessName(e.target.value)} disabled={isLoading} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Address</Label>
+                        <Input placeholder="Street Address" value={address.street} onChange={e => setAddress(a => ({...a, street: e.target.value}))} required disabled={isLoading} />
+                        <div className="flex gap-2">
+                            <Input placeholder="City" value={address.city} onChange={e => setAddress(a => ({...a, city: e.target.value}))} required disabled={isLoading} />
+                            <Input placeholder="State" value={address.state} onChange={e => setAddress(a => ({...a, state: e.target.value}))} required disabled={isLoading} />
+                        </div>
+                         <div className="flex gap-2">
+                             <Input placeholder="Postal Code" value={address.postalCode} onChange={e => setAddress(a => ({...a, postalCode: e.target.value}))} required disabled={isLoading} />
+                            <Input placeholder="Country" value={address.country} onChange={e => setAddress(a => ({...a, country: e.target.value}))} required disabled={isLoading} />
+                        </div>
+                    </div>
+                </>
+            )}
+
+
             <Button type="submit" className="w-full mt-4" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 animate-spin" />}
               {buttonText}

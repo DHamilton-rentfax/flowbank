@@ -16,7 +16,7 @@ import { headers } from "next/headers";
 import { getAdminDb, getAdminAuth } from "@/firebase/server";
 import { plans, addOns, initialRulesForNewUser } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
-import type { Account, UserPlan, UserData, UserRole, PaymentLink } from "@/lib/types";
+import type { Account, UserPlan, UserData, UserRole, PaymentLink, UserAddress } from "@/lib/types";
 
 const getUserId = async () => {
     const idToken = headers().get('Authorization')?.split('Bearer ')[1];
@@ -27,7 +27,7 @@ const getUserId = async () => {
     return decodedToken.uid;
 };
 
-export async function createUserDocument(userId: string, email: string, displayName?: string | null, planId?: string | null) {
+export async function createUserDocument(userId: string, email: string, displayName: string, phone: string, businessName: string, address: UserAddress, planId?: string | null) {
     const db = getAdminDb();
     const userDocRef = db.collection("users").doc(userId);
     
@@ -38,13 +38,22 @@ export async function createUserDocument(userId: string, email: string, displayN
     
     const stripeCustomer = await stripe.customers.create({
         email,
-        name: displayName || email,
+        name: displayName,
+        phone,
+        address: {
+            line1: address.street,
+            city: address.city,
+            state: address.state,
+            postal_code: address.postalCode,
+            country: address.country,
+        },
         metadata: {
             firebaseUID: userId,
+            businessName: businessName,
         },
     });
 
-    const userRole = email === 'urbndesignz@gmail.com' ? 'admin' : 'user';
+    const userRole = email === 'urbandesignz@gmail.com' ? 'admin' : 'user';
 
     const userPlan: UserPlan = {
         id: plan.id,
@@ -55,9 +64,12 @@ export async function createUserDocument(userId: string, email: string, displayN
         role: userRole, 
     };
 
-    const userData = {
+    const userData: Omit<UserData, 'uid' | 'role'> = {
         email,
-        displayName: displayName || email,
+        displayName,
+        phone,
+        businessName,
+        address,
         createdAt: new Date().toISOString(),
         stripeCustomerId: stripeCustomer.id,
         plan: userPlan,
@@ -418,13 +430,34 @@ export async function setup2FA() {
     }
 }
 
-export async function signUpUser(email: string, password: string, planId?: string | null) {
+const SignUpSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(6),
+    displayName: z.string().min(1),
+    phone: z.string().min(1),
+    businessName: z.string().optional(),
+    address: z.object({
+        street: z.string().min(1),
+        city: z.string().min(1),
+        state: z.string().min(1),
+        postalCode: z.string().min(1),
+        country: z.string().min(1),
+    }),
+    planId: z.string().nullable().optional(),
+});
+
+type SignUpInput = z.infer<typeof SignUpSchema>;
+
+export async function signUpUser(input: SignUpInput) {
     try {
+        const validatedInput = SignUpSchema.parse(input);
+        const { email, password, displayName, phone, businessName, address, planId } = validatedInput;
+
         const auth = getAdminAuth();
-        const userRecord = await auth.createUser({ email, password });
+        const userRecord = await auth.createUser({ email, password, displayName });
         const { uid } = userRecord;
 
-        await createUserDocument(uid, email, null, planId);
+        await createUserDocument(uid, email, displayName, phone, businessName || '', address, planId);
         
         // Create a custom token for the client to sign in
         const customToken = await auth.createCustomToken(uid);
@@ -433,10 +466,14 @@ export async function signUpUser(email: string, password: string, planId?: strin
 
     } catch (error) {
         console.error("Sign up failed:", error);
+        if (error instanceof z.ZodError) {
+            return { success: false, error: "Invalid input data." };
+        }
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }
 }
+
 
 export async function handleInstantPayout() {
     try {
