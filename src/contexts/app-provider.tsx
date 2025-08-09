@@ -60,24 +60,24 @@ export function AppProvider({ children }: AppProviderProps) {
       const userDocRef = doc(db, "users", user.uid);
       
       const unsubscribeAll = [
-        onSnapshot(userDocRef, async (userDoc) => {
+        onSnapshot(userDocRef, (userDoc) => {
           if (userDoc.exists()) {
             const data = userDoc.data();
             setPlaidAccessTokenState(data.plaidAccessToken || null);
             setPlaidCursor(data.plaidCursor || null);
             setUserPlan(data.plan || null);
-
-            if (data.plan?.role === 'admin') {
-                // If user is admin, subscribe to all users collection
-                const usersCollectionRef = collection(db, "users");
-                const unsubscribeUsers = onSnapshot(usersCollectionRef, (snapshot) => {
-                    const usersList = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserData));
-                    setAllUsers(usersList);
-                });
-                return () => unsubscribeUsers();
-            }
+            // Always add the current user to the list
+            const selfData = { uid: userDoc.id, ...data } as UserData;
+            setAllUsers(prev => {
+                const others = prev.filter(u => u.uid !== userDoc.id);
+                return [selfData, ...others];
+            });
 
           }
+        }),
+        onSnapshot(collection(db, "users"), (snapshot) => {
+            const usersList = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserData));
+            setAllUsers(usersList);
         }),
         onSnapshot(collection(db, "users", user.uid, "rules"), (snapshot) => {
           if (!snapshot.empty) {
@@ -292,5 +292,3 @@ export function useApp() {
   }
   return context;
 }
-
-    

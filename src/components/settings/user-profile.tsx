@@ -17,53 +17,15 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useApp } from "@/contexts/app-provider";
-import { createCustomerPortalSession, createTestCharge } from "@/app/actions";
+import { createCustomerPortalSession } from "@/app/actions";
 import { Badge } from "../ui/badge";
 import type { UserAddress } from "@/lib/types";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/firebase/client";
 
-function TestIntegration() {
-    const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
-
-    const handleTestCharge = async () => {
-        setIsLoading(true);
-        const result = await createTestCharge();
-        if (result.success) {
-            toast({
-                title: "Test Charge Successful",
-                description: result.message,
-                className: "bg-accent text-accent-foreground",
-            });
-        } else {
-             toast({
-                title: "Test Charge Failed",
-                description: result.error,
-                variant: "destructive",
-            });
-        }
-        setIsLoading(false);
-    }
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Test Stripe Integration</CardTitle>
-                <CardDescription>
-                    Click the button below to create a $1.00 test charge. This will verify that your Stripe API keys are configured correctly.
-                </CardDescription>
-            </CardHeader>
-            <CardFooter>
-                 <Button className="w-full" onClick={handleTestCharge} disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 animate-spin" />}
-                    Create $1.00 Test Charge
-                </Button>
-            </CardFooter>
-        </Card>
-    )
-}
 
 export function UserProfile() {
-  const { user, updateUserProfile, sendPasswordReset } = useAuth();
+  const { user, updateUserProfile: updateFirebaseAuthProfile, sendPasswordReset } = useAuth();
   const { userPlan, allUsers, loadingData } = useApp();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
@@ -90,13 +52,24 @@ export function UserProfile() {
   }, [currentUserData]);
   
   const handleUpdateProfile = async () => {
+    if (!user) return;
     setIsUpdating(true);
     try {
-        // Here you would also update the document in Firestore
-        await updateUserProfile({ displayName });
+        // This updates the Firebase Auth profile (for display name)
+        await updateFirebaseAuthProfile({ displayName });
+
+        // And this updates the user document in Firestore
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, {
+            displayName,
+            phone,
+            businessName,
+            address,
+        });
+
         toast({
             title: "Profile Updated",
-            description: "Your display name has been successfully updated.",
+            description: "Your account details have been successfully updated.",
             className: "bg-accent text-accent-foreground",
         });
     } catch (error) {
