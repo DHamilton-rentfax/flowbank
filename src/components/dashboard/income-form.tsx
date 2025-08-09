@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { DollarSign } from "lucide-react";
+import { DollarSign, Send } from "lucide-react";
+import { PayoutDialog } from "./payout-dialog";
 
 interface IncomeFormProps {
   onAddIncome: (amount: number) => void;
@@ -69,12 +70,20 @@ export function IncomeForm({ onAddIncome }: IncomeFormProps) {
             />
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-col sm:flex-row gap-2">
           <Button className="w-full" type="submit">
             Allocate Funds
           </Button>
+          <PayoutDialog>
+            <Button variant="secondary" className="w-full">
+              <Send className="mr-2" />
+              Pay Yourself
+            </Button>
+          </PayoutDialog>
         </CardFooter>
       </form>
     </Card>
   );
 }
+
+    

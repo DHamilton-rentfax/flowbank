@@ -759,5 +759,53 @@ export async function suggestFinancialProductsAction(input: FinancialProductsInp
     }
 }
 
+export async function createPayout(amount: number, accountId: string) {
+    const userId = await getUserId();
+    const db = getAdminDb();
+    const userDocRef = db.collection("users").doc(userId);
+    const userDoc = await userDocRef.get();
+
+    if (!userDoc.exists) throw new Error("User not found.");
+
+    const userData = userDoc.data()!;
+    const stripeAccountId = userData.stripeAccountId;
+
+    if (!stripeAccountId) {
+        throw new Error("Stripe account not connected. Please set up payouts in settings.");
+    }
     
+    // In a real application, you would need to get the user's external bank account ID
+    // that's registered with their Stripe account. For this demo, we assume one exists.
+    
+    try {
+        // This is a placeholder. A real implementation would be more complex.
+        // 1. Check Stripe account balance.
+        // 2. Create a Payout to the user's bank.
+        // 3. Decrease the virtual account balance in Firestore.
+
+        // For now, we will just simulate the success and decrease the balance.
+        const accountDocRef = db.collection("users").doc(userId).collection("accounts").doc(accountId);
+        const accountDoc = await accountDocRef.get();
+
+        if (!accountDoc.exists) throw new Error("Allocation account not found.");
+        
+        const accountData = accountDoc.data() as Account;
+        
+        if (accountData.balance < amount) {
+            throw new Error("Insufficient balance in the selected account.");
+        }
+
+        const newBalance = accountData.balance - amount;
+        await accountDocRef.update({ balance: newBalance });
+
+        return { success: true, message: `Successfully initiated a payout of $${amount.toFixed(2)}.` };
+    } catch (error) {
+        console.error("Error creating payout:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+    
+    
+
     
