@@ -6,6 +6,7 @@ import { identifyIncome, type IdentifyIncomeInput } from "@/ai/flows/identify-in
 import { chat, type ChatInput } from "@/ai/flows/chatbot";
 import { getFinancialCoaching, type FinancialCoachInput } from "@/ai/flows/financial-coach-flow";
 import { generateBlogPost, type GenerateBlogPostInput } from "@/ai/flows/generate-blog-post";
+import { suggestFinancialProducts, type FinancialProductsInput, type FinancialProductsOutput } from "@/ai/flows/suggest-financial-products";
 import { z } from "zod";
 import { plaidClient } from "@/lib/plaid";
 import { Products, TransactionsSyncRequest } from "plaid";
@@ -83,11 +84,9 @@ export async function createUserDocument(userId: string, email: string, displayN
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
   try {
     const result = await suggestAllocationPlan(input);
-    const planSchema = z.record(z.string(), z.number());
-    const parsedPlan = planSchema.parse(result.allocationPlan);
     return {
       success: true,
-      plan: parsedPlan,
+      plan: result.allocationPlan,
       explanation: result.breakdownExplanation,
     };
   } catch (error) {
@@ -138,7 +137,7 @@ export async function createLinkToken(userId: string) {
           user: {
             client_user_id: userId,
           },
-          client_name: 'Flow Bank',
+          client_name: 'AutoAllocator',
           country_codes: [CountryCode.Us],
           language: 'en',
           webhook: `${process.env.NEXT_PUBLIC_SITE_URL}/api/plaid/webhook`,
@@ -397,7 +396,7 @@ export async function setup2FA() {
     try {
         // Generate a new secret for the user.
         const totp = new OTPAuth.TOTP({
-            issuer: 'FlowBank',
+            issuer: 'AutoAllocator',
             label: email,
             algorithm: 'SHA1',
             digits: 6,
@@ -541,7 +540,7 @@ export async function createTestCharge() {
             payment_method: paymentMethods.data[0].id,
             off_session: true,
             confirm: true,
-            description: "Test charge from FlowBank"
+            description: "Test charge from AutoAllocator"
         });
 
         return { success: true, message: "Successfully created a $1.00 test charge." };
@@ -712,4 +711,14 @@ export async function generateAIBlogPost(input: GenerateBlogPostInput) {
         return { success: false, error: errorMessage };
     }
 }
-    
+
+export async function suggestFinancialProductsAction(input: FinancialProductsInput): Promise<{ success: boolean, products?: FinancialProductsOutput['products'], error?: string }> {
+    try {
+        const result = await suggestFinancialProducts(input);
+        return { success: true, products: result.products };
+    } catch (error) {
+        console.error("Error suggesting financial products:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
