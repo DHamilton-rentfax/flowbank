@@ -5,6 +5,7 @@ import { useApp } from "@/contexts/app-provider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 export default function BlogLayout({
   children,
