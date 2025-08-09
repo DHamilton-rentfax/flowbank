@@ -6,9 +6,7 @@ import { AllocationRules } from "./allocation-rules";
 import { AIPlanGenerator } from "./ai-plan-generator";
 import { useState, useEffect, Suspense } from "react";
 import type { AllocationRule } from "@/lib/types";
-import { PlaidIntegration } from "./plaid-integration";
 import { UserProfile } from "./user-profile";
-import { StripeConnect } from "./stripe-connect";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +19,16 @@ const AddOns = dynamic(() => import('./add-ons').then(mod => mod.AddOns), {
 
 const TwoFactorAuth = dynamic(() => import('./two-factor-auth').then(mod => mod.TwoFactorAuth), {
     loading: () => <Skeleton className="h-48" />,
+    ssr: false,
+});
+
+const PlaidIntegration = dynamic(() => import('./plaid-integration').then(mod => mod.PlaidIntegration), {
+    loading: () => <Skeleton className="h-40" />,
+    ssr: false,
+});
+
+const StripeConnect = dynamic(() => import('./stripe-connect').then(mod => mod.StripeConnect), {
+    loading: () => <Skeleton className="h-40" />,
     ssr: false,
 });
 
@@ -61,8 +69,12 @@ export function SettingsClient() {
                     <UserProfile />
                 </div>
                 <div className="lg:col-span-1 space-y-6">
-                    <PlaidIntegration />
-                    <StripeConnect />
+                    <Suspense fallback={<Skeleton className="h-40" />}>
+                        <PlaidIntegration />
+                    </Suspense>
+                    <Suspense fallback={<Skeleton className="h-40" />}>
+                        <StripeConnect />
+                    </Suspense>
                 </div>
             </div>
         </TabsContent>
