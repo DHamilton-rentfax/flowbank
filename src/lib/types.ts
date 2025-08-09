@@ -50,6 +50,7 @@ export interface UserPlan {
     status: 'active' | 'trialing' | 'cancelled';
     stripeSubscriptionId?: string;
     stripeCustomerId?: string;
+    stripeAccountId?: string;
     currentPeriodEnd?: number;
     addOns?: { [key: string]: boolean };
     paymentLinks?: number;
@@ -73,3 +74,5 @@ export interface PaymentLink {
     createdAt: string;
     status: 'active' | 'archived';
 }
+
+    

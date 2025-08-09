@@ -14,6 +14,7 @@ import { useApp } from "@/contexts/app-provider";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2, PlusCircle, Copy, Check, ExternalLink, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function CreatePaymentLinkDialog() {
     const [description, setDescription] = useState("");
@@ -116,10 +117,33 @@ function CopyButton({ text }: { text: string }) {
 
 export default function PaymentsPage() {
     const { paymentLinks, loadingData, userPlan } = useApp();
-    const hasStripeAccount = !!userPlan?.stripeSubscriptionId; // A proxy to know if they've connected stripe
+    const hasStripeAccount = !!userPlan?.stripeAccountId;
 
     if (loadingData) {
-        return <div>Loading payments...</div>
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                        <Skeleton className="h-8 w-40" />
+                        <Skeleton className="h-4 w-72" />
+                    </div>
+                    <Skeleton className="h-10 w-44" />
+                </div>
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="h-4 w-80" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     if (!hasStripeAccount) {
@@ -198,3 +222,5 @@ export default function PaymentsPage() {
         </div>
     );
 }
+
+    

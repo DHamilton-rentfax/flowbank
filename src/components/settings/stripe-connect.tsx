@@ -14,8 +14,8 @@ export function StripeConnect() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { userPlan } = useApp(); // We'll assume the user's connected account status is on the plan
-  const isConnected = !!userPlan?.stripeSubscriptionId; // This is a proxy for now
+  const { userPlan } = useApp();
+  const isConnected = !!userPlan?.stripeAccountId;
 
   const handleConnect = async () => {
     if (!user || !user.email) {
@@ -71,3 +71,5 @@ export function StripeConnect() {
     </Card>
   );
 }
+
+    

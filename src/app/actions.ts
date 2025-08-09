@@ -16,7 +16,7 @@ import { headers } from "next/headers";
 import { getAdminDb, getAdminAuth } from "@/firebase/server";
 import { plans, addOns, initialRulesForNewUser } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
-import type { Account, UserPlan, UserData, UserRole } from "@/lib/types";
+import type { Account, UserPlan, UserData, UserRole, PaymentLink } from "@/lib/types";
 
 const getUserId = async () => {
     const idToken = headers().get('Authorization')?.split('Bearer ')[1];
@@ -84,9 +84,10 @@ export async function createUserDocument(userId: string, email: string, displayN
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
   try {
     const result = await suggestAllocationPlan(input);
+    const parsedPlan = JSON.parse(result.allocationPlan);
     return {
       success: true,
-      plan: result.allocationPlan,
+      plan: parsedPlan,
       explanation: result.breakdownExplanation,
     };
   } catch (error) {
@@ -589,8 +590,7 @@ export async function createPaymentLink(description: string, amount: number) {
         });
 
         // Save the payment link to Firestore
-        const paymentLinkData = {
-            id: paymentLink.id,
+        const paymentLinkData: Omit<PaymentLink, 'id'> = {
             userId,
             description,
             amount,
@@ -722,3 +722,5 @@ export async function suggestFinancialProductsAction(input: FinancialProductsInp
         return { success: false, error: errorMessage };
     }
 }
+
+    

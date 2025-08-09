@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,7 +17,7 @@ import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Chat = dynamic(() => import('@/components/chatbot/chat').then(mod => mod.Chat), {
-    loading: () => <div className="flex justify-center items-center h-full"><p>Loading Chat...</p></div>,
+    loading: () => <Skeleton className="h-full" />,
     ssr: false
 });
 
@@ -59,7 +59,7 @@ function DashboardNav({
             <SidebarHeader>
               <div className="flex items-center gap-2">
                 <Logo className="size-7 text-primary" />
-                <h1 className="text-xl font-semibold">AutoAllocator</h1>
+                <h1 className="text-xl font-semibold">FlowBank</h1>
               </div>
             </SidebarHeader>
             <SidebarMenu>
@@ -170,7 +170,9 @@ function DashboardNav({
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 h-96 p-0 mr-4 mb-2" side="top" align="end">
-                    <Chat />
+                    <Suspense fallback={<div className="flex items-center justify-center h-full"><p>Loading Chat...</p></div>}>
+                        <Chat />
+                    </Suspense>
                 </PopoverContent>
             </Popover>
         </SidebarInset>
@@ -209,3 +211,5 @@ export default function DashboardLayout({
     </AppProvider>
   );
 }
+
+    

@@ -103,7 +103,7 @@ export function AppProvider({ children }: AppProviderProps) {
           setPlaidTransactions(snapshot.docs.map(doc => doc.data()));
         }),
         onSnapshot(query(collection(db, "users", user.uid, "payment_links"), orderBy("createdAt", "desc")), (snapshot) => {
-          setPaymentLinks(snapshot.docs.map(doc => doc.data() as PaymentLink));
+          setPaymentLinks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentLink)));
         }),
       ];
 
@@ -292,3 +292,5 @@ export function useApp() {
   }
   return context;
 }
+
+    
