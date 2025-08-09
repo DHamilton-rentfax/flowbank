@@ -8,6 +8,7 @@ import { RecentAllocations } from "./recent-allocations";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { PlaidTransactions } from "./plaid-transactions";
+import { GettingStartedGuide } from "./getting-started-guide";
 import { DollarSign, Banknote } from "lucide-react";
 import type { Account, AllocationRule, Transaction, UserPlan } from "@/lib/types";
 
@@ -23,6 +24,7 @@ interface DashboardClientProps {
 export function DashboardClient({ initialData }: DashboardClientProps) {
   const { 
     accounts: contextAccounts, 
+    transactions: contextTransactions,
     addIncome, 
     plaidAccessToken, 
     loadingData 
@@ -30,6 +32,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
   // Use server-provided data initially, then switch to client-side context state
   const accounts = initialData && !loadingData ? initialData.accounts : contextAccounts;
+  const transactions = initialData && !loadingData ? initialData.transactions : contextTransactions;
   
   const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
 
@@ -37,9 +40,13 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   if (loadingData && !initialData) {
     return <div>Loading dashboard...</div>
   }
+  
+  const isNewUser = transactions.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
+      {isNewUser && <GettingStartedGuide />}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -75,12 +82,14 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       {plaidAccessToken ? (
         <PlaidTransactions />
       ) : (
-        <Card className="text-center p-8">
-            <CardTitle>Connect Your Bank</CardTitle>
-            <CardDescription className="mt-2">
-                Link your bank account in Settings to automatically find and allocate income.
-            </CardDescription>
-        </Card>
+        !isNewUser && (
+            <Card className="text-center p-8">
+                <CardTitle>Connect Your Bank</CardTitle>
+                <CardDescription className="mt-2">
+                    Link your bank account in Settings to automatically find and allocate income.
+                </CardDescription>
+            </Card>
+        )
       )}
       
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
