@@ -57,10 +57,10 @@ const generateBlogPostPrompt = ai.definePrompt({
     1.  **Analyze the Data:** Carefully review the provided transaction data to identify patterns, trends, and interesting insights related to the topic. For example, if the topic is about saving, look for common spending categories, income patterns, or potential areas for savings.
     2.  **Write a Compelling Blog Post:** Create a blog post that is helpful, easy to read, and provides actionable advice. The post should be structured with a clear introduction, body, and conclusion.
     3.  **Format as HTML:** The entire 'content' field of your output must be a single string of valid HTML.
-        *   Use `<h2>` for main section headings.
-        *   Use `<p>` for paragraphs.
-        *   Use `<ul>` and `<li>` for bulleted lists.
-        *   Use `<strong>` to emphasize key points.
+        *   Use \`<h2>\` for main section headings.
+        *   Use \`<p>\` for paragraphs.
+        *   Use \`<ul>\` and \`<li>\` for bulleted lists.
+        *   Use \`<strong>\` to emphasize key points.
     4.  **Create a Title and Excerpt:**
         *   **title:** Write a catchy, SEO-friendly title for the post.
         *   **excerpt:** Write a concise summary (under 160 characters) to be used for social media and search engine results.

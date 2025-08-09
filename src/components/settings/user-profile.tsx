@@ -182,7 +182,7 @@ export function UserProfile() {
                 )}
             </CardFooter>
         </Card>
-        <TestIntegration />
+        
     </div>
   );
 }

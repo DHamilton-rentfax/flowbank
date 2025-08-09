@@ -51,7 +51,7 @@ const suggestFinancialProductsPrompt = ai.definePrompt({
     name: 'suggestFinancialProductsPrompt',
     input: { schema: FinancialProductsInputSchema },
     output: { schema: FinancialProductsOutputSchema },
-    prompt: `You are an expert financial advisor for a platform called AutoAllocator. Your role is to act like a recommendation engine similar to Credit Karma.
+    prompt: `You are an expert financial advisor for a platform called FlowBank. Your role is to act like a recommendation engine similar to Credit Karma.
 
     Analyze the user's transaction data to identify their financial habits, needs, and potential opportunities. Based on this analysis, recommend up to 3 financial products that would be highly beneficial for them.
 
@@ -66,9 +66,9 @@ const suggestFinancialProductsPrompt = ai.definePrompt({
         *   **Business Loan:** Recommend if you see signs of growth (increasing revenue) but potential cash flow gaps, or large one-off expenses that suggest a need for capital.
         *   **High-Yield Savings Account:** Recommend if the user has a significant amount of cash sitting in what appears to be a standard checking account.
     3.  **Generate Recommendations:** Create a list of 1 to 3 product recommendations. For each product:
-        *   Provide a generic but descriptive `productName` (e.g., "Premier Business Rewards Card," not "Chase Sapphire").
-        *   Write a clear `recommendationReason` that directly ties the product to their observed financial behavior. For example, "Because you spend over $2,000 monthly on supplies, a cashback card could earn you significant rewards."
-        *   List 2-3 compelling `keyFeatures`.
+        *   Provide a generic but descriptive \`productName\` (e.g., "Premier Business Rewards Card," not "Chase Sapphire").
+        *   Write a clear \`recommendationReason\` that directly ties the product to their observed financial behavior. For example, "Because you spend over $2,000 monthly on supplies, a cashback card could earn you significant rewards."
+        *   List 2-3 compelling \`keyFeatures\`.
 
     Your final output must strictly adhere to the defined JSON output schema.`,
 });

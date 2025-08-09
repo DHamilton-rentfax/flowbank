@@ -137,7 +137,7 @@ export async function createLinkToken(userId: string) {
           user: {
             client_user_id: userId,
           },
-          client_name: 'AutoAllocator',
+          client_name: 'FlowBank',
           country_codes: [CountryCode.Us],
           language: 'en',
           webhook: `${process.env.NEXT_PUBLIC_SITE_URL}/api/plaid/webhook`,
@@ -396,7 +396,7 @@ export async function setup2FA() {
     try {
         // Generate a new secret for the user.
         const totp = new OTPAuth.TOTP({
-            issuer: 'AutoAllocator',
+            issuer: 'FlowBank',
             label: email,
             algorithm: 'SHA1',
             digits: 6,
@@ -540,7 +540,7 @@ export async function createTestCharge() {
             payment_method: paymentMethods.data[0].id,
             off_session: true,
             confirm: true,
-            description: "Test charge from AutoAllocator"
+            description: "Test charge from FlowBank"
         });
 
         return { success: true, message: "Successfully created a $1.00 test charge." };
