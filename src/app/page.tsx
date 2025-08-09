@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import Image from 'next/image';
+import { cn } from "@/lib/utils";
 
 const howItWorks = [
     {
