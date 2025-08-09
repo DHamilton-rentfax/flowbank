@@ -84,10 +84,9 @@ export async function createUserDocument(userId: string, email: string, displayN
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
   try {
     const result = await suggestAllocationPlan(input);
-    const parsedPlan = JSON.parse(result.allocationPlan);
     return {
       success: true,
-      plan: parsedPlan,
+      plan: result.allocationPlan,
       explanation: result.breakdownExplanation,
     };
   } catch (error) {

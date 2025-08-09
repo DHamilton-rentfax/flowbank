@@ -19,10 +19,9 @@ const SuggestAllocationPlanInputSchema = z.object({
 export type SuggestAllocationPlanInput = z.infer<typeof SuggestAllocationPlanInputSchema>;
 
 const SuggestAllocationPlanOutputSchema = z.object({
-  allocationPlan: z
-    .string()
+  allocationPlan: z.object({}).catchall(z.number())
     .describe(
-      'A suggested allocation plan as a JSON object with account names and allocation percentages.'
+      'A JSON object with account names as keys and allocation percentages as values.'
     ),
   breakdownExplanation: z
     .string()
@@ -42,32 +41,20 @@ const suggestAllocationPlanPrompt = ai.definePrompt({
   output: {schema: SuggestAllocationPlanOutputSchema},
   prompt: `You are an expert financial advisor specializing in creating allocation plans for businesses.
 
-  Given the business type: {{{businessType}}}, suggest an allocation plan as a JSON object with account names and allocation percentages.
+  Given the business type: {{{businessType}}}, suggest an allocation plan.
   Also provide a breakdown explanation of why this allocation plan is suggested.
 
   The allocation plan should include common business accounts such as "Operating Expenses", "Savings", "Marketing", "Taxes", and "Owner Compensation".
   Ensure that the percentages add up to 100.
-  The JSON object should have the following format:
+  
+  Your entire response must conform to the output JSON schema.
+  The allocationPlan field must be a valid JSON object. For example:
   {
     "Operating Expenses": 30,
     "Savings": 10,
     "Marketing": 15,
     "Taxes": 25,
     "Owner Compensation": 20
-  }
-  Make sure the percentages add up to 100.
-  Ensure that the allocationPlan can be parsed as JSON and that the allocationPlan field contains the JSON object.
-
-  Here is a sample good output (only one JSON object, no leading/trailing text): 
-  {
-    "allocationPlan": '{
-      "Operating Expenses": 30,
-      "Savings": 10,
-      "Marketing": 15,
-      "Taxes": 25,
-      "Owner Compensation": 20
-    }',
-    "breakdownExplanation": "This allocation plan ensures that the business can cover its operating expenses, save for future investments, market its products/services, pay its taxes, and compensate the owner."
   }
 `,
 });

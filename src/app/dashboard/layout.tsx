@@ -7,7 +7,7 @@ import { useEffect, useState, Suspense } from "react";
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Home, Settings, BarChart3, LogOut, PenSquare, MessageSquare, CreditCard, Bot, BrainCircuit, Shield, Gift } from "lucide-react";
+import { Home, Settings, BarChart3, LogOut, PenSquare, MessageSquare, CreditCard, Bot, BrainCircuit, Shield, Gift, Handshake } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -76,6 +76,14 @@ function DashboardNav({
                       <Link href="/dashboard/coach">
                           <BrainCircuit />
                           <span>AI Coach</span>
+                      </Link>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/partners')}>
+                      <Link href="/dashboard/partners">
+                          <Handshake />
+                          <span>Partners</span>
                       </Link>
                   </SidebarMenuButton>
               </SidebarMenuItem>
@@ -212,4 +220,3 @@ export default function DashboardLayout({
   );
 }
 
-    
