@@ -5,6 +5,7 @@ import { suggestAllocationPlan, type SuggestAllocationPlanInput } from "@/ai/flo
 import { identifyIncome, type IdentifyIncomeInput } from "@/ai/flows/identify-income";
 import { chat, type ChatInput } from "@/ai/flows/chatbot";
 import { getFinancialCoaching, type FinancialCoachInput } from "@/ai/flows/financial-coach-flow";
+import { generateBlogPost, type GenerateBlogPostInput } from "@/ai/flows/generate-blog-post";
 import { z } from "zod";
 import { plaidClient } from "@/lib/plaid";
 import { Products, TransactionsSyncRequest } from "plaid";
@@ -80,36 +81,31 @@ export async function createUserDocument(userId: string, email: string, displayN
 
 
 export async function getAISuggestion(input: SuggestAllocationPlanInput) {
-    try {
-        const result = await suggestAllocationPlan(input);
-        
-        const plan = JSON.parse(result.allocationPlan);
-        
-        const planSchema = z.record(z.string(), z.number());
-        const parsedPlan = planSchema.parse(plan);
-        
-        return {
-            success: true,
-            plan: parsedPlan,
-            explanation: result.breakdownExplanation,
-        };
-    } catch (error) {
-        console.error("Error getting AI suggestion:", error);
-        
-        let errorMessage = "An unknown error occurred.";
-        if (error instanceof SyntaxError) {
-            errorMessage = "Failed to parse AI response. The format was unexpected.";
-        } else if (error instanceof z.ZodError) {
-            errorMessage = "AI response had an invalid data structure.";
-        } else if (error instanceof Error) {
-            errorMessage = error.message;
-        }
-
-        return {
-            success: false,
-            error: errorMessage,
-        };
+  try {
+    const result = await suggestAllocationPlan(input);
+    const planSchema = z.record(z.string(), z.number());
+    const parsedPlan = planSchema.parse(result.allocationPlan);
+    return {
+      success: true,
+      plan: parsedPlan,
+      explanation: result.breakdownExplanation,
+    };
+  } catch (error) {
+    console.error('Error getting AI suggestion:', error);
+    let errorMessage = 'An unknown error occurred.';
+    if (error instanceof SyntaxError) {
+      errorMessage =
+        'Failed to parse AI response. The format was unexpected.';
+    } else if (error instanceof z.ZodError) {
+      errorMessage = 'AI response had an invalid data structure.';
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
     }
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
 }
 
 export async function getChatbotResponse(input: ChatInput) {
@@ -706,4 +702,14 @@ export async function updateUserRole(targetUserId: string, newRole: UserRole): P
     }
 }
 
+export async function generateAIBlogPost(input: GenerateBlogPostInput) {
+    try {
+        const result = await generateBlogPost(input);
+        return { success: true, post: result };
+    } catch (error) {
+        console.error("Error generating AI blog post:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
     
