@@ -2,15 +2,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { getAllPosts, type Post } from "@/lib/blog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/layout/footer";
+import { FixedSizeList as List } from 'react-window';
 
-function PostCard({ post }: { post: Post }) {
+const PostCard = memo(function PostCard({ post }: { post: Post }) {
   return (
     <Link href={`/blog/${post.slug}`} className="group block">
       <div className="overflow-hidden rounded-lg">
@@ -40,9 +41,9 @@ function PostCard({ post }: { post: Post }) {
       </div>
     </Link>
   )
-}
+});
 
-function FeaturedPostCard({ post }: { post: Post }) {
+const FeaturedPostCard = memo(function FeaturedPostCard({ post }: { post: Post }) {
     return (
         <Link href={`/blog/${post.slug}`} className="group block">
             <Card className="overflow-hidden transition-shadow hover:shadow-lg">
@@ -82,7 +83,7 @@ function FeaturedPostCard({ post }: { post: Post }) {
             </Card>
         </Link>
     )
-}
+});
 
 function PostSkeleton() {
     return (
@@ -99,16 +100,52 @@ function PostSkeleton() {
     )
 }
 
-const POSTS_PER_PAGE = 6; // Show more posts per "page"
+function PostGrid({ posts }: { posts: Post[] }) {
+    const Row = ({ index, style }: { index: number, style: React.CSSProperties }) => {
+        const post = posts[index];
+        return <div style={style} className="p-4"><PostCard post={post} /></div>
+    };
+    
+    // For a 3-column grid
+    const columnCount = 3;
+    const rowCount = Math.ceil(posts.length / columnCount);
+    
+    const RowGrid = ({ index, style }: { index: number, style: React.CSSProperties }) => {
+        const items = [];
+        const startIndex = index * columnCount;
+        for (let i = 0; i < columnCount; i++) {
+            const postIndex = startIndex + i;
+            if (postIndex < posts.length) {
+                items.push(<div key={postIndex} className="w-1/3 p-4"><PostCard post={posts[postIndex]} /></div>);
+            }
+        }
+        return <div style={style} className="flex">{items}</div>
+    }
+
+    if (typeof window === 'undefined') {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                {posts.map((post) => <PostCard key={post.slug} post={post} />)}
+            </div>
+        )
+    }
+
+    return (
+        <List
+            height={Math.min(rowCount, 3) * 380} // Approx height for 3 rows
+            itemCount={rowCount}
+            itemSize={380} // Approx height of a PostCard
+            width="100%"
+        >
+            {RowGrid}
+        </List>
+    )
+}
+
 
 export default function BlogIndexPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const loader = useRef(null);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -120,55 +157,9 @@ export default function BlogIndexPage() {
     fetchPosts();
   }, []);
   
-  useEffect(() => {
-    if (posts.length > 0) {
-        const remainingPosts = posts.slice(4); 
-        setDisplayedPosts(remainingPosts.slice(0, POSTS_PER_PAGE));
-        setPage(1);
-        setHasMore(remainingPosts.length > POSTS_PER_PAGE);
-    }
-  }, [posts]);
-  
-  const loadMore = useCallback(() => {
-    if (!hasMore || isLoading) return;
-    
-    const remainingPosts = posts.slice(4);
-    const nextPage = page + 1;
-    const newPosts = remainingPosts.slice(0, nextPage * POSTS_PER_PAGE);
-    
-    setDisplayedPosts(newPosts);
-    setPage(nextPage);
-    setHasMore(newPosts.length < remainingPosts.length);
-  }, [page, posts, hasMore, isLoading]);
-  
-  useEffect(() => {
-    if (!loader.current || isLoading) return;
-    
-    const observer = new IntersectionObserver((entities) => {
-        const target = entities[0];
-        if (target.isIntersecting && hasMore) {
-            loadMore();
-        }
-    }, {
-      root: null,
-      rootMargin: "20px",
-      threshold: 1.0
-    });
-
-    const currentLoader = loader.current;
-    if (currentLoader) {
-      observer.observe(currentLoader);
-    }
-
-    return () => {
-      if (currentLoader) {
-        observer.unobserve(currentLoader);
-      }
-    };
-  }, [loadMore, hasMore, isLoading]);
-
   const featuredPost = posts[0];
   const trendingPosts = posts.slice(1, 4);
+  const morePosts = posts.slice(4);
 
   if (isLoading) {
     return (
@@ -219,29 +210,15 @@ export default function BlogIndexPage() {
                 </section>
             )}
 
-            {displayedPosts.length > 0 && (
+            {morePosts.length > 0 && (
                 <section>
                     <header className="my-12 pt-6 border-t">
                         <h2 className="text-3xl font-bold tracking-tight">More from the Blog</h2>
                     </header>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-                        {displayedPosts.map((post) => (
-                            <PostCard key={post.slug} post={post} />
-                        ))}
-                    </div>
+                    <PostGrid posts={morePosts} />
                 </section>
             )}
 
-            <div ref={loader} className="py-8">
-                {hasMore && (
-                    <div className="text-center">
-                        <p className="text-muted-foreground">Loading more posts...</p>
-                    </div>
-                )}
-                {!hasMore && posts.length > (4 + POSTS_PER_PAGE) && (
-                    <p className="text-center text-muted-foreground">You've reached the end!</p>
-                )}
-            </div>
             </div>
         </main>
         <Footer />

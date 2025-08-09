@@ -59,6 +59,7 @@
     "react-hook-form": "latest",
     "react-markdown": "latest",
     "react-plaid-link": "latest",
+    "react-window": "^1.8.10",
     "recharts": "latest",
     "stripe": "latest",
     "tailwind-merge": "latest",
@@ -66,11 +67,13 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^14.2.3",
     "@tailwindcss/typography": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/react-google-recaptcha": "latest",
+    "@types/react-window": "^1.8.8",
     "cross-env": "latest",
     "postcss": "latest",
     "tailwindcss": "latest",

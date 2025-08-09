@@ -6,6 +6,20 @@ import { AuthProvider } from "@/hooks/use-auth";
 import React from "react";
 import { ClientLayout } from "@/components/layout/client-layout";
 import { Header } from "@/components/layout/header";
+import { Inter, Poppins } from 'next/font/google';
+
+const inter = Inter({ 
+  subsets: ['latin'], 
+  display: 'swap',
+  variable: '--font-inter',
+});
+
+const poppins = Poppins({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-poppins',
+});
 
 export const metadata: Metadata = {
   title: "FlowBank | Split. Stash. Scale your profits.",
@@ -19,7 +33,7 @@ export default function RootLayout({
 }>) {
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${poppins.variable}`}>
       <head />
       <body className="font-body antialiased" suppressHydrationWarning={true}>
         <AuthProvider>
