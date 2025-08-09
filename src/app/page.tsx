@@ -11,17 +11,23 @@ const howItWorks = [
     {
         step: 1,
         title: "Connect Your Revenue",
-        description: "Securely link your Stripe account to capture incoming payments, or connect your bank accounts with Plaid to monitor income deposits."
+        description: "Securely link your Stripe account to capture incoming payments, or connect your bank accounts with Plaid to monitor income deposits.",
+        image: "https://placehold.co/1200x800.png",
+        aiHint: "financial connection",
     },
     {
         step: 2,
         title: "Define Your Rules",
-        description: "Create custom rules based on percentages or fixed dollar amounts. Not sure where to start? Our AI can generate a plan for you."
+        description: "Create custom rules based on percentages or fixed dollar amounts. Not sure where to start? Our AI can generate a plan for you.",
+        image: "https://placehold.co/1200x800.png",
+        aiHint: "allocation rules"
     },
     {
         step: 3,
         title: "Automate Your Cash Flow",
-        description: "FlowBank automatically detects income and allocates it to your virtual accounts, giving you a real-time view of your finances."
+        description: "FlowBank automatically detects income and allocates it to your virtual accounts, giving you a real-time view of your finances.",
+        image: "https://placehold.co/1200x800.png",
+        aiHint: "dashboard chart"
     }
 ];
 
@@ -97,6 +103,17 @@ export default function LandingPage() {
                         <GoogleAiLogo className="h-6 text-muted-foreground" />
                     </div>
                  </div>
+                 <div className="relative mt-20 max-w-5xl mx-auto">
+                    <Image 
+                        src="https://placehold.co/1200x750.png"
+                        alt="FlowBank Dashboard"
+                        width={1200}
+                        height={750}
+                        className="rounded-lg shadow-2xl"
+                        data-ai-hint="dashboard analytics"
+                        priority
+                    />
+                </div>
             </div>
         </section>
 
@@ -108,14 +125,26 @@ export default function LandingPage() {
                     <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">Go from financial stress to streamlined success in minutes.</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {howItWorks.map((item) => (
-                        <div key={item.step} className="text-center">
-                            <div className="flex items-center justify-center">
-                                <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold font-headline">{item.step}</div>
+                <div className="space-y-16">
+                    {howItWorks.map((item, index) => (
+                        <div key={item.step} className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+                            <div className={cn("order-2", index % 2 === 0 ? "md:order-1" : "md:order-2")}>
+                                <div className="mb-4 flex items-center gap-4">
+                                     <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold font-headline shrink-0">{item.step}</div>
+                                     <h3 className="text-2xl font-bold font-headline">{item.title}</h3>
+                                </div>
+                                <p className="text-muted-foreground text-lg">{item.description}</p>
                             </div>
-                            <h3 className="text-xl font-bold font-headline mt-6 mb-2">{item.title}</h3>
-                            <p className="text-muted-foreground">{item.description}</p>
+                            <div className={cn("order-1", index % 2 === 0 ? "md:order-2" : "md:order-1")}>
+                                <Image
+                                    src={item.image}
+                                    alt={item.title}
+                                    width={1200}
+                                    height={800}
+                                    className="rounded-lg shadow-lg"
+                                    data-ai-hint={item.aiHint}
+                                />
+                            </div>
                         </div>
                     ))}
                 </div>
