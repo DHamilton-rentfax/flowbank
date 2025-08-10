@@ -101,27 +101,6 @@ function PostSkeleton() {
 }
 
 function PostGrid({ posts }: { posts: Post[] }) {
-    const Row = ({ index, style }: { index: number, style: React.CSSProperties }) => {
-        const post = posts[index];
-        return <div style={style} className="p-4"><PostCard post={post} /></div>
-    };
-    
-    // For a 3-column grid
-    const columnCount = 3;
-    const rowCount = Math.ceil(posts.length / columnCount);
-    
-    const RowGrid = ({ index, style }: { index: number, style: React.CSSProperties }) => {
-        const items = [];
-        const startIndex = index * columnCount;
-        for (let i = 0; i < columnCount; i++) {
-            const postIndex = startIndex + i;
-            if (postIndex < posts.length) {
-                items.push(<div key={postIndex} className="w-1/3 p-4"><PostCard post={posts[postIndex]} /></div>);
-            }
-        }
-        return <div style={style} className="flex">{items}</div>
-    }
-
     if (typeof window === 'undefined') {
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
@@ -129,15 +108,37 @@ function PostGrid({ posts }: { posts: Post[] }) {
             </div>
         )
     }
+    
+    // For a 3-column grid
+    const columnCount = 3;
+    const rowCount = Math.ceil(posts.length / columnCount);
+    const cardHeight = 380; // Approximate height of a PostCard with padding
+    const columnWidth = window.innerWidth > 1024 ? (window.innerWidth / columnCount) : window.innerWidth;
+    
+    const Row = ({ index, style }: { index: number, style: React.CSSProperties }) => {
+        const items = [];
+        const startIndex = index * columnCount;
+        for (let i = 0; i < columnCount; i++) {
+            const postIndex = startIndex + i;
+            if (postIndex < posts.length) {
+                items.push(
+                  <div key={postIndex} className="px-4" style={{ width: `${100/columnCount}%` }}>
+                    <PostCard post={posts[postIndex]} />
+                  </div>
+                );
+            }
+        }
+        return <div style={style} className="flex -mx-4">{items}</div>
+    }
 
     return (
         <List
-            height={Math.min(rowCount, 3) * 380} // Approx height for 3 rows
+            height={Math.min(rowCount, 3) * cardHeight} // Show up to 3 rows to avoid excessive height
             itemCount={rowCount}
-            itemSize={380} // Approx height of a PostCard
+            itemSize={cardHeight}
             width="100%"
         >
-            {RowGrid}
+            {Row}
         </List>
     )
 }
