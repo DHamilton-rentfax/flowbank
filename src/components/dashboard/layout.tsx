@@ -79,7 +79,7 @@ function DashboardNav({
                       </Link>
                   </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
+               <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/partners')}>
                       <Link href="/dashboard/partners">
                           <Handshake />

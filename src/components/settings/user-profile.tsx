@@ -13,75 +13,41 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useApp } from "@/contexts/app-provider";
 import { createCustomerPortalSession } from "@/app/actions";
 import { Badge } from "../ui/badge";
-import type { UserAddress } from "@/lib/types";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/firebase/client";
-
 
 export function UserProfile() {
-  const { user, updateUserProfile: updateFirebaseAuthProfile, sendPasswordReset } = useAuth();
-  const { userPlan, allUsers, loadingData } = useApp();
+  const { user, updateUserProfile, sendPasswordReset } = useAuth();
+  const { userPlan } = useApp();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [isManagingSubscription, setIsManagingSubscription] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.displayName || "");
   const { toast } = useToast();
 
-  const currentUserData = allUsers.find(u => u.uid === user?.uid);
-
-  const [displayName, setDisplayName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [address, setAddress] = useState<UserAddress>({
-    street: "", city: "", state: "", postalCode: "", country: ""
-  });
-
-
-  useEffect(() => {
-    if (currentUserData) {
-        setDisplayName(currentUserData.displayName || "");
-        setPhone(currentUserData.phone || "");
-        setBusinessName(currentUserData.businessName || "");
-        setAddress(currentUserData.address || { street: "", city: "", state: "", postalCode: "", country: "" });
-    }
-  }, [currentUserData]);
-  
   const handleUpdateProfile = async () => {
-    if (!user) return;
     setIsUpdating(true);
     try {
-        // This updates the Firebase Auth profile (for display name)
-        await updateFirebaseAuthProfile({ displayName });
-
-        // And this updates the user document in Firestore
-        const userDocRef = doc(db, 'users', user.uid);
-        await updateDoc(userDocRef, {
-            displayName,
-            phone,
-            businessName,
-            address,
-        });
-
-        toast({
-            title: "Profile Updated",
-            description: "Your account details have been successfully updated.",
-            className: "bg-accent text-accent-foreground",
-        });
+      await updateUserProfile({ displayName });
+      toast({
+        title: "Profile Updated",
+        description: "Your display name has been successfully updated.",
+        className: "bg-accent text-accent-foreground",
+      });
     } catch (error) {
-        toast({
-            title: "Update Failed",
-            description: (error as Error).message,
-            variant: "destructive",
-        });
+      toast({
+        title: "Update Failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
     } finally {
-        setIsUpdating(false);
+      setIsUpdating(false);
     }
-  }
+  };
 
   const handlePasswordReset = async () => {
     setIsSendingReset(true);
@@ -136,81 +102,21 @@ export function UserProfile() {
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="displayName">Display Name</Label>
-                        <Input 
-                            id="displayName" 
-                            type="text" 
-                            placeholder="Your Name" 
-                            value={displayName}
-                            onChange={(e) => setDisplayName(e.target.value)}
-                            disabled={isUpdating}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input 
-                            id="phone" 
-                            type="tel" 
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            disabled={isUpdating}
-                        />
-                    </div>
+                <div className="space-y-2">
+                <Label htmlFor="displayName">Display Name</Label>
+                <Input 
+                    id="displayName" 
+                    type="text" 
+                    placeholder="Your Name" 
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    disabled={isUpdating}
+                />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={user?.email || ""} disabled />
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={user?.email || ""} disabled />
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="businessName">Business Name</Label>
-                    <Input 
-                        id="businessName" 
-                        type="text" 
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        disabled={isUpdating}
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label>Address</Label>
-                    <Input 
-                        placeholder="Street Address" 
-                        value={address.street} 
-                        onChange={e => setAddress(a => ({...a, street: e.target.value}))} 
-                        disabled={isUpdating} 
-                    />
-                    <div className="flex gap-2">
-                        <Input 
-                            placeholder="City" 
-                            value={address.city} 
-                            onChange={e => setAddress(a => ({...a, city: e.target.value}))} 
-                            disabled={isUpdating} 
-                        />
-                        <Input 
-                            placeholder="State" 
-                            value={address.state} 
-                            onChange={e => setAddress(a => ({...a, state: e.target.value}))} 
-                            disabled={isUpdating} 
-                        />
-                    </div>
-                    <div className="flex gap-2">
-                        <Input 
-                            placeholder="Postal Code" 
-                            value={address.postalCode} 
-                            onChange={e => setAddress(a => ({...a, postalCode: e.target.value}))} 
-                            disabled={isUpdating} 
-                        />
-                        <Input 
-                            placeholder="Country" 
-                            value={address.country} 
-                            onChange={e => setAddress(a => ({...a, country: e.target.value}))} 
-                            disabled={isUpdating} 
-                        />
-                    </div>
-                </div>
-
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
                 <Button className="w-full" onClick={handleUpdateProfile} disabled={isUpdating || isSendingReset}>
@@ -221,15 +127,23 @@ export function UserProfile() {
                     {isSendingReset && <Loader2 className="mr-2 animate-spin" />}
                     Change Password
                 </Button>
-                {userPlan && userPlan.stripeSubscriptionId && (
-                    <Button variant="outline" className="w-full" onClick={handleManageSubscription} disabled={isManagingSubscription}>
-                        {isManagingSubscription && <Loader2 className="mr-2 animate-spin" />}
-                        Manage Subscription
-                    </Button>
-                )}
             </CardFooter>
         </Card>
         
+        {userPlan && userPlan.stripeSubscriptionId && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Subscription</CardTitle>
+                    <CardDescription>Manage your billing and subscription details.</CardDescription>
+                </CardHeader>
+                <CardFooter>
+                    <Button className="w-full" onClick={handleManageSubscription} disabled={isManagingSubscription}>
+                        {isManagingSubscription && <Loader2 className="mr-2 animate-spin" />}
+                        Manage Subscription
+                    </Button>
+                </CardFooter>
+            </Card>
+        )}
     </div>
   );
 }
