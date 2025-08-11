@@ -17,6 +17,7 @@ import { getAdminDb, getAdminAuth } from "@/firebase/server";
 import { plans, addOns, initialRulesForNewUser } from "@/lib/plans";
 import * as OTPAuth from 'otpauth';
 import type { Account, UserPlan, UserData, UserRole, PaymentLink, UserAddress } from "@/lib/types";
+import * as admin from 'firebase-admin';
 
 const getUserId = async () => {
     const idToken = headers().get('Authorization')?.split('Bearer ')[1];
@@ -554,36 +555,48 @@ export async function handleInstantPayout() {
     }
 }
 
-export async function createTestCharge() {
-    try {
-        const userId = await getUserId();
-        const userDocRef = getAdminDb().collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-        
-        if (!userDoc.exists) throw new Error("User not found.");
-        
-        const userData = userDoc.data()!;
-        const customerId = userData.stripeCustomerId;
+export async function createPayout(amount: number, accountId: string) {
+    const userId = await getUserId();
+    const db = getAdminDb();
+    const userDocRef = db.collection("users").doc(userId);
+    const userDoc = await userDocRef.get();
 
-        const paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
-        if (paymentMethods.data.length === 0) {
-            throw new Error("No payment method on file. Please add a card in your settings.");
+    if (!userDoc.exists) throw new Error("User not found.");
+
+    const userData = userDoc.data()!;
+    const stripeAccountId = userData.stripeAccountId;
+
+    if (!stripeAccountId) {
+        throw new Error("Stripe account not connected. Please set up payouts in settings.");
+    }
+    
+    // In a real application, you would need to get the user's external bank account ID
+    // that's registered with their Stripe account. For this demo, we assume one exists.
+    
+    try {
+        // This is a placeholder. A real implementation would be more complex.
+        // 1. Check Stripe account balance.
+        // 2. Create a Payout to the user's bank.
+        // 3. Decrease the virtual account balance in Firestore.
+
+        // For now, we will just simulate the success and decrease the balance.
+        const accountDocRef = db.collection("users").doc(userId).collection("accounts").doc(accountId);
+        const accountDoc = await accountDocRef.get();
+
+        if (!accountDoc.exists) throw new Error("Allocation account not found.");
+        
+        const accountData = accountDoc.data() as Account;
+        
+        if (accountData.balance < amount) {
+            throw new Error("Insufficient balance in the selected account.");
         }
 
-        await stripe.paymentIntents.create({
-            amount: 100, // $1.00
-            currency: 'usd',
-            customer: customerId,
-            payment_method: paymentMethods.data[0].id,
-            off_session: true,
-            confirm: true,
-            description: "Test charge from FlowBank"
-        });
+        const newBalance = accountData.balance - amount;
+        await accountDocRef.update({ balance: newBalance });
 
-        return { success: true, message: "Successfully created a $1.00 test charge." };
-
+        return { success: true, message: `Successfully initiated a payout of $${amount.toFixed(2)}.` };
     } catch (error) {
-        console.error("Error creating test charge:", error);
+        console.error("Error creating payout:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }
@@ -759,53 +772,127 @@ export async function suggestFinancialProductsAction(input: FinancialProductsInp
     }
 }
 
-export async function createPayout(amount: number, accountId: string) {
-    const userId = await getUserId();
-    const db = getAdminDb();
-    const userDocRef = db.collection("users").doc(userId);
-    const userDoc = await userDocRef.get();
+// Staging Seeder Action
+const seedStagingSchema = z.object({
+    companyName: z.string().optional(),
+    ownerEmail: z.string().email().optional(),
+    managerEmail: z.string().email().optional(),
+    overwrite: z.boolean().optional(),
+});
+type SeedStagingInput = z.infer<typeof seedStagingSchema>;
 
-    if (!userDoc.exists) throw new Error("User not found.");
+function slugify(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0, 32);
+}
 
-    const userData = userDoc.data()!;
-    const stripeAccountId = userData.stripeAccountId;
+export async function seedStagingData(data: SeedStagingInput) {
+    const validatedData = seedStagingSchema.parse(data);
+    const {
+        companyName = 'RentFAX Demo Co',
+        ownerEmail = `owner.demo+${Date.now()}@example.com`,
+        managerEmail = `manager.demo+${Date.now()}@example.com`,
+        overwrite = false
+    } = validatedData;
 
-    if (!stripeAccountId) {
-        throw new Error("Stripe account not connected. Please set up payouts in settings.");
-    }
-    
-    // In a real application, you would need to get the user's external bank account ID
-    // that's registered with their Stripe account. For this demo, we assume one exists.
-    
     try {
-        // This is a placeholder. A real implementation would be more complex.
-        // 1. Check Stripe account balance.
-        // 2. Create a Payout to the user's bank.
-        // 3. Decrease the virtual account balance in Firestore.
+        const currentUserId = await getUserId();
+        const db = getAdminDb();
+        const auth = getAdminAuth();
 
-        // For now, we will just simulate the success and decrease the balance.
-        const accountDocRef = db.collection("users").doc(userId).collection("accounts").doc(accountId);
-        const accountDoc = await accountDocRef.get();
-
-        if (!accountDoc.exists) throw new Error("Allocation account not found.");
-        
-        const accountData = accountDoc.data() as Account;
-        
-        if (accountData.balance < amount) {
-            throw new Error("Insufficient balance in the selected account.");
+        const currentUserDoc = await db.collection('users').doc(currentUserId).get();
+        if (currentUserDoc.data()?.plan?.role !== 'admin') {
+            throw new Error("Permission denied. You must be an admin to seed data.");
         }
 
-        const newBalance = accountData.balance - amount;
-        await accountDocRef.update({ balance: newBalance });
+        const slug = slugify(companyName);
+        let companyId: string | undefined;
 
-        return { success: true, message: `Successfully initiated a payout of $${amount.toFixed(2)}.` };
+        // Using a transaction to ensure atomicity for company creation/update
+        await db.runTransaction(async (transaction) => {
+            const companyQuery = db.collection('companies').where('slug', '==', slug).limit(1);
+            const existing = await transaction.get(companyQuery);
+
+            if (!existing.empty && !overwrite) {
+                companyId = existing.docs[0].id;
+            } else if (!existing.empty && overwrite) {
+                companyId = existing.docs[0].id;
+                transaction.set(db.doc(`companies/${companyId}`), {
+                    name: companyName, slug, plan: 'pro', status: 'active',
+                    brand: { primary: '#0ea5e9' },
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            } else {
+                const newCompanyRef = db.collection('companies').doc();
+                companyId = newCompanyRef.id;
+                 transaction.set(newCompanyRef, {
+                    id: companyId, // Storing id in the doc itself
+                    name: companyName, slug, plan: 'pro', status: 'active',
+                    seats: 5, timezone: 'America/New_York',
+                    createdAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        });
+        
+        if (!companyId) {
+            throw new Error("Failed to create or find company.");
+        }
+        
+        const finalCompanyId = companyId; // To satisfy TypeScript's non-null assertion
+
+        const ensureUser = async (email: string, role: UserRole) => {
+            let user: admin.auth.UserRecord;
+            try {
+                user = await auth.getUserByEmail(email);
+            } catch {
+                user = await auth.createUser({ email, emailVerified: true, password: 'Password123!' });
+            }
+            await auth.setCustomUserClaims(user.uid, { role, companyId: finalCompanyId });
+            await auth.revokeRefreshTokens(user.uid);
+            // Also create a user doc in 'users' collection for consistency with the app
+            await db.doc(`users/${user.uid}`).set({
+                email,
+                displayName: `${role.charAt(0).toUpperCase() + role.slice(1)}`,
+                plan: {
+                    id: 'pro',
+                    name: 'Pro',
+                    status: 'active',
+                    role: role,
+                },
+                stripeCustomerId: '' // Add placeholder
+            }, { merge: true });
+
+            return user.uid;
+        };
+
+        const ownerUid = await ensureUser(ownerEmail, 'admin'); // Assuming owner is admin
+        const managerUid = await ensureUser(managerEmail, 'user');
+
+        const renters = [
+            { firstName: 'Ava', lastName: 'Lopez', licenseState: 'CA', licenseNumber: 'X1234567', dob: '1994-02-14', phone: '555-0101', email: 'ava@example.com' },
+            { firstName: 'Ben', lastName: 'Tran', licenseState: 'NV', licenseNumber: 'NV998877', dob: '1990-06-09', phone: '555-0102', email: 'ben@example.com' },
+        ];
+        
+        const batch = db.batch();
+        renters.forEach(r => {
+            const renterRef = db.collection('users').doc(finalCompanyId).collection('renters').doc();
+            batch.set(renterRef, { ...r, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        });
+        await batch.commit();
+
+        return { 
+            success: true, 
+            message: "Staging data seeded successfully!",
+            details: {
+                companyId: finalCompanyId,
+                ownerEmail,
+                managerEmail,
+                renters: renters.length,
+            }
+        };
+
     } catch (error) {
-        console.error("Error creating payout:", error);
+        console.error("Error seeding staging data:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }
 }
-    
-    
-
-    
