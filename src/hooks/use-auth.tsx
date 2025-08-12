@@ -38,9 +38,9 @@ const createSession = async (idToken: string) => {
     });
 
     if (!res.ok) {
-        const errorText = await res.text();
-        console.error("sessionLogin failed:", res.status, errorText);
-        throw new Error(`sessionLogin failed: ${res.status} ${errorText}`);
+        const errorBody = await res.json();
+        console.error("sessionLogin failed:", res.status, errorBody.error);
+        throw new Error(`sessionLogin failed: ${errorBody.error || 'Unknown error'}`);
     }
 }
 
@@ -130,3 +130,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

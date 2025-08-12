@@ -13,13 +13,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useApp } from "@/contexts/app-provider";
-import { createCustomerPortalSession } from "@/app/actions";
+import { createCustomerPortalSession, updateUserDocument } from "@/app/actions";
 import { Badge } from "../ui/badge";
-import { updateUserDocument } from "@/app/actions";
 import type { UserAddress } from "@/lib/types";
 
 export function UserProfile() {
@@ -38,6 +37,16 @@ export function UserProfile() {
   const [address, setAddress] = useState<UserAddress>(currentUserData?.address || {
     street: "", city: "", state: "", postalCode: "", country: "US"
   });
+
+  useEffect(() => {
+    if(currentUserData) {
+        setDisplayName(currentUserData.displayName || "");
+        setPhone(currentUserData.phone || "");
+        setBusinessName(currentUserData.businessName || "");
+        setAddress(currentUserData.address || { street: "", city: "", state: "", postalCode: "", country: "US" });
+    }
+  }, [currentUserData])
+
 
   const { toast } = useToast();
 
@@ -191,3 +200,5 @@ export function UserProfile() {
     </div>
   );
 }
+
+    

@@ -9,29 +9,22 @@ let _auth: Auth | null = null;
 let _db: Firestore | null = null;
 
 function makeApp(): App {
-  const serviceAccountEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  const serviceAccountB64 = process.env.FIREBASE_ADMIN_CERT_B64;
 
-  if (!serviceAccountEnv) {
-    console.warn(
-      "[admin] GOOGLE_APPLICATION_CREDENTIALS_JSON is not set. Falling back to ADC (likely to fail in dev)."
-    );
-    // Fallback to Application Default Credentials if env var is not set.
-    return initializeApp();
+  if (!serviceAccountB64) {
+    throw new Error('FIREBASE_ADMIN_CERT_B64 is missing. Cannot initialize Firebase Admin SDK.');
   }
 
   try {
-    const serviceAccount: ServiceAccount = JSON.parse(serviceAccountEnv);
-    // Correctly format the private key by replacing escaped newlines.
-    if (serviceAccount.privateKey) {
-        serviceAccount.privateKey = serviceAccount.privateKey.replace(/\\n/g, '\n');
-    }
+    const serviceAccountJson = Buffer.from(serviceAccountB64, 'base64').toString('utf8');
+    const serviceAccount: ServiceAccount = JSON.parse(serviceAccountJson);
     
     return initializeApp({
       credential: cert(serviceAccount),
     });
   } catch (error) {
     console.error("Error parsing service account JSON or initializing app:", error);
-    throw new Error("Failed to initialize Firebase Admin SDK.");
+    throw new Error("Failed to initialize Firebase Admin SDK due to invalid credentials.");
   }
 }
 
@@ -56,3 +49,5 @@ export function getAdminDb(): Firestore {
   _db = getFirestore(getAdminApp());
   return _db;
 }
+
+    
