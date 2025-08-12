@@ -19,23 +19,36 @@ import { Loader2 } from "lucide-react";
 import { useApp } from "@/contexts/app-provider";
 import { createCustomerPortalSession } from "@/app/actions";
 import { Badge } from "../ui/badge";
+import { updateUserDocument } from "@/app/actions";
+import type { UserAddress } from "@/lib/types";
 
 export function UserProfile() {
-  const { user, updateUserProfile, sendPasswordReset } = useAuth();
-  const { userPlan } = useApp();
+  const { user, sendPasswordReset } = useAuth();
+  const { userPlan, allUsers } = useApp();
+  
+  const currentUserData = allUsers.find(u => u.uid === user?.uid);
+
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [isManagingSubscription, setIsManagingSubscription] = useState(false);
-  const [displayName, setDisplayName] = useState(user?.displayName || "");
+  
+  const [displayName, setDisplayName] = useState(currentUserData?.displayName || "");
+  const [phone, setPhone] = useState(currentUserData?.phone || "");
+  const [businessName, setBusinessName] = useState(currentUserData?.businessName || "");
+  const [address, setAddress] = useState<UserAddress>(currentUserData?.address || {
+    street: "", city: "", state: "", postalCode: "", country: "US"
+  });
+
   const { toast } = useToast();
 
   const handleUpdateProfile = async () => {
+    if (!user) return;
     setIsUpdating(true);
     try {
-      await updateUserProfile({ displayName });
+      await updateUserDocument(user.uid, { displayName, phone, businessName, address });
       toast({
         title: "Profile Updated",
-        description: "Your display name has been successfully updated.",
+        description: "Your account details have been successfully updated.",
         className: "bg-accent text-accent-foreground",
       });
     } catch (error) {
@@ -102,20 +115,51 @@ export function UserProfile() {
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input 
-                    id="displayName" 
-                    type="text" 
-                    placeholder="Your Name" 
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    disabled={isUpdating}
-                />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="displayName">Display Name</Label>
+                        <Input 
+                            id="displayName" 
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            disabled={isUpdating}
+                        />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input 
+                            id="phone" 
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            disabled={isUpdating}
+                        />
+                    </div>
                 </div>
                 <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={user?.email || ""} disabled />
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" value={user?.email || ""} disabled />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="businessName">Business Name</Label>
+                    <Input 
+                        id="businessName" 
+                        value={businessName}
+                        onChange={(e) => setBusinessName(e.target.value)}
+                        disabled={isUpdating}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>Address</Label>
+                    <Input placeholder="Street Address" value={address.street} onChange={e => setAddress(a => ({...a, street: e.target.value}))} disabled={isUpdating} />
+                    <div className="flex gap-2">
+                        <Input placeholder="City" value={address.city} onChange={e => setAddress(a => ({...a, city: e.target.value}))} disabled={isUpdating} />
+                        <Input placeholder="State" value={address.state} onChange={e => setAddress(a => ({...a, state: e.target.value}))} disabled={isUpdating} />
+                    </div>
+                    <div className="flex gap-2">
+                        <Input placeholder="Postal Code" value={address.postalCode} onChange={e => setAddress(a => ({...a, postalCode: e.target.value}))} disabled={isUpdating} />
+                        <Input placeholder="Country" value={address.country} onChange={e => setAddress(a => ({...a, country: e.target.value}))} disabled={isUpdating} />
+                    </div>
                 </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-2">

@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken, getIdToken } from "firebase/auth";
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
+import { onAuthStateChanged, signOut, type User, updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithCustomToken, getIdToken } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => void;
-  updateUserProfile: (updates: { displayName?: string; photoURL?: string; }) => Promise<void>;
   sendPasswordReset: () => Promise<void>;
   signUpWithEmail: (params: SignUpParams) => Promise<any>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
@@ -85,19 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
   };
-  
-  const updateUserProfile = async (updates: { displayName?: string; photoURL?: string; }) => {
-    if (!auth.currentUser) {
-        throw new Error("No user is signed in.");
-    }
-    try {
-        await updateProfile(auth.currentUser, updates);
-        setUser(auth.currentUser ? { ...auth.currentUser } : null);
-    } catch (error) {
-        console.error("Error updating profile:", error);
-        throw error;
-    }
-  };
 
   const sendPasswordReset = async () => {
     if (!auth.currentUser?.email) {
@@ -131,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout, updateUserProfile, sendPasswordReset, signUpWithEmail, loginWithEmail }}>
+    <AuthContext.Provider value={{ user, loading, logout, sendPasswordReset, signUpWithEmail, loginWithEmail }}>
       {children}
     </AuthContext.Provider>
   );

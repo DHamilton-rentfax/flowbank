@@ -21,9 +21,12 @@ import { createPayout } from "@/app/actions";
 import { useApp } from "@/contexts/app-provider";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { ShieldAlert } from "lucide-react";
 
 export function PayoutDialog({ children }: { children: React.ReactNode }) {
-    const { accounts } = useApp();
+    const { accounts, userPlan } = useApp();
     const [selectedAccountId, setSelectedAccountId] = useState<string | undefined>();
     const [amount, setAmount] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +34,7 @@ export function PayoutDialog({ children }: { children: React.ReactNode }) {
     const { toast } = useToast();
 
     const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
+    const hasStripeAccount = !!userPlan?.stripeAccountId;
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -88,55 +92,73 @@ export function PayoutDialog({ children }: { children: React.ReactNode }) {
                             Transfer funds from a virtual account to your bank via Stripe.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="account" className="text-right">
-                                From
-                            </Label>
-                            <Select onValueChange={setSelectedAccountId} value={selectedAccountId}>
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select an account" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {accounts.map(acc => (
-                                        <SelectItem key={acc.id} value={acc.id}>
-                                            <div className="flex justify-between w-full">
-                                                <span>{acc.name}</span>
-                                                <span className="text-muted-foreground ml-4">{formatCurrency(acc.balance)}</span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+
+                    {!hasStripeAccount ? (
+                        <div className="py-4">
+                            <Alert variant="destructive">
+                                <ShieldAlert className="h-4 w-4" />
+                                <AlertTitle>Stripe Account Required</AlertTitle>
+                                <AlertDescription>
+                                    You must connect a Stripe account in your settings before you can create payouts.
+                                </AlertDescription>
+                            </Alert>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="amount" className="text-right">
-                                Amount
-                            </Label>
-                            <div className="relative col-span-3">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                                <Input 
-                                    id="amount" 
-                                    type="number" 
-                                    value={amount} 
-                                    onChange={e => setAmount(e.target.value)} 
-                                    className="pl-6" 
-                                    placeholder="0.00" 
-                                />
+                    ) : (
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="account" className="text-right">
+                                    From
+                                </Label>
+                                <Select onValueChange={setSelectedAccountId} value={selectedAccountId}>
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue placeholder="Select an account" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {accounts.map(acc => (
+                                            <SelectItem key={acc.id} value={acc.id}>
+                                                <div className="flex justify-between w-full">
+                                                    <span>{acc.name}</span>
+                                                    <span className="text-muted-foreground ml-4">{formatCurrency(acc.balance)}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="amount" className="text-right">
+                                    Amount
+                                </Label>
+                                <div className="relative col-span-3">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                                    <Input 
+                                        id="amount" 
+                                        type="number" 
+                                        value={amount} 
+                                        onChange={e => setAmount(e.target.value)} 
+                                        className="pl-6" 
+                                        placeholder="0.00" 
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
+                    
                     <DialogFooter>
                         <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 animate-spin" />}
-                            Initiate Payout
-                        </Button>
+                        {hasStripeAccount ? (
+                            <Button type="submit" disabled={isLoading}>
+                                {isLoading && <Loader2 className="mr-2 animate-spin" />}
+                                Initiate Payout
+                            </Button>
+                        ) : (
+                             <Button asChild>
+                                <Link href="/dashboard/settings">Go to Settings</Link>
+                            </Button>
+                        )}
                     </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
     )
 }
-
-    
