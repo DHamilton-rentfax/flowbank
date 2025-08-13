@@ -49,5 +49,3 @@ export function getAdminDb(): Firestore {
   _db = getFirestore(getAdminApp());
   return _db;
 }
-
-    

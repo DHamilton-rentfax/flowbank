@@ -43,5 +43,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: msg, code }, { status: 401 });
   }
 }
-
-    

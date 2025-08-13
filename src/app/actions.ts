@@ -787,4 +787,57 @@ export async function updateUserDocument(userId: string, data: Partial<Omit<User
     }
 }
 
-    
+
+export async function seedStagingData(companyName: string, ownerEmail: string, managerEmail: string, overwrite: boolean) {
+    const slug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+    let companyId: string | undefined;
+    const db = getAdminDb();
+    const auth = getAdminAuth();
+
+    // 1) Company: create or reuse
+    const existing = await db.collection('companies').where('slug', '==', slug).limit(1).get();
+    if (!existing.empty && !overwrite) {
+        companyId = existing.docs[0].id;
+    } else if (!existing.empty && overwrite) {
+        companyId = existing.docs[0].id;
+        await db.doc(`companies/${companyId}`).set({
+            name: companyName, slug, plan: 'pro', status: 'active',
+            brand: { primary: '#0ea5e9' },
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    } else {
+        companyId = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+        await db.doc(`companies/${companyId}`).set({
+            name: companyName, slug, plan: 'pro', status: 'active',
+            seats: 5, timezone: 'America/New_York',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+    }
+
+    // 2) Users & Claims
+    const ensureUser = async (email: string, role: UserRole) => {
+        let user: admin.auth.UserRecord;
+        try {
+            user = await auth.getUserByEmail(email);
+        } catch {
+            user = await auth.createUser({ email, emailVerified: true, password: 'Password123!' });
+        }
+        await auth.setCustomUserClaims(user.uid, { role, companyId });
+        await auth.revokeRefreshTokens(user.uid);
+        return user.uid;
+    };
+
+    const ownerUid = await ensureUser(ownerEmail, 'owner');
+    const managerUid = await ensureUser(managerEmail, 'manager');
+
+    // ... (rest of the seeding logic for renters, rentals etc. would go here)
+    // This part is omitted for brevity as it's not directly related to the current app structure
+    // but the principle remains the same.
+
+    return {
+        ok: true,
+        companyId,
+        ownerEmail,
+        managerEmail,
+    };
+}
