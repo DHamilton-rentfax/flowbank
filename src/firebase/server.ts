@@ -12,7 +12,9 @@ function makeApp(): App {
   const serviceAccountB64 = process.env.FIREBASE_ADMIN_CERT_B64;
 
   if (!serviceAccountB64) {
-    throw new Error('FIREBASE_ADMIN_CERT_B64 is missing. Cannot initialize Firebase Admin SDK.');
+    throw new Error(
+      'FIREBASE_ADMIN_CERT_B64 is missing — export it in Cloud Workstations before starting the dev server.'
+    );
   }
 
   try {
@@ -23,8 +25,8 @@ function makeApp(): App {
       credential: cert(serviceAccount),
     });
   } catch (error) {
-    console.error("Error parsing service account JSON or initializing app:", error);
-    throw new Error("Failed to initialize Firebase Admin SDK due to invalid credentials.");
+    console.error("Failed to parse FIREBASE_ADMIN_CERT_B64:", error);
+    throw new Error("Invalid FIREBASE_ADMIN_CERT_B64 value — check your base64 encoding.");
   }
 }
 
