@@ -1,5 +1,6 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
+import "server-only";
 
 export const ai = genkit({
   plugins: [
