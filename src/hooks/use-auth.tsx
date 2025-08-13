@@ -34,7 +34,7 @@ const createSession = async (idToken: string) => {
     const res = await fetch("/api/auth/sessionLogin", { 
         method: "POST", 
         body: JSON.stringify({ idToken }), 
-        headers: { "Content-Type": "application/json" } 
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" } 
     });
 
     if (!res.ok) {
