@@ -10,21 +10,12 @@ export default function LandingPage() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       <main className="flex-1">
-        <section className="relative w-full h-[60vh] min-h-[400px] flex items-center justify-center text-center text-white">
-          <Image
-            src="https://placehold.co/1200x800.png"
-            alt="Abstract background representing financial flows"
-            fill
-            priority
-            className="object-cover -z-10"
-            data-ai-hint="abstract financial flows"
-          />
-          <div className="absolute inset-0 bg-black/50 -z-10" />
+        <section className="w-full py-20 md:py-32 flex items-center justify-center text-center bg-secondary">
           <div className="container px-4 md:px-6">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-foreground">
               Automate Your Business Finances
             </h1>
-            <p className="max-w-2xl mx-auto text-lg md:text-xl text-neutral-200 mb-8">
+            <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-8">
               AutoAllocator intelligently splits your income into accounts for
               taxes, savings, and expenses, so you don&apos;t have to.
             </p>
@@ -34,7 +25,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="py-12 md:py-24 bg-secondary">
+        <section className="py-12 md:py-24 bg-background">
           <div className="container px-4 md:px-6">
             <h2 className="text-3xl font-bold text-center mb-12">
               How It Works
