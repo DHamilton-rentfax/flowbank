@@ -31,8 +31,9 @@ export default function Blog() {
                         <Image
                         src={post.image}
                         alt={post.title}
-                        fill
-                        className="object-cover"
+                        width={600}
+                        height={400}
+                        className="object-cover w-full h-full"
                         data-ai-hint="financial blog post"
                         />
                     </div>

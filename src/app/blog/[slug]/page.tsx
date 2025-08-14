@@ -95,11 +95,12 @@ export default function BlogPostPage() {
                         <span>{post.readTime} min read</span>
                     </div>
 
-                    <div className="relative w-full h-auto aspect-video rounded-lg overflow-hidden my-8">
+                    <div className="relative w-full h-auto rounded-lg overflow-hidden my-8">
                         <Image 
                             src={post.image} 
                             alt={post.title} 
-                            fill 
+                            width={1200}
+                            height={600}
                             className="object-cover"
                             data-ai-hint="small business finances"
                         />
