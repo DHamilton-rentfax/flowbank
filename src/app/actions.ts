@@ -17,14 +17,18 @@ const getUserId = async () => {
     if (!idToken) {
         throw new Error("User not authenticated");
     }
-    const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-    return decodedToken.uid;
+    try {
+        const decodedToken = await getAdminAuth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        console.error("Error verifying ID token:", error);
+        throw new Error("Invalid authentication token.");
+    }
 };
 
 // Plaid: Create Link Token
-export async function createLinkToken(idToken: string) {
-    const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-    const userId = decodedToken.uid;
+export async function createLinkToken() {
+    const userId = await getUserId();
     if (!userId) throw new Error("User not authenticated");
 
     try {
@@ -197,8 +201,13 @@ export async function createCheckoutSession(planId: string) {
     const userDoc = await userDocRef.get();
     let customerId = userDoc.data()?.stripeCustomerId;
 
+    // Create a new Stripe customer if one doesn't exist
     if (!customerId) {
-        const customer = await stripe.customers.create({ metadata: { firebaseUID: userId } });
+        const firebaseUser = await getAdminAuth().getUser(userId);
+        const customer = await stripe.customers.create({ 
+            email: firebaseUser.email,
+            metadata: { firebaseUID: userId } 
+        });
         customerId = customer.id;
         await userDocRef.set({ stripeCustomerId: customerId }, { merge: true });
     }
@@ -231,7 +240,11 @@ export async function createPortalSession() {
 }
 
 // Analytics
-export async function getAnalyticsSnapshot(idToken: string | null, sinceDate: string | null) {
+export async function getAnalyticsSnapshot(sinceDate: string | null) {
+    if (!process.env.FIREBASE_ADMIN_CERT_B64) {
+        console.warn("FIREBASE_ADMIN_CERT_B64 not set. Skipping server-side analytics.");
+        return { since: null, income: 0, expenses: 0, net: 0, series: [] };
+    }
     const userId = await getUserId();
     const db = getAdminDb();
     const since = sinceDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

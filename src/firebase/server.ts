@@ -9,33 +9,31 @@ let _auth: Auth | null = null;
 let _db: Firestore | null = null;
 
 function makeApp(): App {
-  const serviceAccountB64 = process.env.FIREBASE_ADMIN_CERT_B64;
+    if (getApps().length > 0) {
+        return getApp();
+    }
 
-  if (!serviceAccountB64) {
-    throw new Error(
-      'FIREBASE_ADMIN_CERT_B64 is missing — export it in Cloud Workstations before starting the dev server.'
-    );
-  }
+    const serviceAccountB64 = process.env.FIREBASE_ADMIN_CERT_B64;
+    if (serviceAccountB64) {
+        try {
+            const serviceAccountJson = Buffer.from(serviceAccountB64, 'base64').toString('utf8');
+            const serviceAccount: ServiceAccount = JSON.parse(serviceAccountJson);
+            
+            return initializeApp({
+                credential: cert(serviceAccount),
+            });
+        } catch (error) {
+            console.error("Failed to parse FIREBASE_ADMIN_CERT_B64:", error);
+            throw new Error("Invalid FIREBASE_ADMIN_CERT_B64 value — check your base64 encoding.");
+        }
+    }
 
-  try {
-    const serviceAccountJson = Buffer.from(serviceAccountB64, 'base64').toString('utf8');
-    const serviceAccount: ServiceAccount = JSON.parse(serviceAccountJson);
-    
-    return initializeApp({
-      credential: cert(serviceAccount),
-    });
-  } catch (error) {
-    console.error("Failed to parse FIREBASE_ADMIN_CERT_B64:", error);
-    throw new Error("Invalid FIREBASE_ADMIN_CERT_B64 value — check your base64 encoding.");
-  }
+    // Fallback for local development or environments with GOOGLE_APPLICATION_CREDENTIALS
+    return initializeApp();
 }
 
 export function getAdminApp(): App {
   if (_app) return _app;
-  if (getApps().length > 0) {
-    _app = getApp();
-    return _app;
-  }
   _app = makeApp();
   return _app;
 }

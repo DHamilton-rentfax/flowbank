@@ -5,27 +5,64 @@ import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
 import { plans, addOns } from "@/lib/plans";
 import { getAdminDb, getAdminAuth } from "@/firebase/server";
-import { UserPlan } from "@/lib/types";
+import type { UserPlan } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 async function findUidByCustomer(customerId: string) {
     if (!customerId) return null;
-    const userQuery = await getAdminDb().collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
-    return userQuery.empty ? null : userQuery.docs[0].id;
+    const db = getAdminDb();
+    const userQuery = await db.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
+    if (!userQuery.empty) {
+        return userQuery.docs[0].id;
+    }
+    
+    // Fallback: Check customer metadata (if you store it there)
+    try {
+        const customer = await stripe.customers.retrieve(customerId);
+        if (!customer.deleted) {
+            return (customer.metadata.firebaseUID as string) || null;
+        }
+    } catch (error) {
+        console.error(`Could not find customer ${customerId} in Stripe.`);
+    }
+
+    return null;
 }
 
-async function setUserPlan(uid: string, planId: string) {
-    if (!uid) return;
-    const plan = [...plans, ...addOns].find(p => p.id === planId) || plans.find(p => p.id === "free") || { id: 'free', name: 'Free' };
+async function handleSubscriptionChange(subscription: Stripe.Subscription, status: UserPlan['status']) {
+    const db = getAdminDb();
+    const auth = getAdminAuth();
     
-    const userPlanData = {
-        id: plan.id,
-        name: plan.name,
+    const uid = await findUidByCustomer(subscription.customer as string);
+    if (!uid) {
+        console.warn(`Webhook: Could not find user for Stripe customer ${subscription.customer}`);
+        return;
+    }
+
+    const priceId = subscription.items.data[0]?.price.id;
+    const isCancellation = status === 'cancelled';
+    const targetPlan = isCancellation 
+        ? plans.find(p => p.id === 'free')
+        : [...plans, ...addOns].find(p => p.stripePriceId === priceId);
+
+    if (!targetPlan) {
+        console.warn(`Webhook: Could not find plan for price ID ${priceId}`);
+        return;
+    }
+
+    const userDocRef = db.collection("users").doc(uid);
+    const userPlan: Partial<UserPlan> = {
+        id: targetPlan.id,
+        name: targetPlan.name,
+        status: status,
+        stripeSubscriptionId: isCancellation ? undefined : subscription.id,
+        currentPeriodEnd: isCancellation ? undefined : subscription.current_period_end,
     };
     
-    await getAdminDb().collection("users").doc(uid).set({ plan: userPlanData }, { merge: true });
-    await getAdminAuth().setCustomUserClaims(uid, { plan: planId });
+    await userDocRef.set({ plan: userPlan }, { merge: true });
+    await auth.setCustomUserClaims(uid, { plan: targetPlan.id });
+    console.log(`Updated plan for user ${uid} to ${targetPlan.name} (${status})`);
 }
 
 export async function POST(req: Request) {
@@ -46,53 +83,33 @@ export async function POST(req: Request) {
         console.error(`Webhook signature verification failed: ${err.message}`);
         return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
     }
-    
-    const db = getAdminDb();
-    const auth = getAdminAuth();
 
     try {
         switch (event.type) {
             case "customer.subscription.created":
             case "customer.subscription.updated": {
                 const sub = event.data.object as Stripe.Subscription;
-                const uid = sub.metadata.firebaseUID || await findUidByCustomer(sub.customer as string);
-                
-                if (uid) {
-                    const priceId = sub.items.data[0]?.price.id;
-                    const plan = [...plans, ...addOns].find(p => p.stripePriceId === priceId);
-                    if (plan) {
-                        const userDocRef = db.collection("users").doc(uid);
-                        const userPlan: Partial<UserPlan> = {
-                            id: plan.id,
-                            name: plan.name,
-                            status: sub.status,
-                            stripeSubscriptionId: sub.id,
-                            currentPeriodEnd: sub.current_period_end,
-                        };
-                        await userDocRef.set({ plan: userPlan }, { merge: true });
-                        await auth.setCustomUserClaims(uid, { plan: plan.id });
-                    }
-                }
+                await handleSubscriptionChange(sub, sub.status);
                 break;
             }
             case "customer.subscription.deleted": {
                 const sub = event.data.object as Stripe.Subscription;
-                const uid = sub.metadata.firebaseUID || await findUidByCustomer(sub.customer as string);
-                if (uid) {
-                    const userDocRef = db.collection("users").doc(uid);
-                    // Revert to free plan
-                    const freePlan = plans.find(p => p.id === 'free')!;
-                    const userPlan: Partial<UserPlan> = {
-                        id: freePlan.id,
-                        name: freePlan.name,
-                        status: 'cancelled',
-                        stripeSubscriptionId: undefined,
-                        currentPeriodEnd: undefined,
-                    };
-                    await userDocRef.set({ plan: userPlan }, { merge: true });
-                    await auth.setCustomUserClaims(uid, { plan: 'free' });
-                }
+                await handleSubscriptionChange(sub, 'cancelled');
                 break;
+            }
+            // Optional: Handle one-time payment success for non-subscription items
+            case 'checkout.session.completed': {
+                const session = event.data.object as Stripe.Checkout.Session;
+                // If it's a subscription, the subscription events will handle it.
+                // If it's a one-time payment, handle that here.
+                if (session.mode === 'payment') {
+                    const uid = session.metadata?.firebaseUID;
+                    if (uid) {
+                        // Logic to grant access for one-time purchases
+                        console.log(`One-time payment successful for user ${uid}`);
+                    }
+                }
+                 break;
             }
         }
         return new NextResponse(null, { status: 200 });

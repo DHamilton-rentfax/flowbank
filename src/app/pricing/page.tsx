@@ -13,15 +13,15 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 
 export default function Pricing() {
-  const { user } = useAuth();
+  const { user, idToken } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(''); // Store ID of plan being loaded
   const pricingTiers = [...plans, ...addOns];
 
   async function checkout(planId: string) {
-    if (!user) {
-        router.push('/login');
+    if (!user || !idToken) {
+        router.push('/login?next=/pricing');
         return;
     }
     setLoading(planId);
@@ -29,6 +29,8 @@ export default function Pricing() {
         const { url } = await createCheckoutSession(planId);
         if (url) {
             window.location.href = url;
+        } else {
+            throw new Error("Could not create a checkout session.");
         }
     } catch(e) {
         const error = e as Error;
