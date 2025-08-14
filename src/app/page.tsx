@@ -1,243 +1,77 @@
-
+"use client";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
+import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Logo, StripeLogo, PlaidLogo, Zap, Shuffle, BarChartBig, Link2, Bot, ShieldCheck, Banknote, FirebaseLogo, GoogleAiLogo } from "@/components/icons";
-import { Footer } from "@/components/layout/footer";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
-import Image from 'next/image';
-import { cn } from "@/lib/utils";
-
-const howItWorks = [
-    {
-        step: 1,
-        title: "Connect Your Revenue",
-        description: "Securely link your Stripe account to capture incoming payments, or connect your bank accounts with Plaid to monitor income deposits.",
-        image: "https://placehold.co/1200x800.png",
-        aiHint: "financial connection",
-    },
-    {
-        step: 2,
-        title: "Define Your Rules",
-        description: "Create custom rules based on percentages or fixed dollar amounts. Not sure where to start? Our AI can generate a plan for you.",
-        image: "https://placehold.co/1200x800.png",
-        aiHint: "allocation rules"
-    },
-    {
-        step: 3,
-        title: "Automate Your Cash Flow",
-        description: "FlowBank automatically detects income and allocates it to your virtual accounts, giving you a real-time view of your finances.",
-        image: "https://placehold.co/1200x800.png",
-        aiHint: "dashboard chart"
-    }
-];
-
-const features = [
-    {
-        icon: <Shuffle />,
-        title: "Automated Allocations",
-        description: "Inspired by Profit First, our system automatically divides your income into virtual accounts based on your rules."
-    },
-    {
-        icon: <Link2 />,
-        title: "Payment Links",
-        description: "Generate and share Stripe payment links directly from your dashboard to get paid by clients with ease."
-    },
-    {
-        icon: <Bot />,
-        title: "AI-Powered Plans",
-        description: "Tell our AI about your business, and it will generate a tailored allocation plan to get you started in seconds."
-    },
-    {
-        icon: <BarChartBig />,
-        title: "Insightful Reporting",
-        description: "Visualize your allocation history and rule breakdown with simple, clear charts and reports."
-    }
-]
-
-const addOns = [
-    {
-        icon: <Zap />,
-        title: "Instant Payouts",
-        description: "Access your funds immediately with our pay-per-use or unlimited monthly plan."
-    },
-     {
-        icon: <Banknote />,
-        title: "Tax Vault",
-        description: "Automatically set aside a percentage of your income for taxes so you're never caught off guard."
-    },
-    {
-        icon: <ShieldCheck />,
-        title: "Smart Forecasting",
-        description: "Leverage AI to predict future cash flow and make smarter financial decisions."
-    }
-]
-
 
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
+      <Header />
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="py-20 md:py-32">
-            <div className="container mx-auto px-4 sm:px-6 text-center">
-                <h1 className="text-4xl font-bold tracking-tight sm:text-6xl font-headline">
-                    Your Money, <span className="text-primary">Perfectly Allocated.</span>
-                </h1>
-                <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">
-                    FlowBank is the smart financial engine for entrepreneurs. Automate your income splitting, get paid by clients, and achieve financial clarity without the spreadsheets.
+        <section className="relative w-full h-[60vh] min-h-[400px] flex items-center justify-center text-center text-white">
+          <Image
+            src="https://placehold.co/1200x800.png"
+            alt="Abstract background representing financial flows"
+            fill
+            priority
+            className="object-cover -z-10"
+            data-ai-hint="abstract financial flows"
+          />
+          <div className="absolute inset-0 bg-black/50 -z-10" />
+          <div className="container px-4 md:px-6">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4">
+              Automate Your Business Finances
+            </h1>
+            <p className="max-w-2xl mx-auto text-lg md:text-xl text-neutral-200 mb-8">
+              AutoAllocator intelligently splits your income into accounts for
+              taxes, savings, and expenses, so you don&apos;t have to.
+            </p>
+            <Button asChild size="lg">
+              <Link href="/onboarding">Get Started for Free</Link>
+            </Button>
+          </div>
+        </section>
+
+        <section className="py-12 md:py-24 bg-secondary">
+          <div className="container px-4 md:px-6">
+            <h2 className="text-3xl font-bold text-center mb-12">
+              How It Works
+            </h2>
+            <div className="grid md:grid-cols-3 gap-8 text-center">
+              <div className="flex flex-col items-center">
+                <div className="rounded-full bg-primary text-primary-foreground p-4 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8"><path d="M12 22v-5"/><path d="M9 17H7A5 5 0 0 1 7 7h1a3 3 0 0 0 3-3V2"/><path d="M15 17h2a5 5 0 0 0 0-10h-1a3 3 0 0 1-3-3V2"/></svg>
+                </div>
+                <h3 className="text-xl font-semibold mb-2">1. Connect Your Bank</h3>
+                <p className="text-muted-foreground">
+                  Securely link your bank account using Plaid. We detect incoming
+                  revenue automatically.
                 </p>
-                <div className="mt-10 flex justify-center gap-4">
-                    <Button asChild size="lg">
-                    <Link href="/signup">
-                        Get Started for Free
-                        <ArrowRight className="ml-2" />
-                    </Link>
-                    </Button>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="rounded-full bg-primary text-primary-foreground p-4 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M12 14h0"/><path d="M12 18h0"/><path d="M12 10h0"/></svg>
                 </div>
-                 <div className="mt-16 text-center">
-                    <p className="text-sm text-muted-foreground font-semibold mb-4">POWERED BY INDUSTRY LEADERS</p>
-                    <div className="flex justify-center items-center gap-8 md:gap-12 flex-wrap">
-                        <StripeLogo className="h-8 text-muted-foreground" />
-                        <PlaidLogo className="h-12 text-muted-foreground" />
-                        <FirebaseLogo className="h-8 text-muted-foreground" />
-                        <GoogleAiLogo className="h-6 text-muted-foreground" />
-                    </div>
-                 </div>
-                 <div className="relative mt-20 max-w-5xl mx-auto">
-                    <Image 
-                        src="https://placehold.co/1200x750.png"
-                        alt="FlowBank Dashboard"
-                        width={1200}
-                        height={750}
-                        className="rounded-lg shadow-2xl"
-                        data-ai-hint="dashboard analytics"
-                        priority
-                    />
-                </div>
-            </div>
-        </section>
-
-        {/* How It Works Section */}
-        <section id="how-it-works" className="py-20 md:py-24 bg-card border-y">
-             <div className="container mx-auto px-4 sm:px-6">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">Three Steps to Financial Autopilot</h2>
-                    <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">Go from financial stress to streamlined success in minutes.</p>
-                </div>
-
-                <div className="space-y-16">
-                    {howItWorks.map((item, index) => (
-                        <div key={item.step} className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-                            <div className={cn("order-2", index % 2 === 0 ? "md:order-1" : "md:order-2")}>
-                                <div className="mb-4 flex items-center gap-4">
-                                     <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold font-headline shrink-0">{item.step}</div>
-                                     <h3 className="text-2xl font-bold font-headline">{item.title}</h3>
-                                </div>
-                                <p className="text-muted-foreground text-lg">{item.description}</p>
-                            </div>
-                            <div className={cn("order-1", index % 2 === 0 ? "md:order-2" : "md:order-1")}>
-                                <Image
-                                    src={item.image}
-                                    alt={item.title}
-                                    width={1200}
-                                    height={800}
-                                    className="rounded-lg shadow-lg"
-                                    data-ai-hint={item.aiHint}
-                                />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-             </div>
-        </section>
-
-        {/* Features Section */}
-        <section id="features" className="py-20 md:py-24">
-             <div className="container mx-auto px-4 sm:px-6">
-                 <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">A Smarter Way to Manage Money</h2>
-                    <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">FlowBank is more than just an app—it's your dedicated financial system.</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {features.map((feature, index) => (
-                        <Card key={index} className="text-center p-6">
-                           <div className="flex justify-center mb-4">
-                             <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                                {feature.icon}
-                             </div>
-                           </div>
-                           <h3 className="text-lg font-bold font-headline mb-2">{feature.title}</h3>
-                           <p className="text-muted-foreground text-sm">{feature.description}</p>
-                        </Card>
-                    ))}
-                </div>
-            </div>
-        </section>
-        
-        {/* Testimonial Section */}
-        <section className="py-20 md:py-24 bg-card border-y">
-            <div className="container mx-auto px-4 sm:px-6">
-                <div className="max-w-3xl mx-auto text-center">
-                     <Image 
-                        src="https://placehold.co/100x100.png"
-                        alt="Customer photo"
-                        width={100}
-                        height={100}
-                        className="rounded-full mx-auto mb-4"
-                        data-ai-hint="happy person"
-                     />
-                    <blockquote className="text-xl md:text-2xl font-medium">
-                        "FlowBank completely changed how I handle my business finances. I used to spend hours in spreadsheets, and now it's all automated. I finally have clarity and peace of mind."
-                    </blockquote>
-                    <cite className="mt-4 block font-semibold not-italic">
-                        Sarah Johnson, Founder of SJ Creative
-                    </cite>
-                </div>
-            </div>
-        </section>
-
-         {/* Add-ons Section */}
-        <section id="add-ons" className="py-20 md:py-24">
-             <div className="container mx-auto px-4 sm:px-6">
-                 <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">Supercharge Your Finances</h2>
-                    <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">Elevate your financial toolkit with powerful, optional add-ons.</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                     {addOns.map((addOn, index) => (
-                        <div key={index} className="flex items-start gap-4">
-                           <div className="w-10 h-10 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0 mt-1">
-                             {addOn.icon}
-                           </div>
-                           <div>
-                            <h3 className="text-lg font-bold font-headline">{addOn.title}</h3>
-                            <p className="text-muted-foreground">{addOn.description}</p>
-                           </div>
-                        </div>
-                     ))}
-                </div>
-            </div>
-        </section>
-        
-        {/* Final CTA Section */}
-        <section className="py-20 md:py-32">
-            <div className="container mx-auto px-4 sm:px-6 text-center">
-                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">
-                    Ready to Take Control of Your Cash Flow?
-                </h2>
-                <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">
-                    Stop guessing and start allocating. Join hundreds of entrepreneurs who trust FlowBank to automate their finances and build a more profitable business.
+                <h3 className="text-xl font-semibold mb-2">2. Set Your Rules</h3>
+                <p className="text-muted-foreground">
+                  Define percentages for categories like Taxes (25%),
+                  Profit (10%), and Operating Costs (65%).
                 </p>
-                <div className="mt-10 flex justify-center">
-                    <Button asChild size="lg">
-                    <Link href="/signup">
-                        Sign Up and Start for Free
-                        <ArrowRight className="ml-2" />
-                    </Link>
-                    </Button>
+              </div>
+              <div className="flex flex-col items-center">
+                 <div className="rounded-full bg-primary text-primary-foreground p-4 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8"><path d="m12 15 4 4"/><path d="M15.5 8.5c.3-1.8.8-3.4 1.5-4.8"/><path d="M5.1 6.3C4.1 7.6 3.4 9.2 3.1 11c-.1.6-.1 1.2-.1 1.8 0 1.6.4 3.2 1.2 4.5"/><path d="M13 20c.5-.2 1-.4 1.5-.7.9-.5 1.7-1.1 2.4-1.8.4-.4.7-.8.9-1.2"/><path d="m18 10-4-4"/><path d="M12.2 4.2c.4-.2.9-.4 1.3-.6 2.3-1.1 4.9-1.2 7.2-.3"/><path d="M5.5 19.5c-1.8-.3-3.4-.8-4.8-1.5-1.3-.7-2.4-1.6-3.1-2.7"/><path d="M3.1 3.1c1.1-1.1 2.5-1.9 4-2.4C8.7 0 10.3 0 12 0c.6 0 1.2.1 1.8.1"/></svg>
                 </div>
+                <h3 className="text-xl font-semibold mb-2">3. Relax</h3>
+                <p className="text-muted-foreground">
+                  As funds arrive, they are automatically allocated to virtual
+                  accounts based on your rules.
+                </p>
+              </div>
             </div>
+          </div>
         </section>
       </main>
       <Footer />

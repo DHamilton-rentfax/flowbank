@@ -2,22 +2,16 @@
 "use server";
 
 import { suggestAllocationPlan, type SuggestAllocationPlanInput } from "@/ai/flows/suggest-allocation-plan";
-import { identifyIncome, type IdentifyIncomeInput } from "@/ai/flows/identify-income";
-import { chat, type ChatInput } from "@/ai/flows/chatbot";
-import { getFinancialCoaching, type FinancialCoachInput } from "@/ai/flows/financial-coach-flow";
-import { generateBlogPost, type GenerateBlogPostInput } from "@/ai/flows/generate-blog-post";
-import { suggestFinancialProducts, type FinancialProductsInput, type FinancialProductsOutput } from "@/ai/flows/suggest-financial-products";
-import { z } from "zod";
 import { plaidClient } from "@/lib/plaid";
 import { Products, TransactionsSyncRequest } from "plaid";
 import { CountryCode } from "plaid";
 import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import { getAdminDb, getAdminAuth } from "@/firebase/server";
-import { plans, addOns, initialRulesForNewUser } from "@/lib/plans";
-import * as OTPAuth from 'otpauth';
-import type { Account, UserPlan, UserData, UserRole, PaymentLink, UserAddress } from "@/lib/types";
+import { plans, addOns } from "@/lib/plans";
+import type { Account, UserPlan, UserData, PaymentLink, AllocationRule, Transaction } from "@/lib/types";
 
+// Helper to get the current user's UID from the session
 const getUserId = async () => {
     const idToken = headers().get('Authorization')?.split('Bearer ')[1];
     if (!idToken) {
@@ -27,121 +21,9 @@ const getUserId = async () => {
     return decodedToken.uid;
 };
 
-export async function createUserDocument(userId: string, email: string, displayName: string, phone: string, businessName: string, address: UserAddress, planId?: string | null) {
-    const db = getAdminDb();
-    const userDocRef = db.collection("users").doc(userId);
-    
-    const selectedPlanId = planId || 'free';
-    const plan = plans.find(p => p.id === selectedPlanId);
-
-    if (!plan) throw new Error(`Plan with ID "${selectedPlanId}" not found.`);
-    
-    const stripeCustomer = await stripe.customers.create({
-        email,
-        name: displayName,
-        phone,
-        address: {
-            line1: address.street,
-            city: address.city,
-            state: address.state,
-            postal_code: address.postalCode,
-            country: address.country,
-        },
-        metadata: {
-            firebaseUID: userId,
-            businessName: businessName,
-        },
-    });
-
-    const userRole = email === 'urbandesignz@gmail.com' ? 'admin' : 'user';
-
-    const userPlan: UserPlan = {
-        id: plan.id,
-        name: plan.name,
-        status: 'active',
-        stripeCustomerId: stripeCustomer.id,
-        addOns: {},
-        role: userRole, 
-    };
-
-    const userData: Omit<UserData, 'uid' | 'role'> = {
-        email,
-        displayName,
-        phone,
-        businessName,
-        address,
-        createdAt: new Date().toISOString(),
-        stripeCustomerId: stripeCustomer.id,
-        plan: userPlan,
-    };
-
-    const batch = db.batch();
-    batch.set(userDocRef, userData);
-
-    const newRules = initialRulesForNewUser();
-    newRules.forEach((rule) => {
-        const account: Account = { id: rule.id, name: rule.name, balance: 0 };
-        
-        const ruleDocRef = db.collection("users").doc(userId).collection("rules").doc(rule.id);
-        batch.set(ruleDocRef, rule);
-
-        const accountDocRef = db.collection("users").doc(userId).collection("accounts").doc(rule.id);
-        batch.set(accountDocRef, account);
-    });
-
-    await batch.commit();
-}
-
-
-export async function getAISuggestion(input: SuggestAllocationPlanInput) {
-  try {
-    const result = await suggestAllocationPlan(input);
-    return {
-      success: true,
-      plan: result.allocationPlan,
-      explanation: result.breakdownExplanation,
-    };
-  } catch (error) {
-    console.error('Error getting AI suggestion:', error);
-    let errorMessage = 'An unknown error occurred.';
-    if (error instanceof SyntaxError) {
-      errorMessage =
-        'Failed to parse AI response. The format was unexpected.';
-    } else if (error instanceof z.ZodError) {
-      errorMessage = 'AI response had an invalid data structure.';
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
-}
-
-export async function getChatbotResponse(input: ChatInput) {
-    try {
-        const result = await chat(input);
-        return { success: true, response: result.response };
-    } catch (error) {
-        console.error("Error getting chatbot response:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
-export async function getAIFinancialCoach(input: FinancialCoachInput) {
-    try {
-        const result = await getFinancialCoaching(input);
-        return { success: true, advice: result };
-    } catch (error) {
-        console.error("Error getting AI financial coaching:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
-export async function createLinkToken(userId: string) {
+// Plaid: Create Link Token
+export async function createLinkToken() {
+    const userId = await getUserId();
     if (!userId) throw new Error("User not authenticated");
 
     try {
@@ -149,11 +31,11 @@ export async function createLinkToken(userId: string) {
           user: {
             client_user_id: userId,
           },
-          client_name: 'FlowBank',
+          client_name: 'AutoAllocator',
           country_codes: [CountryCode.Us],
           language: 'en',
-          webhook: `${process.env.NEXT_PUBLIC_SITE_URL}/api/plaid/webhook`,
-          products: [Products.Auth, Products.Transactions, Products.Investments],
+          webhook: `${process.env.NEXT_PUBLIC_SITE_URL}/api/plaid-webhook`,
+          products: [Products.Transactions],
         };
         
         const response = await plaidClient.linkTokenCreate(tokenRequest);
@@ -168,676 +50,241 @@ export async function createLinkToken(userId: string) {
       }
 }
 
-export async function exchangePublicToken(publicToken: string, userId: string) {
+// Plaid: Exchange Public Token
+export async function exchangePublicToken(publicToken: string) {
+    const userId = await getUserId();
     if (!userId) throw new Error("User not authenticated");
 
     try {
-      const response = await plaidClient.itemPublicTokenExchange({
-        public_token: publicToken,
-      });
-  
-      const accessToken = response.data.access_token;
-      const itemId = response.data.item_id;
+      const response = await plaidClient.itemPublicTokenExchange({ public_token: publicToken });
+      const { access_token, item_id } = response.data;
 
-      // Save the access token to the user's document
-      await getAdminDb().collection("users").doc(userId).set({ 
-        plaidAccessToken: accessToken,
-        plaidItemId: itemId 
+      await getAdminDb().collection("users").doc(userId).collection("plaidItems").doc(item_id).set({
+        accessToken: access_token,
+        itemId: item_id,
+        linkedAt: new Date().toISOString(),
       }, { merge: true });
   
-      return { 
-        success: true, 
-        message: "Bank account linked successfully!" 
-      };
+      return { success: true, message: "Bank account linked successfully!" };
+
     } catch (error) {
       console.error("Error exchanging public token:", error);
       return { success: false, error: "Failed to link bank account." };
     }
 }
 
-export async function getTransactions(accessToken: string, initialCursor: string | null) {
-    try {
-        let added: any[] = [];
-        let modified: any[] = [];
-        let removed: any[] = [];
-        let hasMore = true;
-        let cursor = initialCursor || undefined;
 
-        while(hasMore) {
-            const request: TransactionsSyncRequest = {
-                access_token: accessToken,
-                cursor: cursor,
-            };
-            const response = await plaidClient.transactionsSync(request);
-            
-            added = added.concat(response.data.added);
-            modified = modified.concat(response.data.modified);
-            removed = removed.concat(response.data.removed);
+// Plaid: Sync Transactions
+async function syncTransactionsForItem(userId: string, itemId: string, accessToken: string) {
+    const db = getAdminDb();
+    const itemDocRef = db.collection("users").doc(userId).collection("plaidItems").doc(itemId);
+    const itemDoc = await itemDocRef.get();
+    let cursor = itemDoc.data()?.cursor || null;
 
-            hasMore = response.data.has_more;
-            cursor = response.data.next_cursor;
-        }
+    let added: any[] = [];
+    let hasMore = true;
 
-        return { success: true, added, modified, removed, nextCursor: cursor };
+    while (hasMore) {
+        const request: TransactionsSyncRequest = { access_token: accessToken, cursor };
+        const response = await plaidClient.transactionsSync(request);
+        const data = response.data;
 
-    } catch (error) {
-        console.error("Error fetching transactions:", error);
-        return { success: false, error: "Could not fetch transactions." };
+        added = added.concat(data.added);
+        hasMore = data.has_more;
+        cursor = data.next_cursor;
     }
+
+    const batch = db.batch();
+    for (const tx of added) {
+        const ref = db.collection("users").doc(userId).collection("transactions").doc(tx.transaction_id);
+        const isIncome = !tx.amount || tx.amount < 0; // In Plaid, positive amounts are debits, negative are credits (income)
+        batch.set(ref, {
+            ...tx,
+            isIncome: isIncome,
+            syncedAt: new Date().toISOString(),
+            itemId: itemId
+        }, { merge: true });
+    }
+    await batch.commit();
+
+    await itemDocRef.set({ cursor: cursor, lastSync: new Date().toISOString() }, { merge: true });
 }
 
-export async function findIncomeTransactions(input: IdentifyIncomeInput) {
-    try {
-        const result = await identifyIncome(input);
-        return { success: true, incomeTransactions: result.incomeTransactions };
-    } catch (error) {
-        console.error("Error identifying income:", error);
-        return { success: false, error: "Failed to identify income from transactions." };
-    }
-}
-
-export async function createStripeConnectedAccount(userId: string, email: string) {
-    try {
-        const userDocRef = getAdminDb().collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-        if (userDoc.exists && userDoc.data()?.stripeAccountId) {
-            const accountId = userDoc.data()!.stripeAccountId;
-            const accountLink = await stripe.accountLinks.create({
-                account: accountId,
-                refresh_url: `${headers().get('origin')}/settings`,
-                return_url: `${headers().get('origin')}/settings`,
-                type: 'account_onboarding',
-            });
-            return { success: true, url: accountLink.url };
-        }
-
-        const account = await stripe.accounts.create({
-            type: 'express',
-            country: 'US',
-            email: email,
-            capabilities: {
-                card_payments: { requested: true },
-                transfers: { requested: true },
-            },
-        });
-
-        // Save the Stripe account ID to the user's document in Firestore
-        await userDocRef.set({ stripeAccountId: account.id }, { merge: true });
-
-        const origin = headers().get('origin');
-        const accountLink = await stripe.accountLinks.create({
-            account: account.id,
-            refresh_url: `${origin}/settings`,
-            return_url: `${origin}/settings`,
-            type: 'account_onboarding',
-        });
-        
-        return { success: true, url: accountLink.url };
-    } catch (error) {
-        console.error("Error creating Stripe connected account:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: `Failed to create Stripe account: ${errorMessage}` };
-    }
-}
-
-
-export async function createCheckoutSession(userId: string, planId: string) {
-    try {
-        const userDocRef = getAdminDb().collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-
-        if (!userDoc.exists) {
-            throw new Error("User not found");
-        }
-        const user = userDoc.data();
-        const stripeCustomerId = user!.stripeCustomerId;
-        const plan = plans.find(p => p.id === planId);
-
-        if (!plan || !plan.stripePriceId) {
-            throw new Error("Plan not found or not configured for Stripe.");
-        }
-        
-        const origin = headers().get('origin') || process.env.NEXT_PUBLIC_SITE_URL;
-
-        const session = await stripe.checkout.sessions.create({
-            customer: stripeCustomerId,
-            payment_method_types: ['card'],
-            line_items: [{
-                price: plan.stripePriceId,
-                quantity: 1,
-            }],
-            mode: 'subscription',
-            success_url: `${origin}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${origin}/pricing`,
-            metadata: {
-                userId,
-                planId: plan.id,
-                type: 'plan'
-            }
-        });
-
-        return { success: true, url: session.url };
-    } catch (error) {
-        console.error("Error creating checkout session:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: `Failed to create checkout session: ${errorMessage}` };
-    }
-}
-
-export async function createAddOnCheckoutSession(userId: string, addOnId: string) {
-    try {
-        const userDocRef = getAdminDb().collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-
-        if (!userDoc.exists) throw new Error("User not found");
-        
-        const userData = userDoc.data();
-        const stripeCustomerId = userData!.stripeCustomerId;
-        const addOn = addOns.find(a => a.id === addOnId);
-        
-        if (!addOn) throw new Error("Add-on not found.");
-        
-        const origin = headers().get('origin') || process.env.NEXT_PUBLIC_SITE_URL;
-
-        const session = await stripe.checkout.sessions.create({
-            customer: stripeCustomerId,
-            payment_method_types: ['card'],
-            line_items: [{
-                price: addOn.stripePriceId,
-                quantity: 1,
-            }],
-            mode: 'subscription',
-            success_url: `${origin}/settings?tab=add-ons`,
-            cancel_url: `${origin}/settings?tab=add-ons`,
-            metadata: {
-                userId,
-                addOnId: addOn.id,
-                type: 'add-on',
-            }
-        });
-
-        return { success: true, url: session.url };
-    } catch (error) {
-        console.error("Error creating add-on checkout session:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: `Failed to create checkout session: ${errorMessage}` };
-    }
-}
-
-
-export async function createCustomerPortalSession(userId: string) {
-    try {
-        const userDocRef = getAdminDb().collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-
-        if (!userDoc.exists) {
-            throw new Error("User not found");
-        }
-        
-        const userData = userDoc.data();
-        const stripeCustomerId = userData!.stripeCustomerId;
-        if (!stripeCustomerId) {
-            throw new Error("User does not have a Stripe customer ID.");
-        }
-
-        const origin = headers().get('origin') || process.env.NEXT_PUBLIC_SITE_URL;
-
-        const portalSession = await stripe.billingPortal.sessions.create({
-            customer: stripeCustomerId,
-            return_url: `${origin}/settings`,
-        });
-
-        return { success: true, url: portalSession.url };
-    } catch (error) {
-        console.error("Error creating customer portal session:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: `Failed to create customer portal session: ${errorMessage}` };
-    }
-}
-
-
-export async function setup2FA() {
+export async function syncAllTransactions() {
     const userId = await getUserId();
-    const userDoc = await getAdminDb().collection('users').doc(userId).get();
-    const email = userDoc.data()?.email;
+    const itemsSnap = await getAdminDb().collection("users").doc(userId).collection("plaidItems").get();
+    for (const itemDoc of itemsSnap.docs) {
+        await syncTransactionsForItem(userId, itemDoc.id, itemDoc.data().accessToken);
+    }
+    return { success: true };
+}
 
-    if (!userId || !email) {
-        throw new Error("User not authenticated or email is missing.");
+
+// Allocation Engine
+async function allocateForUserTx(userId: string, tx: any) {
+    const db = getAdminDb();
+    const rulesSnap = await db.collection("users").doc(userId).collection("rules").get();
+    const rules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as AllocationRule));
+    if (!rules.length) return;
+
+    const incomeAmount = Math.abs(tx.amount);
+    const allocations: { ruleId: string; name: string; percentage: number; amount: number; destination: any }[] = [];
+    let totalPercentage = 0;
+
+    for (const rule of rules) {
+        const percentage = Number(rule.percentage || 0);
+        if (percentage > 0) {
+            totalPercentage += percentage;
+            const amount = Math.round((incomeAmount * (percentage / 100)) * 100) / 100;
+            allocations.push({ ruleId: rule.id, name: rule.name, percentage, amount, destination: rule.destination });
+        }
     }
     
-    try {
-        // Generate a new secret for the user.
-        const totp = new OTPAuth.TOTP({
-            issuer: 'FlowBank',
-            label: email,
-            algorithm: 'SHA1',
-            digits: 6,
-            period: 30,
-            secret: new OTPAuth.Secret()
+    // Normalize if total > 100%
+    if (totalPercentage > 100) {
+        const factor = 100 / totalPercentage;
+        allocations.forEach(a => a.amount = Math.round((a.amount * factor) * 100) / 100);
+    }
+
+    const transfers: any[] = [];
+    for (const alloc of allocations) {
+        // In a real app, this would create Stripe transfers. For now, we simulate.
+        transfers.push({
+            ...alloc,
+            transferId: `held_${Math.random().toString(36).slice(2, 10)}`
         });
-
-        const uri = totp.toString();
-        
-        // Don't save the secret to the user doc yet.
-        // It should be saved only after the user successfully verifies the code.
-
-        return { success: true, secret: totp.secret.base32, uri };
-
-    } catch (error) {
-        console.error("Error setting up 2FA:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: `Failed to set up 2FA: ${errorMessage}` };
     }
-}
 
-const SignUpSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
-    displayName: z.string().min(1),
-    phone: z.string().min(1),
-    businessName: z.string().optional(),
-    address: z.object({
-        street: z.string().min(1),
-        city: z.string().min(1),
-        state: z.string().min(1),
-        postalCode: z.string().min(1),
-        country: z.string().min(1),
-    }),
-    planId: z.string().nullable().optional(),
-});
+    await db.collection("users").doc(userId).collection("allocations").add({
+        txId: tx.transaction_id || tx.id,
+        executedAt: new Date().toISOString(),
+        date: tx.date,
+        currency: tx.iso_currency_code || 'USD',
+        totalIncome: incomeAmount,
+        outputs: transfers
+    });
 
-type SignUpInput = z.infer<typeof SignUpSchema>;
-
-export async function signUpUser(input: SignUpInput) {
-    try {
-        const validatedInput = SignUpSchema.parse(input);
-        const { email, password, displayName, phone, businessName, address, planId } = validatedInput;
-
-        const auth = getAdminAuth();
-        const userRecord = await auth.createUser({ email, password, displayName });
-        const { uid } = userRecord;
-
-        await createUserDocument(uid, email, displayName, phone, businessName || '', address, planId);
-        
-        // Create a custom token for the client to sign in
-        const customToken = await auth.createCustomToken(uid);
-
-        return { success: true, customToken };
-
-    } catch (error) {
-        console.error("Sign up failed:", error);
-        if (error instanceof z.ZodError) {
-            return { success: false, error: "Invalid input data." };
-        }
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
+    // Update virtual account balances
+    const batch = db.batch();
+    for (const alloc of allocations) {
+        const accountRef = db.collection("users").doc(userId).collection("accounts").doc(alloc.ruleId);
+        const accountDoc = await accountRef.get();
+        const currentBalance = accountDoc.exists() ? accountDoc.data()!.balance : 0;
+        batch.set(accountRef, {
+            id: alloc.ruleId,
+            name: alloc.name,
+            balance: currentBalance + alloc.amount
+        }, { merge: true });
     }
+    await batch.commit();
 }
 
 
-export async function handleInstantPayout() {
-    try {
-        const userId = await getUserId();
-        const db = getAdminDb();
-        const userDocRef = db.collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-        
-        if (!userDoc.exists) throw new Error("User not found.");
-        
-        const userData = userDoc.data()!;
-        const customerId = userData.stripeCustomerId;
-
-        // 1. Check if user is on unlimited plan
-        const unlimitedAddOn = addOns.find(a => a.id === 'instant_payouts');
-        if (!unlimitedAddOn || !unlimitedAddOn.stripePriceId) throw new Error("Instant Payouts add-on not configured.");
-
-        const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'active' });
-        const hasUnlimited = subscriptions.data.some(sub => 
-            sub.items.data.some(item => item.price.id === unlimitedAddOn.stripePriceId)
-        );
-
-        if (hasUnlimited) {
-            return { success: true, charged: false, upgraded: false, message: "Unlimited plan is active. No charge needed." };
-        }
-
-        // 2. Log payout use
-        const now = new Date();
-        const month = `${now.getFullYear()}-${now.getMonth() + 1}`;
-        const payoutLogRef = db.collection("payout_logs").doc(userId);
-        const logSnap = await payoutLogRef.get();
-        
-        let usageCount = 0;
-        if (logSnap.exists) {
-            usageCount = (logSnap.data()?.[month] || 0) + 1;
-            await payoutLogRef.update({ [month]: usageCount });
-        } else {
-            usageCount = 1;
-            await payoutLogRef.set({ [month]: 1 });
-        }
-        
-        // 3. Charge $2
-        const paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
-        if (paymentMethods.data.length === 0) {
-            throw new Error("No payment method on file. Please add a card in your settings.");
-        }
-
-        await stripe.paymentIntents.create({
-            amount: 200, // $2.00
-            currency: 'usd',
-            customer: customerId,
-            payment_method: paymentMethods.data[0].id,
-            off_session: true,
-            confirm: true,
-        });
-
-        // 4. Auto-upgrade after 3 uses
-        if (usageCount >= 3) {
-            await stripe.subscriptions.create({
-                customer: customerId,
-                items: [{ price: unlimitedAddOn.stripePriceId }],
-                proration_behavior: 'none', // Don't prorate
-            });
-            // Update user's plan in Firestore
-            const userPlan = userData.plan || {};
-            userPlan.addOns = { ...userPlan.addOns, 'instant_payouts': true };
-            await userDocRef.update({ plan: userPlan });
-
-            return { success: true, charged: true, upgraded: true, message: "Charged $2.00 and auto-upgraded to unlimited payouts!" };
-        }
-
-        return { success: true, charged: true, upgraded: false, message: `Charged $2.00. You've used instant payouts ${usageCount} time(s) this month.` };
-
-    } catch (error) {
-        console.error("Error handling instant payout:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
+export async function manualAllocate(txId: string) {
+    const userId = await getUserId();
+    const txDoc = await getAdminDb().collection("users").doc(userId).collection("transactions").doc(txId).get();
+    if (!txDoc.exists) throw new Error("Transaction not found");
+    await allocateForUserTx(userId, txDoc.data());
+    return { success: true };
 }
 
-export async function createPayout(amount: number, accountId: string) {
+// Stripe Billing
+export async function createCheckoutSession(planId: string) {
     const userId = await getUserId();
     const db = getAdminDb();
     const userDocRef = db.collection("users").doc(userId);
     const userDoc = await userDocRef.get();
+    let customerId = userDoc.data()?.stripeCustomerId;
 
-    if (!userDoc.exists) throw new Error("User not found.");
-
-    const userData = userDoc.data()!;
-    const stripeAccountId = userData.stripeAccountId;
-
-    if (!stripeAccountId) {
-        throw new Error("Stripe account not connected. Please set up payouts in settings.");
+    if (!customerId) {
+        const customer = await stripe.customers.create({ metadata: { firebaseUID: userId } });
+        customerId = customer.id;
+        await userDocRef.set({ stripeCustomerId: customerId }, { merge: true });
     }
-    
-    // In a real application, you would need to get the user's external bank account ID
-    // that's registered with their Stripe account. For this demo, we assume one exists.
-    
-    try {
-        // This is a placeholder. A real implementation would be more complex.
-        // 1. Check Stripe account balance.
-        // 2. Create a Payout to the user's bank.
-        // 3. Decrease the virtual account balance in Firestore.
 
-        // For now, we will just simulate the success and decrease the balance.
-        const accountDocRef = db.collection("users").doc(userId).collection("accounts").doc(accountId);
-        const accountDoc = await accountDocRef.get();
+    const plan = [...plans, ...addOns].find(p => p.id === planId);
+    if (!plan || !plan.stripePriceId) throw new Error("Plan not found or not configured for Stripe.");
 
-        if (!accountDoc.exists) throw new Error("Allocation account not found.");
-        
-        const accountData = accountDoc.data() as Account;
-        
-        if (accountData.balance < amount) {
-            throw new Error("Insufficient balance in the selected account.");
-        }
+    const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        customer: customerId,
+        line_items: [{ price: plan.stripePriceId, quantity: 1 }],
+        success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?checkout=success`,
+        cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing?checkout=cancel`,
+    });
 
-        const newBalance = accountData.balance - amount;
-        await accountDocRef.update({ balance: newBalance });
-
-        return { success: true, message: `Successfully initiated a payout of $${amount.toFixed(2)}.` };
-    } catch (error) {
-        console.error("Error creating payout:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
+    return { success: true, url: session.url };
 }
 
-export async function createPaymentLink(description: string, amount: number) {
-    try {
-        const userId = await getUserId();
-        const db = getAdminDb();
-        const userDocRef = db.collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-        
-        if (!userDoc.exists) throw new Error("User not found.");
-        
-        const userData = userDoc.data()!;
-        const stripeAccountId = userData.stripeAccountId;
+export async function createPortalSession() {
+    const userId = await getUserId();
+    const userDoc = await getAdminDb().collection("users").doc(userId).get();
+    const customerId = userDoc.data()?.stripeCustomerId;
+    if (!customerId) throw new Error("Stripe customer not found.");
 
-        if (!stripeAccountId) {
-            throw new Error("Stripe account not connected. Please connect your Stripe account in settings.");
-        }
-
-        // Create a product for the payment
-        const product = await stripe.products.create({
-            name: description,
-        });
-
-        // Create a price for the product
-        const price = await stripe.prices.create({
-            product: product.id,
-            unit_amount: amount * 100, // Amount in cents
-            currency: 'usd',
-        });
-
-        // Create the payment link
-        const paymentLink = await stripe.paymentLinks.create({
-            line_items: [{ price: price.id, quantity: 1 }],
-            transfer_data: {
-                destination: stripeAccountId,
-            },
-        });
-
-        // Save the payment link to Firestore
-        const paymentLinkData: Omit<PaymentLink, 'id'> = {
-            userId,
-            description,
-            amount,
-            url: paymentLink.url,
-            createdAt: new Date().toISOString(),
-            status: 'active'
-        };
-        await db.collection("users").doc(userId).collection("payment_links").doc(paymentLink.id).set(paymentLinkData);
-
-
-        return { success: true, url: paymentLink.url };
-
-    } catch (error) {
-        console.error("Error creating payment link:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
+    const portal = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
+    });
+    return { success: true, url: portal.url };
 }
 
-export async function submitFeedback(feedback: string) {
-    try {
-        const userId = await getUserId();
-        const userDoc = await getAdminDb().collection('users').doc(userId).get();
-        const userEmail = userDoc.data()?.email || 'unknown';
-
-        // In a real app, you would save this to a database or send it to a support tool.
-        // For now, we'll just log it to the server console.
-        console.log(`Feedback from ${userEmail} (${userId}):`);
-        console.log(feedback);
-
-        // You could also use a Genkit flow to summarize or categorize feedback.
-
-        return { 
-            success: true, 
-            message: "Thank you for your feedback! We've received it and will review it shortly." 
-        };
-
-    } catch (error) {
-        console.error("Error submitting feedback:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
-export async function getAllUsers(): Promise<{ success: boolean; users?: UserData[]; error?: string }> {
-    try {
-        const currentUserId = await getUserId();
-        const db = getAdminDb();
-        const currentUserDoc = await db.collection('users').doc(currentUserId).get();
-        const currentUserData = currentUserDoc.data();
-
-        if (currentUserData?.plan?.role !== 'admin') {
-            throw new Error("Permission denied. You must be an admin to view all users.");
-        }
-
-        const usersSnapshot = await db.collection('users').get();
-        const users = usersSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                uid: doc.id,
-                email: data.email,
-                displayName: data.displayName,
-                role: data.plan?.role || 'user',
-                plan: data.plan
-            }
-        });
-
-        return { success: true, users: users as UserData[] };
-    } catch (error) {
-        console.error("Error fetching users:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
-export async function updateUserRole(targetUserId: string, newRole: UserRole): Promise<{ success: boolean; error?: string }> {
-     try {
-        const currentUserId = await getUserId();
-        const db = getAdminDb();
-        const currentUserDoc = await db.collection('users').doc(currentUserId).get();
-        const currentUserData = currentUserDoc.data();
-
-        if (currentUserData?.plan?.role !== 'admin') {
-            throw new Error("Permission denied. You must be an admin to change user roles.");
-        }
-
-        if (currentUserId === targetUserId) {
-            throw new Error("Admins cannot change their own role.");
-        }
-
-        const targetUserDocRef = db.collection('users').doc(targetUserId);
-        const targetUserDoc = await targetUserDocRef.get();
-
-        if (!targetUserDoc.exists) {
-            throw new Error("Target user not found.");
-        }
-
-        const targetUserData = targetUserDoc.data();
-        const updatedPlan = { ...targetUserData!.plan, role: newRole };
-
-        await targetUserDocRef.update({ plan: updatedPlan });
-
-        return { success: true };
-    } catch (error) {
-        console.error("Error updating user role:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
-export async function generateAIBlogPost(input: GenerateBlogPostInput) {
-    try {
-        const result = await generateBlogPost(input);
-        return { success: true, post: result };
-    } catch (error) {
-        console.error("Error generating AI blog post:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
-export async function suggestFinancialProductsAction(input: FinancialProductsInput): Promise<{ success: boolean, products?: FinancialProductsOutput['products'], error?: string }> {
-    try {
-        const result = await suggestFinancialProducts(input);
-        return { success: true, products: result.products };
-    } catch (error) {
-        console.error("Error suggesting financial products:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
-
-export async function updateUserDocument(userId: string, data: Partial<Omit<UserData, 'uid' | 'email' | 'plan' | 'role'>>) {
-    if (!userId) {
-        throw new Error("User ID is required to update document.");
-    }
-    try {
-        const userDocRef = getAdminDb().collection("users").doc(userId);
-        await userDocRef.update(data);
-        return { success: true };
-    } catch (error) {
-        console.error("Error updating user document:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
-    }
-}
-
-
-export async function seedStagingData(companyName: string, ownerEmail: string, managerEmail: string, overwrite: boolean) {
-    const slug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
-    let companyId: string | undefined;
+// Analytics
+export async function getAnalyticsSnapshot(sinceDate: string | null) {
+    const userId = await getUserId();
     const db = getAdminDb();
-    const auth = getAdminAuth();
+    const since = sinceDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const txSnap = await db.collection("users").doc(userId).collection("transactions")
+        .where("date", ">=", since)
+        .get();
 
-    // 1) Company: create or reuse
-    const existing = await db.collection('companies').where('slug', '==', slug).limit(1).get();
-    if (!existing.empty && !overwrite) {
-        companyId = existing.docs[0].id;
-    } else if (!existing.empty && overwrite) {
-        companyId = existing.docs[0].id;
-        await db.doc(`companies/${companyId}`).set({
-            name: companyName, slug, plan: 'pro', status: 'active',
-            brand: { primary: '#0ea5e9' },
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-    } else {
-        companyId = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
-        await db.doc(`companies/${companyId}`).set({
-            name: companyName, slug, plan: 'pro', status: 'active',
-            seats: 5, timezone: 'America/New_York',
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-    }
+    let income = 0, expenses = 0;
+    const byDay: { [key: string]: { income: number, expenses: number } } = {};
 
-    // 2) Users & Claims
-    const ensureUser = async (email: string, role: UserRole) => {
-        let user: admin.auth.UserRecord;
-        try {
-            user = await auth.getUserByEmail(email);
-        } catch {
-            user = await auth.createUser({ email, emailVerified: true, password: 'Password123!' });
+    txSnap.forEach(doc => {
+        const tx = doc.data();
+        const date = tx.date;
+        const amount = Number(tx.amount || 0);
+
+        if (!byDay[date]) byDay[date] = { income: 0, expenses: 0 };
+
+        if (amount < 0) { // Plaid income is negative
+            income += Math.abs(amount);
+            byDay[date].income += Math.abs(amount);
+        } else {
+            expenses += amount;
+            byDay[date].expenses += amount;
         }
-        await auth.setCustomUserClaims(user.uid, { role, companyId });
-        await auth.revokeRefreshTokens(user.uid);
-        return user.uid;
+    });
+
+    const series = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date, ...v }));
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    
+    const snapshot = {
+        since,
+        income: round2(income),
+        expenses: round2(expenses),
+        net: round2(income - expenses),
+        series,
     };
 
-    const ownerUid = await ensureUser(ownerEmail, 'owner');
-    const managerUid = await ensureUser(managerEmail, 'manager');
+    await db.collection("users").doc(userId).collection("analytics").doc("latest").set(snapshot, { merge: true });
+    return snapshot;
+}
 
-    // ... (rest of the seeding logic for renters, rentals etc. would go here)
-    // This part is omitted for brevity as it's not directly related to the current app structure
-    // but the principle remains the same.
-
-    return {
-        ok: true,
-        companyId,
-        ownerEmail,
-        managerEmail,
-    };
+// AI Suggestions
+export async function getAISuggestion(businessType: string) {
+    try {
+      const result = await suggestAllocationPlan({ businessType });
+      return {
+        success: true,
+        plan: result.allocationPlan,
+        explanation: result.breakdownExplanation,
+      };
+    } catch (error) {
+      console.error('Error getting AI suggestion:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      return { success: false, error: errorMessage };
+    }
 }

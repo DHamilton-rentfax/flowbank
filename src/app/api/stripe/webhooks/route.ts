@@ -4,10 +4,29 @@ import { headers } from "next/headers";
 import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
 import { plans, addOns } from "@/lib/plans";
-import type { UserPlan } from "@/lib/types";
-import { getAdminDb } from "@/firebase/server";
+import { getAdminDb, getAdminAuth } from "@/firebase/server";
+import { UserPlan } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+async function findUidByCustomer(customerId: string) {
+    if (!customerId) return null;
+    const userQuery = await getAdminDb().collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
+    return userQuery.empty ? null : userQuery.docs[0].id;
+}
+
+async function setUserPlan(uid: string, planId: string) {
+    if (!uid) return;
+    const plan = [...plans, ...addOns].find(p => p.id === planId) || plans.find(p => p.id === "free") || { id: 'free', name: 'Free' };
+    
+    const userPlanData = {
+        id: plan.id,
+        name: plan.name,
+    };
+    
+    await getAdminDb().collection("users").doc(uid).set({ plan: userPlanData }, { merge: true });
+    await getAdminAuth().setCustomUserClaims(uid, { plan: planId });
+}
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -28,113 +47,58 @@ export async function POST(req: Request) {
         return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
     }
     
-    const adminDb = getAdminDb();
+    const db = getAdminDb();
+    const auth = getAdminAuth();
 
-    const session = event.data.object as Stripe.Checkout.Session;
-    const sessionType = session.metadata?.type;
-
-    if (event.type === 'checkout.session.completed') {
-        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-        const userId = session.metadata?.userId;
-        
-        if (!userId) {
-            console.error("Webhook Error: Missing userId in session metadata");
-            return new NextResponse("Webhook Error: Missing metadata", { status: 400 });
-        }
-        
-        const userDocRef = adminDb.collection("users").doc(userId);
-
-        if (sessionType === 'plan') {
-            const planId = session.metadata?.planId;
-            if (!planId) {
-                return new NextResponse("Webhook Error: Missing planId for 'plan' type session", { status: 400 });
-            }
-
-            const plan = plans.find(p => p.id === planId);
-            if (!plan) {
-                return new NextResponse(`Webhook Error: Plan with id ${planId} not found.`, { status: 400 });
-            }
-
-            const userPlan: UserPlan = {
-                id: plan.id,
-                name: plan.name,
-                status: 'active',
-                stripeSubscriptionId: subscription.id,
-                stripeCustomerId: subscription.customer as string,
-                currentPeriodEnd: subscription.current_period_end,
-                addOns: {}, // Initialize addOns
-            };
-            
-            await userDocRef.set({ plan: userPlan }, { merge: true });
-
-        } else if (sessionType === 'add-on') {
-            const addOnId = session.metadata?.addOnId;
-            if (!addOnId) {
-                return new NextResponse("Webhook Error: Missing addOnId for 'add-on' type session", { status: 400 });
-            }
-            
-            const addOn = addOns.find(a => a.id === addOnId);
-            if (!addOn) {
-                return new NextResponse(`Webhook Error: Add-on with id ${addOnId} not found.`, { status: 400 });
-            }
-            
-            const userDoc = await userDocRef.get();
-            if(userDoc.exists) {
-                const userPlan = userDoc.data()!.plan as UserPlan;
-                userPlan.addOns = { ...userPlan.addOns, [addOnId]: true };
-                await userDocRef.set({ plan: userPlan }, { merge: true });
-            }
-        }
-    }
-
-    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
-         const subscription = event.data.object as Stripe.Subscription;
-         const customerId = subscription.customer as string;
-
-         const userQuery = await adminDb.collection('users').where('stripeCustomerId', '==', customerId).get();
-         if (userQuery.empty) {
-             console.error(`No user found with Stripe customer ID ${customerId}`);
-             return new NextResponse("User not found", { status: 404 });
-         }
-         const userId = userQuery.docs[0].id;
-         const userDocRef = adminDb.collection("users").doc(userId);
-         const userDoc = await userDocRef.get();
-         
-         if (userDoc.exists()) {
-            let userPlan = userDoc.data()!.plan as UserPlan;
-            const priceId = subscription.items.data[0].price.id;
-            
-            // Check if this subscription is for a main plan or an add-on
-            const plan = plans.find(p => p.stripePriceId === priceId);
-            const addOn = addOns.find(a => a.stripePriceId === priceId);
-
-            if (plan) {
-                 userPlan = {
-                    ...userPlan,
-                    id: plan.id,
-                    name: plan.name,
-                    status: subscription.status,
-                    stripeSubscriptionId: subscription.id,
-                    currentPeriodEnd: subscription.current_period_end,
-                 };
-            } else if (addOn) {
-                const currentAddOns = userPlan.addOns || {};
-                if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
-                    delete currentAddOns[addOn.id];
-                } else {
-                    currentAddOns[addOn.id] = subscription.status === 'active';
+    try {
+        switch (event.type) {
+            case "customer.subscription.created":
+            case "customer.subscription.updated": {
+                const sub = event.data.object as Stripe.Subscription;
+                const uid = sub.metadata.firebaseUID || await findUidByCustomer(sub.customer as string);
+                
+                if (uid) {
+                    const priceId = sub.items.data[0]?.price.id;
+                    const plan = [...plans, ...addOns].find(p => p.stripePriceId === priceId);
+                    if (plan) {
+                        const userDocRef = db.collection("users").doc(uid);
+                        const userPlan: Partial<UserPlan> = {
+                            id: plan.id,
+                            name: plan.name,
+                            status: sub.status,
+                            stripeSubscriptionId: sub.id,
+                            currentPeriodEnd: sub.current_period_end,
+                        };
+                        await userDocRef.set({ plan: userPlan }, { merge: true });
+                        await auth.setCustomUserClaims(uid, { plan: plan.id });
+                    }
                 }
-                userPlan.addOns = currentAddOns;
-            } else {
-                 console.error(`No plan or add-on found for price ID ${priceId}`);
+                break;
             }
-
-            await userDocRef.set({ plan: userPlan }, { merge: true });
-         }
+            case "customer.subscription.deleted": {
+                const sub = event.data.object as Stripe.Subscription;
+                const uid = sub.metadata.firebaseUID || await findUidByCustomer(sub.customer as string);
+                if (uid) {
+                    const userDocRef = db.collection("users").doc(uid);
+                    // Revert to free plan
+                    const freePlan = plans.find(p => p.id === 'free')!;
+                    const userPlan: Partial<UserPlan> = {
+                        id: freePlan.id,
+                        name: freePlan.name,
+                        status: 'cancelled',
+                        stripeSubscriptionId: undefined,
+                        currentPeriodEnd: undefined,
+                    };
+                    await userDocRef.set({ plan: userPlan }, { merge: true });
+                    await auth.setCustomUserClaims(uid, { plan: 'free' });
+                }
+                break;
+            }
+        }
+        return new NextResponse(null, { status: 200 });
+    } catch (e) {
+        console.error("Stripe webhook handler error:", e);
+        const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+        return new NextResponse(errorMessage, { status: 500 });
     }
-
-
-    return new NextResponse(null, { status: 200 });
 }
-
-    

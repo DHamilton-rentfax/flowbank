@@ -1,99 +1,57 @@
 
 "use client";
+import React from "react";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-import { Logo } from "@/components/icons";
-import Link from "next/link";
-import { Users, Banknote, ShieldCheck, Zap } from "lucide-react";
-import dynamic from 'next/dynamic';
-import { Skeleton } from "@/components/ui/skeleton";
-import { Suspense } from "react";
+export default function Login() {
+  const { loginWithEmail, loginWithGoogle } = useAuth();
+  const { toast } = useToast();
 
-const AuthForm = dynamic(() => import('@/components/auth/auth-form').then(mod => mod.AuthForm), {
-    loading: () => (
-      <div className="space-y-4">
-        <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-10 w-full" />
-        </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-10 w-full" />
-        </div>
-        <Skeleton className="h-10 w-full" />
-      </div>
-    ),
-    ssr: false
-});
-
-const adFeatures = [
-    {
-        icon: Banknote,
-        title: "Automated Payouts",
-        description: "Set up automated transfers to your personal and business accounts with Stripe."
-    },
-    {
-        icon: Zap,
-        title: "AI-Powered Insights",
-        description: "Get smart, AI-driven suggestions for your allocation rules based on your business type."
-    },
-    {
-        icon: ShieldCheck,
-        title: "Enhanced Security",
-        description: "Enable Two-Factor Authentication (2FA) for an extra layer of account protection."
-    },
-    {
-        icon: Users,
-        title: "Unlimited Rules",
-        description: "Create as many allocation buckets as you need to manage your money with precision."
+  const handleLogin = async (provider: 'email' | 'google') => {
+    try {
+        if (provider === 'google') {
+            await loginWithGoogle();
+        } else {
+            // This is a placeholder. You would have a form for email/password.
+            const email = prompt("Enter your email");
+            const password = prompt("Enter your password");
+            if (email && password) {
+                await loginWithEmail(email, password);
+            }
+        }
+        toast({ title: "Login Successful" });
+    } catch(e) {
+        const error = e as Error;
+        toast({ title: "Login Failed", description: error.message, variant: "destructive" });
     }
-]
+  }
 
-export default function LoginPage() {
   return (
-    <div className="flex min-h-screen w-full">
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-sm">
-            <div className="mb-8 flex justify-center">
-                <Link href="/" className="flex items-center gap-2">
-                    <Logo className="size-8 text-primary" />
-                    <h1 className="text-2xl font-semibold">FlowBank</h1>
-                </Link>
-            </div>
-            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-              <AuthForm mode="login" />
-            </Suspense>
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
-                Sign up
-            </Link>
-            </p>
-        </div>
-      </div>
-      <div className="hidden lg:flex w-1/2 flex-col items-start justify-center bg-sidebar p-12 text-sidebar-foreground">
-        <div className="max-w-md">
-            <h2 className="text-3xl font-bold font-headline mb-4">
-                Unlock Your Business's Full Potential
-            </h2>
-            <p className="text-muted-foreground mb-8">
-                Go beyond basic allocation. Upgrade to a Pro plan to access powerful features designed to automate your finances and accelerate growth.
-            </p>
-            <div className="space-y-4">
-                {adFeatures.map((feature, index) => (
-                    <div key={index} className="flex gap-4 p-4 rounded-lg bg-sidebar-accent">
-                        <feature.icon className="size-8 text-sidebar-primary shrink-0 mt-1" />
-                        <div>
-                            <h3 className="font-semibold">{feature.title}</h3>
-                            <p className="text-sm text-muted-foreground">{feature.description}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-             <p className="mt-8 text-xs text-muted-foreground">
-                Start for free • No credit card required • Cancel anytime
-            </p>
-        </div>
-      </div>
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-1 flex items-center justify-center bg-secondary">
+        <Card className="w-full max-w-sm">
+            <CardHeader>
+                <CardTitle>Sign in</CardTitle>
+                <CardDescription>Use your Google account or email to continue.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+                <Button variant="outline" onClick={() => handleLogin('google')}>
+                    <svg className="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" x2="12" y1="8" y2="8"/><line x1="3.95" x2="8.54" y1="6.06" y2="14"/><line x1="10.88" x2="15.46" y1="21.94" y2="14"/></svg>
+                    Continue with Google
+                </Button>
+                <Button onClick={() => handleLogin('email')}>
+                    Continue with Email
+                </Button>
+            </CardContent>
+        </Card>
+      </main>
+      <Footer />
     </div>
   );
 }

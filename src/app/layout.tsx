@@ -1,29 +1,16 @@
 
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
-import React from "react";
-import { ClientLayout } from "@/components/layout/client-layout";
-import { Header } from "@/components/layout/header";
-import { Inter, Poppins } from 'next/font/google';
+import { AppProvider } from "@/contexts/app-provider";
 
-const inter = Inter({ 
-  subsets: ['latin'], 
-  display: 'swap',
-  variable: '--font-inter',
-});
-
-const poppins = Poppins({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-poppins',
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "FlowBank | Split. Stash. Scale your profits.",
-  description: "FlowBank is a financial automation app that allows entrepreneurs and individuals to automatically split their income into custom categories.",
+  title: "FlowBank | Your Automated Finances",
+  description: "Automatically allocate your income to different pots for tax, savings, and more.",
 };
 
 export default function RootLayout({
@@ -31,19 +18,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${poppins.variable}`}>
-      <head />
-      <body className="font-body antialiased" suppressHydrationWarning={true}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>
         <AuthProvider>
-            <ClientLayout>
-                <Header />
-                <main className="pt-16">
-                  {children}
-                </main>
-            </ClientLayout>
+          <AppProvider>
+            {children}
             <Toaster />
+          </AppProvider>
         </AuthProvider>
       </body>
     </html>

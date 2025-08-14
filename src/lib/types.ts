@@ -1,5 +1,4 @@
 
-
 export type Account = {
   id: string;
   name: string;
@@ -14,13 +13,19 @@ export type AllocationRule = {
   id: string;
   name: string;
   percentage: number;
+  destination?: {
+    type: 'hold' | 'connected_account' | 'external';
+    id: string | null;
+  };
 };
 
 export type Transaction = {
   id:string;
   date: string;
-  totalAmount: number;
-  allocations: {
+  amount: number;
+  name: string;
+  isIncome: boolean;
+  allocations?: {
     ruleId: string;
     amount: number;
   }[];
@@ -34,26 +39,17 @@ export interface Plan {
     stripePriceId?: string;
 }
 
-export interface AddOn {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    stripePriceId: string;
-}
+export interface AddOn extends Plan {}
 
 export type UserRole = 'admin' | 'editor' | 'user';
 
 export interface UserPlan {
     id: string;
     name: string;
-    status: 'active' | 'trialing' | 'cancelled';
+    status?: 'active' | 'trialing' | 'cancelled';
     stripeSubscriptionId?: string;
     stripeCustomerId?: string;
-    stripeAccountId?: string;
     currentPeriodEnd?: number;
-    addOns?: { [key: string]: boolean };
-    paymentLinks?: number;
     role?: UserRole;
 }
 
@@ -72,8 +68,8 @@ export interface UserData {
     phone?: string;
     businessName?: string;
     address?: UserAddress;
-    role: UserRole;
-    plan: UserPlan;
+    plan?: UserPlan;
+    stripeCustomerId?: string;
 }
 
 export interface PaymentLink {
@@ -86,4 +82,15 @@ export interface PaymentLink {
     status: 'active' | 'archived';
 }
 
-    
+export interface Post {
+    slug: string;
+    title: string;
+    description: string;
+    date: string;
+    author: string;
+    avatar: string;
+    image: string;
+    readTime: number;
+    content: string;
+    published?: boolean;
+}

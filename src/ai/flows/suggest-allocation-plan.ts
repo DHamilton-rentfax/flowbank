@@ -1,5 +1,6 @@
-// src/ai/flows/suggest-allocation-plan.ts
 
+// src/ai/flows/suggest-allocation-plan.ts
+"use server";
 /**
  * @fileOverview This file defines a Genkit flow for suggesting allocation plans tailored to a user's business type.
  *
@@ -19,7 +20,14 @@ const SuggestAllocationPlanInputSchema = z.object({
 export type SuggestAllocationPlanInput = z.infer<typeof SuggestAllocationPlanInputSchema>;
 
 const SuggestAllocationPlanOutputSchema = z.object({
-  allocationPlan: z.object({}).catchall(z.number())
+  allocationPlan: z.object({
+    profit: z.number(),
+    ownersPay: z.number(),
+    taxes: z.number(),
+    opex: z.number(),
+    marketing: z.number(),
+    savings: z.number(),
+  })
     .describe(
       'A JSON object with account names as keys and allocation percentages as values.'
     ),
@@ -44,17 +52,18 @@ const suggestAllocationPlanPrompt = ai.definePrompt({
   Given the business type: {{{businessType}}}, suggest an allocation plan.
   Also provide a breakdown explanation of why this allocation plan is suggested.
 
-  The allocation plan should include common business accounts such as "Operating Expenses", "Savings", "Marketing", "Taxes", and "Owner Compensation".
+  The allocation plan should include common business accounts such as "Profit", "Owner's Pay", "Taxes", "Operating Expenses", "Marketing", and "Savings".
   Ensure that the percentages add up to 100.
   
   Your entire response must conform to the output JSON schema.
   The allocationPlan field must be a valid JSON object. For example:
   {
-    "Operating Expenses": 30,
-    "Savings": 10,
-    "Marketing": 15,
-    "Taxes": 25,
-    "Owner Compensation": 20
+    "profit": 5,
+    "ownersPay": 35,
+    "taxes": 15,
+    "opex": 35,
+    "marketing": 5,
+    "savings": 5
   }
 `,
 });
