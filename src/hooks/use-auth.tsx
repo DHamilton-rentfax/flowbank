@@ -10,6 +10,7 @@ import type { UserAddress } from "@/lib/types";
 
 interface AuthContextType {
   user: User | null;
+  idToken: string | null;
   loading: boolean;
   logout: () => void;
   loginWithEmail: (email: string, password: string) => Promise<void>;
@@ -25,6 +26,7 @@ const createSession = async (idToken: string) => {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [idToken, setIdToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -33,7 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user);
       if (user) {
         const token = await user.getIdToken();
+        setIdToken(token);
         await createSession(token);
+      } else {
+        setIdToken(null);
       }
       setLoading(false);
     });
@@ -58,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout, loginWithEmail, loginWithGoogle }}>
+    <AuthContext.Provider value={{ user, idToken, loading, logout, loginWithEmail, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );

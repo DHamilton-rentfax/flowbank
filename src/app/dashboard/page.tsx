@@ -7,6 +7,7 @@ import { useApp } from "@/contexts/app-provider";
 import PlanGate from "@/components/PlanGate";
 import { getAISuggestion, getAnalyticsSnapshot } from "../actions";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 
 function Stat({ title, value }: { title: string, value: string }) {
@@ -21,14 +22,17 @@ function Stat({ title, value }: { title: string, value: string }) {
 export default function Dashboard() {
   const { toast } = useToast();
   const { userPlan, analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion } = useApp();
+  const { idToken } = useAuth();
 
   useEffect(()=>{ 
     async function fetchData() {
-        const snap = await getAnalyticsSnapshot(null);
-        setAnalyticsSnapshot(snap);
+        if (idToken) {
+          const snap = await getAnalyticsSnapshot(idToken, null);
+          setAnalyticsSnapshot(snap);
+        }
     }
     fetchData();
-  },[setAnalyticsSnapshot]);
+  },[idToken, setAnalyticsSnapshot]);
 
   async function getAi() {
     try {

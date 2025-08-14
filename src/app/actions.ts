@@ -22,8 +22,9 @@ const getUserId = async () => {
 };
 
 // Plaid: Create Link Token
-export async function createLinkToken() {
-    const userId = await getUserId();
+export async function createLinkToken(idToken: string) {
+    const decodedToken = await getAdminAuth().verifyIdToken(idToken);
+    const userId = decodedToken.uid;
     if (!userId) throw new Error("User not authenticated");
 
     try {
@@ -230,8 +231,9 @@ export async function createPortalSession() {
 }
 
 // Analytics
-export async function getAnalyticsSnapshot(sinceDate: string | null) {
-    const userId = await getUserId();
+export async function getAnalyticsSnapshot(idToken: string | null, sinceDate: string | null) {
+    const decodedToken = await getAdminAuth().verifyIdToken(idToken!);
+    const userId = decodedToken.uid;
     const db = getAdminDb();
     const since = sinceDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     

@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, idToken: fbIdToken } = useAuth();
   const router = useRouter();
   
   const [linkToken, setLinkToken] = useState<string | null>(null);
@@ -36,12 +36,12 @@ export default function Onboarding() {
   });
 
   const handleConnectBank = async () => {
-      if (!user) {
+      if (!user || !fbIdToken) {
         toast({ title: "Please sign in first", variant: "destructive" });
         return;
       }
       try {
-        const { linkToken: fetchedToken } = await createLinkToken();
+        const { linkToken: fetchedToken } = await createLinkToken(fbIdToken);
         if (fetchedToken) {
           setLinkToken(fetchedToken);
         } else {
