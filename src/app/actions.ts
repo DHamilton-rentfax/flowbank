@@ -232,6 +232,13 @@ export async function createPortalSession() {
 
 // Analytics
 export async function getAnalyticsSnapshot(idToken: string | null, sinceDate: string | null) {
+    // Gracefully handle missing server-side environment variables during development
+    if (!process.env.FIREBASE_ADMIN_CERT_B64) {
+        console.warn("FIREBASE_ADMIN_CERT_B64 not set. Skipping analytics snapshot.");
+        const since = sinceDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        return { since, income: 0, expenses: 0, net: 0, series: [] };
+    }
+    
     const decodedToken = await getAdminAuth().verifyIdToken(idToken!);
     const userId = decodedToken.uid;
     const db = getAdminDb();
