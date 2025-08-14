@@ -297,3 +297,36 @@ export async function getAISuggestion(businessType: string) {
       return { success: false, error: errorMessage };
     }
 }
+
+// Admin Actions
+export async function grantHighestTierPlan(email: string) {
+    // This is an admin-only function. In a real app, you'd protect this.
+    // For now, we assume it's called from a trusted environment.
+    const auth = getAdminAuth();
+    const db = getAdminDb();
+
+    try {
+        const user = await auth.getUserByEmail(email);
+        const proPlan = plans.find(p => p.id === 'pro');
+        if (!proPlan) throw new Error("Pro plan not found in configuration.");
+
+        const userPlan: UserPlan = {
+            id: proPlan.id,
+            name: proPlan.name,
+            status: 'active', // Manually granted
+            role: 'user', // Or 'admin' if you want to grant admin rights too
+        };
+
+        // Set in Firestore
+        await db.collection("users").doc(user.uid).set({ plan: userPlan }, { merge: true });
+
+        // Set custom claims
+        await auth.setCustomUserClaims(user.uid, { plan: proPlan.id, role: userPlan.role });
+
+        return { success: true, message: `Successfully upgraded ${email} to the ${proPlan.name} plan.` };
+    } catch (error) {
+        console.error("Error granting plan:", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
