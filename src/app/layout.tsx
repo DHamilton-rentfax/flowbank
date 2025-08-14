@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "FlowBank | Your Automated Finances",
-  description: "Automatically allocate your income to different pots for tax, savings, and more.",
+  description: "FlowBank automatically allocates your income to different pots for tax, savings, and more.",
 };
 
 export default function RootLayout({

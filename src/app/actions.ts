@@ -32,7 +32,7 @@ export async function createLinkToken(idToken: string) {
           user: {
             client_user_id: userId,
           },
-          client_name: 'AutoAllocator',
+          client_name: 'FlowBank',
           country_codes: [CountryCode.Us],
           language: 'en',
           webhook: `${process.env.NEXT_PUBLIC_SITE_URL}/api/plaid-webhook`,

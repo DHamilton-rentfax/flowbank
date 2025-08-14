@@ -16,7 +16,7 @@ export default function LandingPage() {
               Automate Your Business Finances
             </h1>
             <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-8">
-              AutoAllocator intelligently splits your income into accounts for
+              FlowBank intelligently splits your income into accounts for
               taxes, savings, and expenses, so you don&apos;t have to.
             </p>
             <Button asChild size="lg">
