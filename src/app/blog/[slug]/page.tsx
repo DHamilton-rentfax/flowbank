@@ -11,6 +11,8 @@ import Image from 'next/image';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Footer } from '@/components/layout/footer';
+import 'react-quill/dist/quill.snow.css';
+
 
 export default function BlogPostPage() {
   const params = useParams();
@@ -104,7 +106,7 @@ export default function BlogPostPage() {
                     </div>
                 </header>
                 <article
-                    className="prose prose-lg dark:prose-invert max-w-none"
+                    className="prose prose-lg dark:prose-invert max-w-none ql-editor"
                     dangerouslySetInnerHTML={{ __html: post.content }}
                 />
             </div>

@@ -91,6 +91,6 @@ export interface Post {
     avatar: string;
     image: string;
     readTime: number;
-    content: string;
+    content: string; // This will now be HTML
     published?: boolean;
 }

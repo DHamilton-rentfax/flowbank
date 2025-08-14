@@ -1,4 +1,3 @@
-
 {
   "name": "flow-bank",
   "version": "0.1.0",
@@ -61,6 +60,7 @@
     "react-hook-form": "latest",
     "react-markdown": "latest",
     "react-plaid-link": "latest",
+    "react-quill": "^2.0.0",
     "react-window": "^1.8.10",
     "recharts": "latest",
     "stripe": "latest",
