@@ -9,75 +9,43 @@ const CONFIG_PATH = path.resolve(process.cwd(), 'scripts/stripe/catalog.config.j
 function log(...args) { console.log('[stripe-catalog]', ...args); }
 
 async function findProductBySlug(slug) {
-  // Use Product Search (recommended). Ensure search is enabled on your account.
-  try {
-    const res = await stripe.products.search({
-      query: `active:'true' AND metadata['slug']:'${slug}'`
-    });
-    return res.data[0] || null;
-  } catch (e) {
-    // Fallback for accounts without search enabled
-    log(`Product search failed (is it enabled in your Stripe account?). Falling back to list search for slug: ${slug}`);
-    const products = await stripe.products.list({ limit: 100 });
-    return products.data.find(p => p.metadata.slug === slug) || null;
-  }
+  const res = await stripe.products.search({
+    query: `active:'true' AND metadata['slug']:'${slug}'`
+  });
+  return res.data[0] || null;
 }
 
 async function upsertProduct({ slug, name, description }) {
   let product = await findProductBySlug(slug);
-  const metadata = { ...(product?.metadata || {}), slug };
+  const params = { name, description, metadata: { slug } };
   
   if (product) {
     if (product.name !== name || product.description !== description) {
-      product = await stripe.products.update(product.id, {
-        name,
-        description,
-        metadata
-      });
+      product = await stripe.products.update(product.id, params);
       log(`Updated product ${name} (${product.id})`);
     } else {
       log(`Product exists ${name} (${product.id})`);
     }
     return product;
   }
-  product = await stripe.products.create({
-    name,
-    description,
-    metadata
-  });
+  
+  product = await stripe.products.create(params);
   log(`Created product ${name} (${product.id})`);
   return product;
 }
 
 async function findPriceByLookupKey(lookup_key) {
   try {
-     const res = await stripe.prices.list({ lookup_keys: [lookup_key], active: true });
-     return res.data[0] || null;
-  } catch(e) {
-    log(`Price search failed for lookup_key: ${lookup_key}`);
+    const prices = await stripe.prices.list({ lookup_keys: [lookup_key], active: true });
+    return prices.data[0] || null;
+  } catch (e) {
     return null;
   }
 }
 
 function priceInputFromConfig(cfg, productId, currency, tax_behavior) {
-  const {
-    lookup_key,
-    unit_amount,
-    recurring,
-    billing_scheme,
-    nickname
-  } = cfg;
-
-  const base = {
-    currency,
-    unit_amount,
-    product: productId,
-    lookup_key,
-    tax_behavior,
-    nickname,
-    billing_scheme
-  };
-
+  const { lookup_key, unit_amount, recurring, billing_scheme, nickname } = cfg;
+  const base = { currency, unit_amount, product: productId, lookup_key, tax_behavior, nickname, billing_scheme };
   if (recurring) base.recurring = recurring;
   return base;
 }
@@ -98,6 +66,7 @@ async function upsertPrice(prod, currency, tax_behavior, priceCfg) {
       log(`Creating new price for lookup_key=${priceCfg.lookup_key} (changes detected).`);
       const created = await stripe.prices.create(desired);
       await stripe.prices.update(existing.id, { active: false });
+      log(`Deactivated old price ${existing.id}`);
       return created;
     } else {
       log(`Price exists (lookup_key=${priceCfg.lookup_key}, id=${existing.id})`);
@@ -119,11 +88,9 @@ async function main() {
 
   for (const p of products) {
     const product = await upsertProduct(p);
+    if (!p.prices) continue;
     for (const priceCfg of p.prices) {
-      const price = await upsertPrice(product, currency, tax_behavior, priceCfg);
-      if (priceCfg.trial_period_days) {
-        log(`Note: trials are set during Checkout (trial_period_days=${priceCfg.trial_period_days}).`);
-      }
+      await upsertPrice(product, currency, tax_behavior, priceCfg);
     }
   }
 

@@ -194,7 +194,7 @@ export async function manualAllocate(txId: string) {
 }
 
 // Stripe Billing
-export async function createCheckoutSession(items: { lookup_key: string, quantity?: number, adjustable_quantity?: { enabled: boolean } }[]) {
+export async function createCheckoutSession(items: { lookup_key: string, quantity?: number, adjustable_quantity?: { enabled: boolean, minimum: number, maximum: number } }[]) {
     try {
         const userId = await getUserId();
         const db = getAdminDb();
@@ -223,11 +223,16 @@ export async function createCheckoutSession(items: { lookup_key: string, quantit
             const price = prices.data[0];
             if (!price) throw new Error(`Price not found for ${item.lookup_key}`);
             
-            return {
+            const lineItem: any = {
                 price: price.id,
                 quantity: item.quantity ?? 1,
-                adjustable_quantity: item.adjustable_quantity
             };
+
+            if (item.adjustable_quantity) {
+                lineItem.adjustable_quantity = item.adjustable_quantity;
+            }
+
+            return lineItem;
         }));
         
         const session = await stripe.checkout.sessions.create({
