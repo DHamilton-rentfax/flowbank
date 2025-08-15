@@ -194,7 +194,7 @@ export async function manualAllocate(txId: string) {
 }
 
 // Stripe Billing
-export async function createCheckoutSession(planId: string) {
+export async function createCheckoutSession(items: { lookup_key: string, quantity?: number }[]) {
     const userId = await getUserId();
     const db = getAdminDb();
     const userDocRef = db.collection("users").doc(userId);
@@ -212,13 +212,25 @@ export async function createCheckoutSession(planId: string) {
         await userDocRef.set({ stripeCustomerId: customerId }, { merge: true });
     }
 
-    const plan = [...plans, ...addOns].find(p => p.id === planId);
-    if (!plan || !plan.stripePriceId) throw new Error("Plan not found or not configured for Stripe.");
+    if (!Array.isArray(items) || items.length === 0) {
+        throw new Error('Provide items as [{ lookup_key, quantity? }]');
+    }
 
+    const lineItems = await Promise.all(items.map(async (item) => {
+        if (!item.lookup_key) throw new Error('Each item needs a lookup_key');
+        const prices = await stripe.prices.list({ lookup_key: item.lookup_key, active: true });
+        const price = prices.data[0];
+        if (!price) throw new Error(`Price not found for ${item.lookup_key}`);
+        return {
+            price: price.id,
+            quantity: item.quantity ?? 1,
+        };
+    }));
+    
     const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         customer: customerId,
-        line_items: [{ price: plan.stripePriceId, quantity: 1 }],
+        line_items: lineItems,
         success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?checkout=success`,
         cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing?checkout=cancel`,
     });

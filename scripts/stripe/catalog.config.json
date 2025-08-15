@@ -1,0 +1,79 @@
+{
+  "currency": "usd",
+  "tax_behavior": "exclusive",
+  "products": [
+    {
+      "slug": "flowbank_pro",
+      "name": "FlowBank Pro",
+      "description": "Everything you need to automate allocations.",
+      "prices": [
+        {
+          "lookup_key": "pro_month_usd",
+          "recurring": { "interval": "month" },
+          "unit_amount": 2900,
+          "trial_period_days": 7
+        },
+        {
+          "lookup_key": "pro_year_usd",
+          "recurring": { "interval": "year" },
+          "unit_amount": 29000
+        }
+      ]
+    },
+    {
+      "slug": "addon_seat",
+      "name": "Extra Team Seat",
+      "description": "Add additional seats to your account.",
+      "prices": [
+        {
+          "lookup_key": "addon_seat_month_usd",
+          "recurring": { "interval": "month" },
+          "unit_amount": 500,
+          "type": "addon",
+          "adjustable_quantity": { "enabled": true, "minimum": 1, "maximum": 50 }
+        }
+      ]
+    },
+    {
+      "slug": "addon_analytics",
+      "name": "Analytics Pack",
+      "description": "Advanced dashboards and reporting.",
+      "prices": [
+        {
+          "lookup_key": "addon_analytics_month_usd",
+          "recurring": { "interval": "month" },
+          "unit_amount": 900,
+          "type": "addon"
+        }
+      ]
+    },
+    {
+      "slug": "addon_support",
+      "name": "Priority Support",
+      "description": "24/7 response, dedicated Slack channel.",
+      "prices": [
+        {
+          "lookup_key": "addon_support_month_usd",
+          "recurring": { "interval": "month" },
+          "unit_amount": 1900,
+          "type": "addon"
+        }
+      ]
+    },
+    {
+      "slug": "addon_metered_tx",
+      "name": "Metered Transactions",
+      "description": "Pay as you grow per successful allocation.",
+      "prices": [
+        {
+          "lookup_key": "addon_metered_tx_usd",
+          "recurring": { "interval": "month", "usage_type": "metered", "aggregate_usage": "sum" },
+          "unit_amount": 2,
+          "billing_scheme": "per_unit",
+          "type": "addon",
+          "nickname": "Per transaction"
+        }
+      ]
+    }
+  ]
+}

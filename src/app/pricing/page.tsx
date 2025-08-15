@@ -17,16 +17,23 @@ export default function Pricing() {
   const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(''); // Store ID of plan being loaded
-  const pricingTiers = [...plans, ...addOns];
 
-  async function checkout(planId: string) {
+  // In a real app, you might fetch these from your catalog config or an API
+  const pricingTiers = [
+      { id: "pro_month_usd", name: "Pro Monthly", price: 29, features: ["Automatic allocations", "AI suggestions", "Priority support"] },
+      { id: "pro_year_usd", name: "Pro Yearly", price: 290, features: ["All Pro features", "2 months free"] },
+  ];
+
+  async function checkout(lookup_key: string) {
     if (!user || !idToken) {
         router.push('/login?next=/pricing');
         return;
     }
-    setLoading(planId);
+    setLoading(lookup_key);
     try {
-        const { url } = await createCheckoutSession(planId);
+        // Example: creating a session with one item.
+        // You could expand this to include add-ons.
+        const { url } = await createCheckoutSession([{ lookup_key }]);
         if (url) {
             window.location.href = url;
         } else {
@@ -48,13 +55,13 @@ export default function Pricing() {
             <h1 className="text-3xl font-bold text-center mb-2">Pricing Plans</h1>
             <p className="text-muted-foreground text-center mb-8">Choose the plan that's right for your business.</p>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
                 {pricingTiers.map(p => (
                 <Card key={p.id} className="flex flex-col">
                     <CardHeader>
                         <CardTitle className="flex justify-between items-baseline">
                             {p.name}
-                            <span className="text-2xl font-bold">${p.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></span>
+                            <span className="text-2xl font-bold">${p.price}<span className="text-sm font-normal text-muted-foreground">/{p.id.includes('year') ? 'yr' : 'mo'}</span></span>
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1">
@@ -71,9 +78,9 @@ export default function Pricing() {
                         <Button 
                             className="w-full"
                             disabled={!!loading}
-                            onClick={() => p.id === "enterprise" ? window.location.href="mailto:hello@flowbank.app" : checkout(p.id)}
+                            onClick={() => checkout(p.id)}
                         >
-                            {loading === p.id ? "Redirecting..." : p.id === "enterprise" ? "Contact Sales" : "Get Started"}
+                            {loading === p.id ? "Redirecting..." : "Get Started"}
                         </Button>
                     </CardFooter>
                 </Card>
