@@ -3,78 +3,87 @@ import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
-import { plans, addOns } from "@/lib/plans";
 import { getAdminDb, getAdminAuth } from "@/firebase/server";
 import type { UserPlan } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
 
-async function findUidByCustomer(customerId: string): Promise<string | null> {
+function deriveFeatures(lookupKeys: string[] = []) {
+  const has = (key: string) => lookupKeys.includes(key);
+
+  const isFree = has('free_month_usd');
+  const isStarter = has('starter_month_usd') || has('starter_year_usd');
+  const isPro = has('pro_month_usd') || has('pro_year_usd');
+  const isEntBaseM = has('enterprise_base_month_usd');
+  const isEntBaseY = has('enterprise_base_year_usd');
+  const isEnterprise = isEntBaseM || isEntBaseY;
+
+  const addAnalytics = has('addon_analytics_month_usd');
+  const addPriority = has('addon_support_month_usd');
+  const addSeatAddon = has('enterprise_addon_seat_month_usd');
+
+  const features = {
+    bankLinking: isFree || isStarter || isPro || isEnterprise,
+    manualAllocations: isFree || isStarter || isPro || isEnterprise,
+    autoAllocations: isStarter || isPro || isEnterprise,
+    aiAllocations: isPro || isEnterprise,
+    advancedRules: isPro || isEnterprise,
+    analyticsBasic: isFree || isStarter || isPro || isEnterprise,
+    analyticsAdvanced: addAnalytics || isPro || isEnterprise,
+    prioritySupport: addPriority || isPro || isEnterprise,
+  };
+
+  const plan =
+    isEnterprise ? 'enterprise' :
+    isPro        ? 'pro' :
+    isStarter    ? 'starter' :
+    isFree       ? 'free' : 'unknown';
+
+  return { plan, features, addSeatAddon, addAnalytics, addPriority, isEnterprise };
+}
+
+async function findUidForCustomer(customerId: string, session?: Stripe.Checkout.Session | { subscription: Stripe.Subscription }) {
     if (!customerId) return null;
     const db = getAdminDb();
     
-    // First, try to find the user by the stored stripeCustomerId
     const userQuery = await db.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
-    if (!userQuery.empty) {
-        return userQuery.docs[0].id;
+    if (!userQuery.empty) return userQuery.docs[0].id;
+    
+    if (session) {
+        if ('metadata' in session && session.metadata?.firebaseUid) {
+            return session.metadata.firebaseUid;
+        }
+        if ('subscription' in session && typeof session.subscription !== 'string' && session.subscription.metadata?.firebaseUid) {
+            return session.subscription.metadata.firebaseUid;
+        }
     }
     
-    // Fallback: If not found, check the customer's metadata in Stripe
-    try {
-        const customer = await stripe.customers.retrieve(customerId);
-        if (!customer.deleted && customer.metadata.firebaseUid) {
-            return customer.metadata.firebaseUid;
-        }
-    } catch (error) {
-        console.error(`Could not retrieve or find metadata for Stripe customer ${customerId}:`, error);
-    }
-
-    console.warn(`Webhook: Could not find a Firebase UID for Stripe customer ${customerId}.`);
     return null;
 }
 
-async function handleSubscriptionChange(subscription: Stripe.Subscription, status: UserPlan['status']) {
-    const db = getAdminDb();
-    const auth = getAdminAuth();
-    
-    const uid = await findUidByCustomer(subscription.customer as string);
-    if (!uid) {
-        console.warn(`Webhook Error: Could not find user for Stripe customer ${subscription.customer}. Skipping plan update.`);
-        return;
-    }
 
-    const priceId = subscription.items.data[0]?.price.id;
-    const isCancellation = status === 'cancelled';
-    
-    // On cancellation, revert to the 'free' plan. Otherwise, find the matching plan.
-    const targetPlan = isCancellation 
-        ? plans.find(p => p.id === 'free')
-        : [...plans, ...addOns].find(p => p.stripePriceId === priceId || p.stripeYearlyPriceId === priceId);
+function summarizeSubscription(sub: Stripe.Subscription) {
+  const items = sub.items?.data || [];
+  const lookupKeys = items.map(i => i.price.lookup_key).filter(Boolean) as string[];
+  const seatItem = items.find(i => i.price.lookup_key === 'addon_seat_month_usd');
+  const extraSeats = seatItem?.quantity || 0;
+  const includedSeats = 10;
+  const totalSeats = sub.metadata?.plan === 'enterprise'
+    ? includedSeats + extraSeats
+    : (sub.metadata?.includedSeats ? Number(sub.metadata.includedSeats) : 1);
 
-    if (!targetPlan) {
-        console.warn(`Webhook Warning: Could not find a plan in config for price ID ${priceId}. User ${uid} will not be updated.`);
-        return;
-    }
-
-    const userDocRef = db.collection("users").doc(uid);
-
-    // Prepare the new plan data for Firestore
-    const userPlanUpdate: Partial<UserPlan> = {
-        id: targetPlan.id,
-        name: targetPlan.name,
-        status: status,
-        stripeSubscriptionId: isCancellation ? undefined : subscription.id,
-        currentPeriodEnd: isCancellation ? undefined : subscription.current_period_end,
-    };
-    
-    // Update Firestore document
-    await userDocRef.set({ plan: userPlanUpdate }, { merge: true });
-
-    // Update Firebase Auth custom claims
-    await auth.setCustomUserClaims(uid, { plan: targetPlan.id });
-
-    console.log(`Successfully updated plan for user ${uid} to ${targetPlan.name} (${status}).`);
+  return {
+    subscriptionId: sub.id,
+    status: sub.status,
+    currentPeriodEnd: sub.current_period_end * 1000,
+    cancelAtPeriodEnd: sub.cancel_at_period_end || false,
+    collectionMethod: sub.collection_method,
+    planInterval: items[0]?.price?.recurring?.interval || null,
+    lookupKeys,
+    seats: totalSeats,
+    latestInvoiceId: sub.latest_invoice as string || null,
+  };
 }
+
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -94,37 +103,74 @@ export async function POST(req: Request) {
         console.error(`❌ Webhook signature verification failed: ${err.message}`);
         return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
     }
+    
+    const db = getAdminDb();
 
     try {
         switch (event.type) {
-            case "customer.subscription.created":
-            case "customer.subscription.updated": {
-                const sub = event.data.object as Stripe.Subscription;
-                console.log(`Processing subscription update for status: ${sub.status}`);
-                await handleSubscriptionChange(sub, sub.status);
-                break;
-            }
-            case "customer.subscription.deleted": {
-                const sub = event.data.object as Stripe.Subscription;
-                console.log(`Processing subscription cancellation.`);
-                await handleSubscriptionChange(sub, 'cancelled');
-                break;
-            }
             case 'checkout.session.completed': {
                 const session = event.data.object as Stripe.Checkout.Session;
-                // This event is useful for handling one-time payments or for actions
-                // that need to happen immediately after the first payment, before the subscription is fully 'active'.
-                // For subscriptions, the customer.subscription.* events are generally more reliable for status changes.
-                if (session.mode === 'subscription') {
-                    const uid = session.metadata?.firebaseUid;
-                    if (uid) {
-                        await getAdminDb().collection('users').doc(uid).set({
-                            stripeCustomerId: session.customer,
-                        }, { merge: true });
-                        console.log(`Checkout session completed for user ${uid}. Associated Stripe customer ${session.customer}.`);
-                    }
-                }
-                 break;
+                const customerId = session.customer as string;
+                const uid = await findUidForCustomer(customerId, session);
+                if (!uid) break;
+
+                await db.collection('users').doc(uid).set({
+                    stripeCustomerId: customerId,
+                    lastCheckoutSessionId: session.id,
+                    billingEmail: session.customer_details?.email || null,
+                    updatedAt: new Date().toISOString(),
+                }, { merge: true });
+                break;
+            }
+
+            case 'customer.subscription.created':
+            case 'customer.subscription.updated':
+            case 'customer.subscription.deleted': {
+                const sub = event.data.object as Stripe.Subscription;
+                const customerId = sub.customer as string;
+                const uid = await findUidForCustomer(customerId, { subscription: sub });
+                if (!uid) break;
+
+                const summary = summarizeSubscription(sub);
+                const { plan, features } = deriveFeatures(summary.lookupKeys);
+
+                const userRef = db.collection('users').doc(uid);
+                await userRef.set({
+                    subscription: summary,
+                    subscriptionStatus: summary.status,
+                    planLookupKeys: summary.lookupKeys,
+                    plan: { id: plan, name: plan.charAt(0).toUpperCase() + plan.slice(1) }, // Simplified plan object
+                    features,
+                    seats: summary.seats,
+                    updatedAt: new Date().toISOString(),
+                }, { merge: true });
+
+                await userRef.collection('billingEvents').add({
+                    type: event.type,
+                    at: new Date().toISOString(),
+                    snapshot: { plan, status: summary.status, lookupKeys: summary.lookupKeys, seats: summary.seats }
+                });
+                break;
+            }
+
+            case 'invoice.payment_failed':
+            case 'invoice.payment_succeeded':
+            case 'invoice.finalized':
+            case 'invoice.voided':
+            case 'invoice.marked_uncollectible': {
+                const invoice = event.data.object as Stripe.Invoice;
+                const customerId = invoice.customer as string;
+                const uid = await findUidForCustomer(customerId);
+                if (!uid) break;
+                await db.collection('users').doc(uid).collection('billingEvents').add({
+                    type: event.type,
+                    invoiceId: invoice.id,
+                    amountDue: invoice.amount_due,
+                    amountPaid: invoice.amount_paid,
+                    status: invoice.status,
+                    at: new Date().toISOString(),
+                });
+                break;
             }
         }
         return new NextResponse(null, { status: 200 });

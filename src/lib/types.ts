@@ -43,15 +43,30 @@ export interface AddOn extends Plan {}
 
 export type UserRole = 'admin' | 'editor' | 'user';
 
+export interface SubscriptionSummary {
+    subscriptionId: string;
+    status: string;
+    currentPeriodEnd: number;
+    cancelAtPeriodEnd: boolean;
+    collectionMethod: 'charge_automatically' | 'send_invoice';
+    planInterval: 'month' | 'year' | null;
+    lookupKeys: string[];
+    seats: number;
+    latestInvoiceId: string | null;
+}
+
 export interface UserPlan {
     id: string;
     name: string;
-    status?: 'active' | 'trialing' | 'cancelled';
-    stripeSubscriptionId?: string;
-    stripeCustomerId?: string;
-    currentPeriodEnd?: number;
+    status?: 'active' | 'trialing' | 'cancelled' | 'past_due' | 'unpaid';
     role?: UserRole;
+    subscription?: SubscriptionSummary;
+    features?: { [key: string]: boolean };
+    seats?: number;
+    planLookupKeys?: string[];
+    stripeCustomerId?: string;
 }
+
 
 export interface UserAddress {
     street: string;

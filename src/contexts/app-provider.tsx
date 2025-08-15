@@ -13,6 +13,8 @@ interface AppContextType {
   rules: AllocationRule[];
   transactions: Transaction[];
   userPlan: UserPlan | null;
+  subscriptionStatus: string | null;
+  features: { [key: string]: boolean };
   analyticsSnapshot: any;
   setAnalyticsSnapshot: (snap: any) => void;
   aiSuggestion: any;
@@ -35,6 +37,8 @@ export function AppProvider({ children }: AppProviderProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [features, setFeatures] = useState<{ [key: string]: boolean }>({});
   const [analyticsSnapshot, setAnalyticsSnapshot] = useState(null);
   const [aiSuggestion, setAiSuggestion] = useState(null);
 
@@ -45,7 +49,10 @@ export function AppProvider({ children }: AppProviderProps) {
       const unsubscribes = [
         onSnapshot(doc(db, "users", user.uid), (userDoc) => {
           if (userDoc.exists()) {
-            setUserPlan(userDoc.data().plan || { id: 'free', name: 'Free' });
+            const data = userDoc.data();
+            setUserPlan(data.plan || { id: 'free', name: 'Free' });
+            setSubscriptionStatus(data.subscriptionStatus || null);
+            setFeatures(data.features || {});
           }
         }),
         onSnapshot(collection(db, "users", user.uid, "rules"), (snapshot) => {
@@ -76,6 +83,8 @@ export function AppProvider({ children }: AppProviderProps) {
       setRules([]);
       setTransactions([]);
       setUserPlan(null);
+      setSubscriptionStatus(null);
+      setFeatures({});
       setAnalyticsSnapshot(null);
       setAiSuggestion(null);
       setLoadingData(true);
@@ -87,6 +96,8 @@ export function AppProvider({ children }: AppProviderProps) {
     rules,
     transactions,
     userPlan,
+    subscriptionStatus,
+    features,
     analyticsSnapshot,
     setAnalyticsSnapshot,
     aiSuggestion,
