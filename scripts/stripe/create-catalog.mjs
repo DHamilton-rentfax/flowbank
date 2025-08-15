@@ -10,20 +10,29 @@ function log(...args) { console.log('[stripe-catalog]', ...args); }
 
 async function findProductBySlug(slug) {
   // Use Product Search (recommended). Ensure search is enabled on your account.
-  const res = await stripe.products.search({
-    query: `active:'true' AND metadata['slug']:'${slug}'`
-  });
-  return res.data[0] || null;
+  try {
+    const res = await stripe.products.search({
+      query: `active:'true' AND metadata['slug']:'${slug}'`
+    });
+    return res.data[0] || null;
+  } catch (e) {
+    // Fallback for accounts without search enabled
+    log(`Product search failed (is it enabled in your Stripe account?). Falling back to list search for slug: ${slug}`);
+    const products = await stripe.products.list({ limit: 100 });
+    return products.data.find(p => p.metadata.slug === slug) || null;
+  }
 }
 
 async function upsertProduct({ slug, name, description }) {
   let product = await findProductBySlug(slug);
+  const metadata = { ...(product?.metadata || {}), slug };
+  
   if (product) {
     if (product.name !== name || product.description !== description) {
       product = await stripe.products.update(product.id, {
         name,
         description,
-        metadata: { ...(product.metadata || {}), slug }
+        metadata
       });
       log(`Updated product ${name} (${product.id})`);
     } else {
@@ -34,16 +43,20 @@ async function upsertProduct({ slug, name, description }) {
   product = await stripe.products.create({
     name,
     description,
-    metadata: { slug }
+    metadata
   });
   log(`Created product ${name} (${product.id})`);
   return product;
 }
 
 async function findPriceByLookupKey(lookup_key) {
-  // Price Search by lookup_key (fast & idempotent)
-  const res = await stripe.prices.search({ query: `lookup_key:'${lookup_key}' AND active:'true'` });
-  return res.data[0] || null;
+  try {
+     const res = await stripe.prices.list({ lookup_keys: [lookup_key], active: true });
+     return res.data[0] || null;
+  } catch(e) {
+    log(`Price search failed for lookup_key: ${lookup_key}`);
+    return null;
+  }
 }
 
 function priceInputFromConfig(cfg, productId, currency, tax_behavior) {
@@ -51,9 +64,8 @@ function priceInputFromConfig(cfg, productId, currency, tax_behavior) {
     lookup_key,
     unit_amount,
     recurring,
-    billing_scheme,         // optional
-    nickname,               // optional
-    adjustable_quantity     // optional
+    billing_scheme,
+    nickname
   } = cfg;
 
   const base = {
@@ -67,7 +79,6 @@ function priceInputFromConfig(cfg, productId, currency, tax_behavior) {
   };
 
   if (recurring) base.recurring = recurring;
-  if (adjustable_quantity) base.transform_quantity = null; // ensure no transform conflicts
   return base;
 }
 
@@ -76,7 +87,6 @@ async function upsertPrice(prod, currency, tax_behavior, priceCfg) {
   const desired = priceInputFromConfig(priceCfg, prod.id, currency, tax_behavior);
 
   if (existing) {
-    // Prices are immutable in amount/recurrence. If anything material changed, create a new Price and (optionally) deactivate old.
     const needsNew =
       existing.unit_amount !== desired.unit_amount ||
       JSON.stringify(existing.recurring || {}) !== JSON.stringify(desired.recurring || {}) ||
@@ -87,7 +97,6 @@ async function upsertPrice(prod, currency, tax_behavior, priceCfg) {
     if (needsNew) {
       log(`Creating new price for lookup_key=${priceCfg.lookup_key} (changes detected).`);
       const created = await stripe.prices.create(desired);
-      // Optionally deactivate the previous price:
       await stripe.prices.update(existing.id, { active: false });
       return created;
     } else {
@@ -112,9 +121,7 @@ async function main() {
     const product = await upsertProduct(p);
     for (const priceCfg of p.prices) {
       const price = await upsertPrice(product, currency, tax_behavior, priceCfg);
-      // Optional: add extra attributes like adjustable_quantity on Checkout via line_items (not on the price itself)
       if (priceCfg.trial_period_days) {
-        // Trial is handled at subscription level or via Checkout's subscription_data; logging for awareness
         log(`Note: trials are set during Checkout (trial_period_days=${priceCfg.trial_period_days}).`);
       }
     }
