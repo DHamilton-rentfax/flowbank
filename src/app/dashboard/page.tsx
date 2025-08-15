@@ -1,13 +1,14 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { useApp } from "@/contexts/app-provider";
 import PlanGate from "@/components/PlanGate";
-import { getAISuggestion, getAnalyticsSnapshot } from "../actions";
+import { getAISuggestion, getAnalyticsSnapshot, createPortalSession } from "../actions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
 
 
 function Stat({ title, value }: { title: string, value: string }) {
@@ -23,11 +24,12 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { userPlan, analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion } = useApp();
   const { idToken } = useAuth();
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
 
-  useEffect(()=>{ 
+  React.useEffect(()=>{ 
     async function fetchData() {
         if (idToken) {
-          const snap = await getAnalyticsSnapshot(idToken, null);
+          const snap = await getAnalyticsSnapshot(null);
           setAnalyticsSnapshot(snap);
         }
     }
@@ -46,8 +48,32 @@ export default function Dashboard() {
     }
   }
 
+  async function openPortal() {
+    setIsPortalLoading(true);
+    try {
+        const { url } = await createPortalSession();
+        if (url) {
+            window.location.href = url;
+        } else {
+            throw new Error("Could not create a portal session.");
+        }
+    } catch (e) {
+        const error = e as Error;
+        toast({ title: "Billing Error", description: error.message, variant: "destructive" });
+    } finally {
+        setIsPortalLoading(false);
+    }
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+       <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <Button onClick={openPortal} disabled={isPortalLoading}>
+                {isPortalLoading ? "Opening..." : "Manage Billing"}
+            </Button>
+        </div>
+
       <section className="grid md:grid-cols-3 gap-4">
         <Stat title="Income (30d)" value={"$"+(analyticsSnapshot?.income?.toFixed?.(2)||"0.00")} />
         <Stat title="Expenses (30d)" value={"$"+(analyticsSnapshot?.expenses?.toFixed?.(2)||"0.00")} />

@@ -240,9 +240,20 @@ export async function createCheckoutSession(items: { lookup_key: string, quantit
 
 export async function createPortalSession() {
     const userId = await getUserId();
-    const userDoc = await getAdminDb().collection("users").doc(userId).get();
-    const customerId = userDoc.data()?.stripeCustomerId;
-    if (!customerId) throw new Error("Stripe customer not found.");
+    const db = getAdminDb();
+    const userDocRef = db.collection("users").doc(userId);
+    const userDoc = await userDocRef.get();
+    let customerId = userDoc.data()?.stripeCustomerId;
+
+    if (!customerId) {
+        const firebaseUser = await getAdminAuth().getUser(userId);
+        const customer = await stripe.customers.create({
+            email: firebaseUser.email,
+            metadata: { firebaseUID: userId }
+        });
+        customerId = customer.id;
+        await userDocRef.set({ stripeCustomerId: customerId }, { merge: true });
+    }
 
     const portal = await stripe.billingPortal.sessions.create({
         customer: customerId,
