@@ -22,7 +22,7 @@ function Stat({ title, value }: { title: string, value: string }) {
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { userPlan, analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion } = useApp();
+  const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion } = useApp();
   const { idToken } = useAuth();
   const [isPortalLoading, setIsPortalLoading] = useState(false);
 
@@ -96,7 +96,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <PlanGate plan={userPlan?.id || 'free'} required="pro">
+      <PlanGate required="pro">
         <section className="border rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-bold">AI Allocation Suggestions</h3>

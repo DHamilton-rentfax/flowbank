@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Check } from "lucide-react";
 
 export default function Pricing() {
   const { user, idToken } = useAuth();
@@ -19,11 +20,10 @@ export default function Pricing() {
   const router = useRouter();
   const [loading, setLoading] = useState(''); // Store ID of plan being loaded
 
-  // In a real app, you might fetch these from your catalog config or an API
   const pricingTiers = [
-      { id: "pro_month_usd", name: "Pro Monthly", price: 29, features: ["Automatic allocations", "AI suggestions", "Priority support"], action: "checkout" },
-      { id: "pro_year_usd", name: "Pro Yearly", price: 290, features: ["All Pro features", "2 months free"], action: "checkout" },
-      { id: "enterprise_month_usd", name: "Enterprise", price: 249, features: ["Advanced rule automation", "SLA & dedicated success", "Custom integrations"], action: "contact" },
+      { id: "pro_month_usd", name: "Pro", price: 29, freq: "/mo", features: ["Automatic allocations", "AI suggestions", "Priority support"], action: "checkout" },
+      { id: "pro_year_usd", name: "Pro", price: 290, freq: "/yr", features: ["All Pro features", "2 months free"], action: "checkout" },
+      { id: "enterprise_month_usd", name: "Enterprise", price: 249, freq: "/mo", features: ["Advanced rule automation", "SLA & dedicated success", "Custom integrations"], action: "contact" },
   ];
 
   async function checkout(lookup_key: string) {
@@ -61,14 +61,14 @@ export default function Pricing() {
                     <CardHeader>
                         <CardTitle className="flex justify-between items-baseline">
                             {p.name}
-                            <span className="text-2xl font-bold">${p.price}<span className="text-sm font-normal text-muted-foreground">/{p.id.includes('year') ? 'yr' : 'mo'}</span></span>
+                            <span className="text-2xl font-bold">${p.price}<span className="text-sm font-normal text-muted-foreground">{p.freq}</span></span>
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1">
                         <ul className="space-y-2 text-sm text-muted-foreground">
                         {p.features.map(f => (
                             <li key={f} className="flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-primary"><path d="M20 6 9 17l-5-5"/></svg>
+                                <Check className="h-4 w-4 text-primary"/>
                                 {f}
                             </li>
                         ))}

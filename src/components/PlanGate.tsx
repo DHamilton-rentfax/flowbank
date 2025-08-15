@@ -1,24 +1,44 @@
 
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { useApp } from "@/contexts/app-provider";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 
 interface PlanGateProps {
     plan: string;
-    required: 'starter' | 'pro' | 'enterprise';
+    required: 'free' | 'starter' | 'pro' | 'enterprise';
     children: React.ReactNode;
 }
 
-export default function PlanGate({ plan, required = "starter", children }: PlanGateProps) {
+export default function PlanGate({ required = "starter", children }: { required: 'free' | 'starter' | 'pro' | 'enterprise', children: React.ReactNode }) {
+  const { userPlan } = useApp();
+  const currentPlan = userPlan?.id || 'free';
+
   const priority: { [key: string]: number } = { free: 0, starter: 1, pro: 2, enterprise: 3 };
   
-  if (priority[plan] < priority[required]) {
-    return (
-      <div className="p-6 border rounded-xl bg-yellow-50">
-        <p className="font-semibold mb-2">Upgrade required</p>
-        <p className="mb-4">This feature requires the {required} plan.</p>
-        <Link className="px-4 py-2 rounded bg-black text-white" href="/pricing">See plans</Link>
-      </div>
-    );
+  const isAllowed = priority[currentPlan] >= priority[required];
+
+  if (isAllowed) {
+    return <>{children}</>;
   }
-  return <>{children}</>;
+
+  return (
+      <Card className="bg-secondary">
+          <CardHeader>
+              <CardTitle>Upgrade Required</CardTitle>
+              <CardDescription>
+                  This feature requires the <span className="font-bold capitalize">{required}</span> plan or higher.
+              </CardDescription>
+          </CardHeader>
+          <CardContent>
+              <p className="mb-4 text-sm text-muted-foreground">Your current plan is <span className="font-bold capitalize">{currentPlan}</span>. Please upgrade to access this functionality.</p>
+              <Button asChild>
+                <Link href="/pricing">View Plans</Link>
+              </Button>
+          </CardContent>
+      </Card>
+  );
 }
