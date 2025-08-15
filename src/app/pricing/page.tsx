@@ -11,6 +11,7 @@ import { plans, addOns } from "@/lib/plans";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function Pricing() {
   const { user, idToken } = useAuth();
@@ -20,8 +21,9 @@ export default function Pricing() {
 
   // In a real app, you might fetch these from your catalog config or an API
   const pricingTiers = [
-      { id: "pro_month_usd", name: "Pro Monthly", price: 29, features: ["Automatic allocations", "AI suggestions", "Priority support"] },
-      { id: "pro_year_usd", name: "Pro Yearly", price: 290, features: ["All Pro features", "2 months free"] },
+      { id: "pro_month_usd", name: "Pro Monthly", price: 29, features: ["Automatic allocations", "AI suggestions", "Priority support"], action: "checkout" },
+      { id: "pro_year_usd", name: "Pro Yearly", price: 290, features: ["All Pro features", "2 months free"], action: "checkout" },
+      { id: "enterprise_month_usd", name: "Enterprise", price: 249, features: ["Advanced rule automation", "SLA & dedicated success", "Custom integrations"], action: "contact" },
   ];
 
   async function checkout(lookup_key: string) {
@@ -31,8 +33,6 @@ export default function Pricing() {
     }
     setLoading(lookup_key);
     try {
-        // Example: creating a session with one item.
-        // You could expand this to include add-ons.
         const { url } = await createCheckoutSession([{ lookup_key }]);
         if (url) {
             window.location.href = url;
@@ -55,7 +55,7 @@ export default function Pricing() {
             <h1 className="text-3xl font-bold text-center mb-2">Pricing Plans</h1>
             <p className="text-muted-foreground text-center mb-8">Choose the plan that's right for your business.</p>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
                 {pricingTiers.map(p => (
                 <Card key={p.id} className="flex flex-col">
                     <CardHeader>
@@ -75,13 +75,19 @@ export default function Pricing() {
                         </ul>
                     </CardContent>
                     <CardFooter>
-                        <Button 
-                            className="w-full"
-                            disabled={!!loading}
-                            onClick={() => checkout(p.id)}
-                        >
-                            {loading === p.id ? "Redirecting..." : "Get Started"}
-                        </Button>
+                      {p.action === 'checkout' ? (
+                          <Button 
+                              className="w-full"
+                              disabled={!!loading}
+                              onClick={() => checkout(p.id)}
+                          >
+                              {loading === p.id ? "Redirecting..." : "Get Started"}
+                          </Button>
+                      ) : (
+                          <Button asChild className="w-full" variant="outline">
+                            <Link href="/contact">Contact Sales</Link>
+                          </Button>
+                      )}
                     </CardFooter>
                 </Card>
                 ))}

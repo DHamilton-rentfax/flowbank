@@ -21,6 +21,18 @@
       ]
     },
     {
+      "slug": "flowbank_enterprise",
+      "name": "FlowBank Enterprise",
+      "description": "Custom setup, SLA, and dedicated success for larger teams.",
+      "prices": [
+        {
+          "lookup_key": "enterprise_month_usd",
+          "recurring": { "interval": "month" },
+          "unit_amount": 24900
+        }
+      ]
+    },
+    {
       "slug": "addon_seat",
       "name": "Extra Team Seat",
       "description": "Add additional seats to your account.",
