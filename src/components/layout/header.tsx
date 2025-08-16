@@ -4,25 +4,32 @@
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useApp } from "@/contexts/app-provider";
+import { Badge } from "@/components/ui/badge";
 
 export function Header() {
   const { user } = useAuth();
   const { userPlan } = useApp();
+
+  const planName = userPlan?.name || "Free";
 
   return (
     <header className="w-full border-b bg-white">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/" className="font-bold">FlowBank</Link>
         <div className="flex items-center gap-4">
-          <Link href="/pricing" className="hover:underline">Pricing</Link>
-          <Link href="/blog" className="hover:underline">Blog</Link>
+          <Link href="/pricing" className="text-sm hover:underline">Pricing</Link>
+          <Link href="/blog" className="text-sm hover:underline">Blog</Link>
           {user ? (
             <>
-              <Link href="/dashboard" className="hover:underline">Dashboard</Link>
-              <span className="text-xs px-2 py-1 rounded bg-neutral-100">Plan: {userPlan?.name || "Free"}</span>
+              <Link href="/dashboard" className="text-sm hover:underline">Dashboard</Link>
+              <Badge variant="outline" className="capitalize">
+                {planName}
+              </Badge>
             </>
           ) : (
-            <Link href="/login" className="px-3 py-1 rounded bg-black text-white">Sign in</Link>
+            <Link href="/login" className="px-3 py-1 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90">
+              Sign in
+            </Link>
           )}
         </div>
       </div>

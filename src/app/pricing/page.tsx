@@ -33,11 +33,11 @@ export default function Pricing() {
     }
     setLoading(lookup_key);
     try {
-        const { url } = await createCheckoutSession([{ lookup_key }]);
+        const { url, error } = await createCheckoutSession([{ lookup_key }]);
         if (url) {
             window.location.href = url;
         } else {
-            throw new Error("Could not create a checkout session.");
+            throw new Error(error || "Could not create a checkout session.");
         }
     } catch(e) {
         const error = e as Error;
