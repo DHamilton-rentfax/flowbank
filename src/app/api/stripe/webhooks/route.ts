@@ -3,8 +3,7 @@ import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
-import { getAdminDb, getAdminAuth } from "@/firebase/server";
-import type { UserPlan } from "@/lib/types";
+import { getAdminDb } from "@/firebase/server";
 
 
 function deriveFeatures(lookupKeys: string[] = []) {
@@ -13,13 +12,12 @@ function deriveFeatures(lookupKeys: string[] = []) {
   const isFree = has('free_month_usd');
   const isStarter = has('starter_month_usd') || has('starter_year_usd');
   const isPro = has('pro_month_usd') || has('pro_year_usd');
-  const isEntBaseM = has('enterprise_base_month_usd');
-  const isEntBaseY = has('enterprise_base_year_usd');
+  const isEntBaseM = has('enterprise_base_month_usd') || has('enterprise_base_year_usd');
   const isEnterprise = isEntBaseM || isEntBaseY;
 
   const addAnalytics = has('addon_analytics_month_usd');
   const addPriority = has('addon_support_month_usd');
-  const addSeatAddon = has('enterprise_addon_seat_month_usd');
+  const addSeatAddon = has('addon_seat_month_usd');
 
   const features = {
     bankLinking: isFree || isStarter || isPro || isEnterprise,
@@ -32,13 +30,18 @@ function deriveFeatures(lookupKeys: string[] = []) {
     prioritySupport: addPriority || isPro || isEnterprise,
   };
 
-  const plan =
+  const planId =
     isEnterprise ? 'enterprise' :
     isPro        ? 'pro' :
     isStarter    ? 'starter' :
     isFree       ? 'free' : 'unknown';
+  
+  const plan = {
+      id: planId,
+      name: planId.charAt(0).toUpperCase() + planId.slice(1)
+  }
 
-  return { plan, features, addSeatAddon, addAnalytics, addPriority, isEnterprise };
+  return { plan, features };
 }
 
 async function findUidForCustomer(customerId: string, session?: Stripe.Checkout.Session | { subscription: Stripe.Subscription }) {
@@ -48,15 +51,17 @@ async function findUidForCustomer(customerId: string, session?: Stripe.Checkout.
     const userQuery = await db.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
     if (!userQuery.empty) return userQuery.docs[0].id;
     
+    // Fallback for first-time checkout
     if (session) {
         if ('metadata' in session && session.metadata?.firebaseUid) {
             return session.metadata.firebaseUid;
         }
-        if ('subscription' in session && typeof session.subscription !== 'string' && session.subscription.metadata?.firebaseUid) {
+        if ('subscription' in session && typeof session.subscription !== 'string' && session.subscription?.metadata?.firebaseUid) {
             return session.subscription.metadata.firebaseUid;
         }
     }
     
+    console.log(`Webhook Error: Could not find user for customerId ${customerId}`);
     return null;
 }
 
@@ -65,11 +70,13 @@ function summarizeSubscription(sub: Stripe.Subscription) {
   const items = sub.items?.data || [];
   const lookupKeys = items.map(i => i.price.lookup_key).filter(Boolean) as string[];
   const seatItem = items.find(i => i.price.lookup_key === 'addon_seat_month_usd');
-  const extraSeats = seatItem?.quantity || 0;
-  const includedSeats = 10;
-  const totalSeats = sub.metadata?.plan === 'enterprise'
-    ? includedSeats + extraSeats
-    : (sub.metadata?.includedSeats ? Number(sub.metadata.includedSeats) : 1);
+  
+  let totalSeats = 1; // Default for non-enterprise plans
+  if (sub.metadata?.plan === 'enterprise') {
+      const includedSeats = sub.metadata?.includedSeats ? Number(sub.metadata.includedSeats) : 10;
+      const extraSeats = seatItem?.quantity || 0;
+      totalSeats = includedSeats + extraSeats;
+  }
 
   return {
     subscriptionId: sub.id,
@@ -80,7 +87,7 @@ function summarizeSubscription(sub: Stripe.Subscription) {
     planInterval: items[0]?.price?.recurring?.interval || null,
     lookupKeys,
     seats: totalSeats,
-    latestInvoiceId: sub.latest_invoice as string || null,
+    latestInvoiceId: typeof sub.latest_invoice === 'string' ? sub.latest_invoice : null,
   };
 }
 
@@ -112,14 +119,17 @@ export async function POST(req: Request) {
                 const session = event.data.object as Stripe.Checkout.Session;
                 const customerId = session.customer as string;
                 const uid = await findUidForCustomer(customerId, session);
-                if (!uid) break;
+                if (!uid) {
+                    console.log(`Webhook: No UID found for checkout session ${session.id}`);
+                    break;
+                }
 
                 await db.collection('users').doc(uid).set({
                     stripeCustomerId: customerId,
                     lastCheckoutSessionId: session.id,
                     billingEmail: session.customer_details?.email || null,
-                    updatedAt: new Date().toISOString(),
                 }, { merge: true });
+                console.log(`Webhook: Updated customer ID for user ${uid}`);
                 break;
             }
 
@@ -129,7 +139,10 @@ export async function POST(req: Request) {
                 const sub = event.data.object as Stripe.Subscription;
                 const customerId = sub.customer as string;
                 const uid = await findUidForCustomer(customerId, { subscription: sub });
-                if (!uid) break;
+                if (!uid) {
+                    console.log(`Webhook: No UID found for subscription ${sub.id}`);
+                    break;
+                }
 
                 const summary = summarizeSubscription(sub);
                 const { plan, features } = deriveFeatures(summary.lookupKeys);
@@ -139,17 +152,17 @@ export async function POST(req: Request) {
                     subscription: summary,
                     subscriptionStatus: summary.status,
                     planLookupKeys: summary.lookupKeys,
-                    plan: { id: plan, name: plan.charAt(0).toUpperCase() + plan.slice(1) }, // Simplified plan object
+                    plan: plan,
                     features,
                     seats: summary.seats,
-                    updatedAt: new Date().toISOString(),
                 }, { merge: true });
 
                 await userRef.collection('billingEvents').add({
                     type: event.type,
-                    at: new Date().toISOString(),
-                    snapshot: { plan, status: summary.status, lookupKeys: summary.lookupKeys, seats: summary.seats }
+                    at: new Date(event.created * 1000).toISOString(),
+                    snapshot: { plan: plan.id, status: summary.status, lookupKeys: summary.lookupKeys, seats: summary.seats }
                 });
+                console.log(`Webhook: Synced subscription ${sub.id} for user ${uid}. Status: ${summary.status}, Plan: ${plan.id}`);
                 break;
             }
 
@@ -161,15 +174,19 @@ export async function POST(req: Request) {
                 const invoice = event.data.object as Stripe.Invoice;
                 const customerId = invoice.customer as string;
                 const uid = await findUidForCustomer(customerId);
-                if (!uid) break;
+                if (!uid) {
+                     console.log(`Webhook: No UID found for invoice ${invoice.id}`);
+                     break;
+                }
                 await db.collection('users').doc(uid).collection('billingEvents').add({
                     type: event.type,
                     invoiceId: invoice.id,
                     amountDue: invoice.amount_due,
                     amountPaid: invoice.amount_paid,
                     status: invoice.status,
-                    at: new Date().toISOString(),
+                    at: new Date(event.created * 1000).toISOString(),
                 });
+                console.log(`Webhook: Logged invoice event ${event.type} for user ${uid}`);
                 break;
             }
         }

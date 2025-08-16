@@ -58,15 +58,7 @@ export interface SubscriptionSummary {
 export interface UserPlan {
     id: string;
     name: string;
-    status?: 'active' | 'trialing' | 'cancelled' | 'past_due' | 'unpaid';
-    role?: UserRole;
-    subscription?: SubscriptionSummary;
-    features?: { [key: string]: boolean };
-    seats?: number;
-    planLookupKeys?: string[];
-    stripeCustomerId?: string;
 }
-
 
 export interface UserAddress {
     street: string;
@@ -85,7 +77,13 @@ export interface UserData {
     address?: UserAddress;
     plan?: UserPlan;
     stripeCustomerId?: string;
+    subscriptionStatus?: 'active' | 'trialing' | 'cancelled' | 'past_due' | 'unpaid' | 'incomplete';
+    subscription?: SubscriptionSummary;
+    features?: { [key: string]: boolean };
+    seats?: number;
+    planLookupKeys?: string[];
 }
+
 
 export interface PaymentLink {
     id: string;
