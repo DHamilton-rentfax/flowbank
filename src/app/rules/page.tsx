@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
 import { AllocationRule } from "@/lib/types";
+import PlanGate from "@/components/PlanGate";
 
 export default function Rules() {
   const [rules, setRules] = useState<AllocationRule[]>([]);
@@ -75,78 +76,80 @@ export default function Rules() {
       <Header />
       <main className="flex-1 bg-secondary py-8">
         <div className="container mx-auto max-w-3xl">
-          <Card>
-            <CardHeader>
-              <CardTitle>Allocation Rules</CardTitle>
-              <CardDescription>
-                Define how your incoming funds should be split. The total percentage of all rules cannot exceed 100%.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={addRule} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end mb-6">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="name">Rule Name</Label>
-                  <Input id="name" placeholder="e.g., Taxes" value={name} onChange={e => setName(e.target.value)} />
-                </div>
-                 <div className="grid gap-1.5">
-                  <Label htmlFor="percentage">Percentage</Label>
-                  <Input id="percentage" placeholder="15" type="number" value={percentage} onChange={e => setPercentage(Number(e.target.value))} />
-                </div>
-                 <div className="grid gap-1.5">
-                  <Label htmlFor="destType">Destination</Label>
-                  <Select value={destinationType} onValueChange={setDestinationType}>
-                      <SelectTrigger id="destType">
-                          <SelectValue placeholder="Select destination" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="hold">Hold (Virtual Account)</SelectItem>
-                          <SelectItem value="connected_account">Stripe Connected Account</SelectItem>
-                          <SelectItem value="external">External Bank (Payout)</SelectItem>
-                      </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="destId">Destination ID</Label>
-                  <Input id="destId" placeholder="acct_... or token" value={destinationId} onChange={e => setDestinationId(e.target.value)} disabled={destinationType === 'hold'} />
-                </div>
-                <Button type="submit" className="w-full lg:col-span-4">Add Rule</Button>
-              </form>
+          <PlanGate required="pro">
+            <Card>
+              <CardHeader>
+                <CardTitle>Allocation Rules</CardTitle>
+                <CardDescription>
+                  Define how your incoming funds should be split. The total percentage of all rules cannot exceed 100%.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={addRule} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end mb-6">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="name">Rule Name</Label>
+                    <Input id="name" placeholder="e.g., Taxes" value={name} onChange={e => setName(e.target.value)} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="percentage">Percentage</Label>
+                    <Input id="percentage" placeholder="15" type="number" value={percentage} onChange={e => setPercentage(Number(e.target.value))} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="destType">Destination</Label>
+                    <Select value={destinationType} onValueChange={setDestinationType}>
+                        <SelectTrigger id="destType">
+                            <SelectValue placeholder="Select destination" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="hold">Hold (Virtual Account)</SelectItem>
+                            <SelectItem value="connected_account">Stripe Connected Account</SelectItem>
+                            <SelectItem value="external">External Bank (Payout)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="destId">Destination ID</Label>
+                    <Input id="destId" placeholder="acct_... or token" value={destinationId} onChange={e => setDestinationId(e.target.value)} disabled={destinationType === 'hold'} />
+                  </div>
+                  <Button type="submit" className="w-full lg:col-span-4">Add Rule</Button>
+                </form>
 
-              <div className="border rounded-lg">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead className="text-right">Percentage</TableHead>
-                            <TableHead>Destination</TableHead>
-                             <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {rules.map(rule => (
-                            <TableRow key={rule.id}>
-                                <TableCell className="font-medium">{rule.name}</TableCell>
-                                <TableCell className="text-right">{rule.percentage}%</TableCell>
-                                <TableCell className="text-muted-foreground text-xs">
-                                    {rule.destination?.type ?? 'hold'}
-                                    {rule.destination?.id && ` (${rule.destination.id})`}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => deleteRule(rule.id)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-            <CardFooter className="justify-between bg-muted/50 p-4 rounded-b-lg">
-                <span className="font-medium">Total Allocated</span>
-                <span className={`font-bold ${totalPercentage > 100 ? 'text-destructive' : ''}`}>{totalPercentage}%</span>
-            </CardFooter>
-          </Card>
+                <div className="border rounded-lg">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead className="text-right">Percentage</TableHead>
+                              <TableHead>Destination</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {rules.map(rule => (
+                              <TableRow key={rule.id}>
+                                  <TableCell className="font-medium">{rule.name}</TableCell>
+                                  <TableCell className="text-right">{rule.percentage}%</TableCell>
+                                  <TableCell className="text-muted-foreground text-xs">
+                                      {rule.destination?.type ?? 'hold'}
+                                      {rule.destination?.id && ` (${rule.destination.id})`}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                      <Button variant="ghost" size="icon" onClick={() => deleteRule(rule.id)}>
+                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                  </TableCell>
+                              </TableRow>
+                          ))}
+                      </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+              <CardFooter className="justify-between bg-muted/50 p-4 rounded-b-lg">
+                  <span className="font-medium">Total Allocated</span>
+                  <span className={`font-bold ${totalPercentage > 100 ? 'text-destructive' : ''}`}>{totalPercentage}%</span>
+              </CardFooter>
+            </Card>
+          </PlanGate>
         </div>
       </main>
       <Footer />
