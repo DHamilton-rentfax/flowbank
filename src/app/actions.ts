@@ -239,6 +239,7 @@ export async function createCheckoutSession(items: { lookup_key: string, quantit
             mode: "subscription",
             customer: customerId,
             line_items: lineItems,
+            automatic_tax: { enabled: true },
             success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?checkout=success`,
             cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing?checkout=cancel`,
         });
@@ -354,15 +355,13 @@ export async function grantHighestTierPlan(email: string) {
         const userPlan: UserPlan = {
             id: proPlan.id,
             name: proPlan.name,
-            status: 'active', // Manually granted
-            role: 'user', // Or 'admin' if you want to grant admin rights too
         };
 
         // Set in Firestore
         await db.collection("users").doc(user.uid).set({ plan: userPlan }, { merge: true });
 
         // Set custom claims
-        await auth.setCustomUserClaims(user.uid, { plan: proPlan.id, role: userPlan.role });
+        await auth.setCustomUserClaims(user.uid, { plan: proPlan.id, role: 'user' });
 
         return { success: true, message: `Successfully upgraded ${email} to the ${proPlan.name} plan.` };
     } catch (error) {
@@ -371,3 +370,5 @@ export async function grantHighestTierPlan(email: string) {
         return { success: false, error: errorMessage };
     }
 }
+
+    

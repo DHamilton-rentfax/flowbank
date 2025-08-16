@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       mode: 'subscription',
       customer: customerId,
       line_items,
+      automatic_tax: { enabled: true },
       allow_promotion_codes: false,
       success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing`,
@@ -71,3 +72,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Internal error creating Enterprise checkout: ${error.message}` }, { status: 500 });
   }
 }
+
+    
