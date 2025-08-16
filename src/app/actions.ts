@@ -145,7 +145,7 @@ async function allocateForUserTx(userId: string, tx: any) {
         }
     }
     
-    // Normalize if total > 100%
+    // Normalize if total > 100
     if (totalPercentage > 100) {
         const factor = 100 / totalPercentage;
         allocations.forEach(a => a.amount = Math.round((a.amount * factor) * 100) / 100);
@@ -174,7 +174,7 @@ async function allocateForUserTx(userId: string, tx: any) {
     for (const alloc of allocations) {
         const accountRef = db.collection("users").doc(userId).collection("accounts").doc(alloc.ruleId);
         const accountDoc = await accountRef.get();
-        const currentBalance = accountDoc.exists() ? accountDoc.data()!.balance : 0;
+        const currentBalance = accountDoc.exists ? accountDoc.data()!.balance : 0;
         batch.set(accountRef, {
             id: alloc.ruleId,
             name: alloc.name,
@@ -240,6 +240,7 @@ export async function createCheckoutSession(items: { lookup_key: string, quantit
             customer: customerId,
             line_items: lineItems,
             automatic_tax: { enabled: true },
+            customer_update: { address: 'auto' },
             success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?checkout=success`,
             cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing?checkout=cancel`,
         });
