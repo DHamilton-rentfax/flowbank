@@ -163,8 +163,27 @@ export async function POST(req: Request) {
                 console.log(`Synced plan for ${userRef.id}: ${plan} (${summary.status})`);
                 break;
             }
+            case 'invoice.payment_succeeded': {
+                if (uid) {
+                    const invoice = event.data.object as Stripe.Invoice;
+                    const taxDetails = {
+                        invoiceId: invoice.id,
+                        tax: invoice.tax,
+                        tax_percent: invoice.tax_percent,
+                        total_tax_amounts: invoice.total_tax_amounts,
+                    };
+                    // Log specific tax details to the billing event for auditing
+                    const eventLogRef = db.collection('users').doc(uid).collection('billingEvents').doc();
+                    await eventLogRef.set({
+                        type: event.type,
+                        taxDetails: taxDetails,
+                        data: event.data.object,
+                        receivedAt: FieldValue.serverTimestamp(),
+                    });
+                }
+                break;
+            }
              case 'invoice.payment_failed':
-             case 'invoice.payment_succeeded':
              case 'invoice.finalized':
              case 'invoice.voided':
              case 'invoice.marked_uncollectible': {
