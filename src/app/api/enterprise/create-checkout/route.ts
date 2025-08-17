@@ -72,5 +72,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Internal error creating Enterprise checkout: ${error.message}` }, { status: 500 });
   }
 }
-
     
