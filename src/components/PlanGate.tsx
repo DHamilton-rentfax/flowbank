@@ -6,12 +6,7 @@ import Link from "next/link";
 import { useApp } from "@/contexts/app-provider";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
-
-interface PlanGateProps {
-    plan: string;
-    required: 'free' | 'starter' | 'pro' | 'enterprise';
-    children: React.ReactNode;
-}
+import { Lock } from "lucide-react";
 
 export default function PlanGate({ required = "starter", children }: { required: 'free' | 'starter' | 'pro' | 'enterprise', children: React.ReactNode }) {
   const { userPlan } = useApp();
@@ -26,12 +21,17 @@ export default function PlanGate({ required = "starter", children }: { required:
   }
 
   return (
-      <Card className="bg-secondary">
-          <CardHeader>
-              <CardTitle>Upgrade Required</CardTitle>
-              <CardDescription>
-                  This feature requires the <span className="font-bold capitalize">{required}</span> plan or higher.
-              </CardDescription>
+      <Card className="bg-secondary/50 border-dashed">
+          <CardHeader className="flex flex-row items-center gap-4">
+              <div className="bg-primary/10 p-3 rounded-full border border-primary/20">
+                <Lock className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Upgrade Required</CardTitle>
+                <CardDescription>
+                    This feature requires the <span className="font-bold capitalize">{required}</span> plan or higher.
+                </CardDescription>
+              </div>
           </CardHeader>
           <CardContent>
               <p className="mb-4 text-sm text-muted-foreground">Your current plan is <span className="font-bold capitalize">{currentPlan}</span>. Please upgrade to access this functionality.</p>
