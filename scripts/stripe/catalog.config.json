@@ -1,7 +1,25 @@
+
 {
   "currency": "usd",
   "tax_behavior": "exclusive",
   "products": [
+    {
+      "slug": "flowbank_starter",
+      "name": "FlowBank Starter",
+      "description": "Simple insights and automation.",
+      "prices": [
+        {
+          "lookup_key": "starter_month_usd",
+          "recurring": { "interval": "month" },
+          "unit_amount": 900
+        },
+        {
+          "lookup_key": "starter_year_usd",
+          "recurring": { "interval": "year" },
+          "unit_amount": 9000
+        }
+      ]
+    },
     {
       "slug": "flowbank_pro",
       "name": "FlowBank Pro",

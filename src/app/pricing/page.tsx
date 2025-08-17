@@ -33,14 +33,27 @@ const plans = {
       action: 'signup',
     },
     {
+      title: 'Starter',
+      lookupKey: 'starter_month_usd', 
+      price: '$9',
+      period: '/mo',
+      description: 'Simple insights, simple setup.',
+      features: [
+        'Everything in Free',
+        'Automatic allocations',
+        'Weekly insights',
+        'AI suggestions (lite)',
+      ],
+      action: 'checkout',
+    },
+    {
       title: 'Pro',
       lookupKey: 'pro_month_usd',
       price: '$29',
       period: '/mo',
       description: 'Advanced features & automation.',
       features: [
-        'Everything in Free',
-        'Automatic allocations',
+        'Everything in Starter',
         'AI suggestions',
         'Dashboard analytics',
         'Priority support',
@@ -50,17 +63,19 @@ const plans = {
   ],
   annually: [
      {
-      title: 'Free',
-      lookupKey: 'free',
-      price: '$0',
+      title: 'Starter',
+      lookupKey: 'starter_year_usd',
+      price: '$90',
       period: '/yr',
-      description: 'For starters trying FlowBank.',
+      description: 'Simple insights at a discount.',
       features: [
-        'Connect 1 bank account',
-        'Manual allocations',
-        'Basic support',
+        'Everything in Free',
+        'Automatic allocations',
+        'Weekly insights',
+        'AI suggestions (lite)',
+        '2 months free',
       ],
-      action: 'signup',
+      action: 'checkout',
     },
     {
       title: 'Pro',
@@ -69,7 +84,10 @@ const plans = {
       period: '/yr',
       description: 'Power users & teams at a discount.',
       features: [
-        'Everything in Pro Monthly',
+        'Everything in Starter',
+        'AI suggestions',
+        'Dashboard analytics',
+        'Priority support',
         '2 months free',
       ],
       action: 'checkout',
@@ -130,7 +148,7 @@ export default function Pricing() {
               <Label htmlFor="billing-cycle" className={cn(billingCycle === 'annually' && 'text-primary')}>Annually</Label>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch justify-center">
                 {tiers.map((p) => (
                 <Card key={p.lookupKey} className="flex flex-col">
                     <CardHeader>
