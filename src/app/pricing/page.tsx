@@ -11,11 +11,10 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-
 
 const plans = {
   monthly: [
@@ -25,11 +24,18 @@ const plans = {
       price: '$0',
       period: '/mo',
       description: 'For starters trying FlowBank.',
-      features: [
-        'Connect 1 bank account',
-        'Manual allocations',
-        'Basic support',
-      ],
+      features: {
+        'Connect Bank Account': true,
+        'Create and Customize Splits': true,
+        'Automatic Allocations': false,
+        'AI Suggestions': false,
+        'Priority Support': false,
+        'Weekly Insights': false,
+        'Dashboard Analytics': false,
+        'Multi-Bank Support': false,
+        'Audit Logging': false,
+        'Add-ons Available': false,
+      },
       action: 'signup',
     },
     {
@@ -38,12 +44,18 @@ const plans = {
       price: '$9',
       period: '/mo',
       description: 'Simple insights, simple setup.',
-      features: [
-        'Everything in Free',
-        'Automatic allocations',
-        'Weekly insights',
-        'AI suggestions (lite)',
-      ],
+      features: {
+        'Connect Bank Account': true,
+        'Create and Customize Splits': true,
+        'Automatic Allocations': 'Basic',
+        'AI Suggestions': 'Simple tips',
+        'Priority Support': 'Add-on',
+        'Weekly Insights': true,
+        'Dashboard Analytics': 'Add-on',
+        'Multi-Bank Support': false,
+        'Audit Logging': false,
+        'Add-ons Available': true,
+      },
       action: 'checkout',
     },
     {
@@ -52,29 +64,40 @@ const plans = {
       price: '$29',
       period: '/mo',
       description: 'Advanced features & automation.',
-      features: [
-        'Everything in Starter',
-        'AI suggestions',
-        'Dashboard analytics',
-        'Priority support',
-      ],
+      features: {
+        'Connect Bank Account': true,
+        'Create and Customize Splits': true,
+        'Automatic Allocations': 'Advanced',
+        'AI Suggestions': 'Full AI Engine',
+        'Priority Support': true,
+        'Weekly Insights': true,
+        'Dashboard Analytics': true,
+        'Multi-Bank Support': true,
+        'Audit Logging': true,
+        'Add-ons Available': true,
+      },
       action: 'checkout',
     },
   ],
   annually: [
-     {
+    {
       title: 'Starter',
       lookupKey: 'starter_year_usd',
       price: '$90',
       period: '/yr',
       description: 'Simple insights at a discount.',
-      features: [
-        'Everything in Free',
-        'Automatic allocations',
-        'Weekly insights',
-        'AI suggestions (lite)',
-        '2 months free',
-      ],
+      features: {
+        'Connect Bank Account': true,
+        'Create and Customize Splits': true,
+        'Automatic Allocations': 'Basic',
+        'AI Suggestions': 'Simple tips',
+        'Priority Support': 'Add-on',
+        'Weekly Insights': true,
+        'Dashboard Analytics': 'Add-on',
+        'Multi-Bank Support': false,
+        'Audit Logging': false,
+        'Add-ons Available': true,
+      },
       action: 'checkout',
     },
     {
@@ -83,18 +106,56 @@ const plans = {
       price: '$290',
       period: '/yr',
       description: 'Power users & teams at a discount.',
-      features: [
-        'Everything in Starter',
-        'AI suggestions',
-        'Dashboard analytics',
-        'Priority support',
-        '2 months free',
-      ],
+      features: {
+        'Connect Bank Account': true,
+        'Create and Customize Splits': true,
+        'Automatic Allocations': 'Advanced',
+        'AI Suggestions': 'Full AI Engine',
+        'Priority Support': true,
+        'Weekly Insights': true,
+        'Dashboard Analytics': true,
+        'Multi-Bank Support': true,
+        'Audit Logging': true,
+        'Add-ons Available': true,
+      },
       action: 'checkout',
     },
   ],
 };
 
+const addOns = [
+    {
+        name: 'Advanced Analytics Pack',
+        price: '$9.99',
+        lookupKey: 'addon_analytics_month_usd',
+        description: 'Unlock deeper reports, allocation trends, and forecasting.'
+    },
+    {
+        name: 'Extra Team Seats',
+        price: '$5.00',
+        lookupKey: 'addon_seat_month_usd',
+        description: 'Add 1 additional user to your dashboard team.'
+    },
+    {
+        name: 'Priority Support',
+        price: '$19.99',
+        lookupKey: 'addon_support_month_usd',
+        description: 'Fast-track access to our support team with guaranteed 24h response.'
+    }
+];
+
+const allFeatures = [
+    'Connect Bank Account',
+    'Create and Customize Splits',
+    'Automatic Allocations',
+    'AI Suggestions',
+    'Priority Support',
+    'Weekly Insights',
+    'Dashboard Analytics',
+    'Multi-Bank Support',
+    'Audit Logging',
+    'Add-ons Available',
+];
 
 export default function Pricing() {
   const { user } = useAuth();
@@ -126,15 +187,21 @@ export default function Pricing() {
     }
   }
 
+  const renderCheck = (value: boolean | string) => {
+    if (value === true) return <Check className="h-5 w-5 text-green-500" />;
+    if (value === false) return <X className="h-5 w-5 text-red-500" />;
+    return <span className="text-sm text-muted-foreground">{value}</span>;
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-secondary">
       <Header />
       <main className="flex-1">
-        <div className="container mx-auto max-w-6xl py-12 px-4">
+        <div className="container mx-auto max-w-7xl py-12 px-4">
             <header className="text-center mb-12">
-              <h1 className="text-4xl font-bold tracking-tight">Pricing Plans</h1>
+              <h1 className="text-4xl font-bold tracking-tight">Flexible Plans for Any Business</h1>
               <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-                Choose the plan that's right for your business.
+                Start for free, then choose a plan that grows with you. Switch or cancel anytime.
               </p>
             </header>
 
@@ -145,68 +212,98 @@ export default function Pricing() {
                 checked={billingCycle === 'annually'}
                 onCheckedChange={(checked) => setBillingCycle(checked ? 'annually' : 'monthly')}
               />
-              <Label htmlFor="billing-cycle" className={cn(billingCycle === 'annually' && 'text-primary')}>Annually</Label>
+              <Label htmlFor="billing-cycle" className={cn(billingCycle === 'annually' && 'text-primary')}>Annually (2 months free)</Label>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch justify-center">
-                {tiers.map((p) => (
-                <Card key={p.lookupKey} className="flex flex-col">
-                    <CardHeader>
-                        <CardTitle>{p.title}</CardTitle>
-                        <CardDescription>{p.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 space-y-4">
-                        <div className="text-3xl font-bold">
-                            {p.price}
-                            <span className="text-base font-normal text-muted-foreground">{p.period}</span>
+            {/* Pricing Table */}
+            <div className="border rounded-lg overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Features</th>
+                    {tiers.map(p => (
+                      <th key={p.title} scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">{p.title}</th>
+                    ))}
+                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">Enterprise</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allFeatures.map(feature => (
+                    <tr key={feature} className="odd:bg-white even:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{feature}</td>
+                       {tiers.map(p => (
+                        <td key={p.title} className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                          {renderCheck(p.features[feature as keyof typeof p.features])}
+                        </td>
+                       ))}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                        {renderCheck(true)}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-gray-50">
+                    <th scope="row" className="px-6 py-5 text-left text-sm font-medium"></th>
+                    {tiers.map(p => (
+                      <td key={p.title} className="px-6 py-5 text-center">
+                        <div className="text-xl font-bold mb-2">
+                          {p.price} <span className="text-sm font-normal text-muted-foreground">{p.period}</span>
                         </div>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                        {p.features.map(f => (
-                            <li key={f} className="flex items-center gap-2">
-                                <Check className="h-4 w-4 text-green-500"/>
-                                {f}
-                            </li>
-                        ))}
-                        </ul>
-                    </CardContent>
-                    <CardFooter>
-                      {p.action === 'checkout' ? (
+                        {p.action === 'checkout' ? (
                           <Button 
-                              className="w-full"
-                              disabled={!!loadingKey}
-                              onClick={() => handleCheckout(p.lookupKey)}
+                            className="w-full"
+                            disabled={!!loadingKey}
+                            onClick={() => handleCheckout(p.lookupKey)}
                           >
-                              {loadingKey === p.lookupKey ? "Processing..." : "Get Started"}
+                            {loadingKey === p.lookupKey ? "Processing..." : "Get Started"}
                           </Button>
-                      ) : (
+                        ) : (
                           <Button asChild className="w-full" variant="outline">
                             <Link href="/login">Get Started</Link>
                           </Button>
-                      )}
-                    </CardFooter>
-                </Card>
-                ))}
-                <Card className="flex flex-col">
-                    <CardHeader>
-                        <CardTitle>Enterprise</CardTitle>
-                        <CardDescription>Custom solutions for teams & orgs.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 space-y-4">
-                        <div className="text-3xl font-bold">
-                           Custom
-                        </div>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500"/>Advanced rule automation</li>
-                            <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500"/>SLA & dedicated success</li>
-                            <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500"/>Custom integrations</li>
-                        </ul>
-                    </CardContent>
-                    <CardFooter>
-                        <Button asChild className="w-full" variant="secondary">
+                        )}
+                      </td>
+                    ))}
+                    <td className="px-6 py-5 text-center">
+                         <div className="text-xl font-bold mb-2">Custom</div>
+                         <Button asChild className="w-full">
                             <Link href="/contact">Contact Sales</Link>
                         </Button>
-                    </CardFooter>
-                </Card>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Add-ons Marketplace */}
+            <div className="mt-16">
+                <header className="text-center mb-12">
+                    <h2 className="text-3xl font-bold tracking-tight">Add-on Marketplace</h2>
+                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                        Customize your Starter or Pro plan with powerful extras.
+                    </p>
+                </header>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {addOns.map(addon => (
+                        <Card key={addon.lookupKey} className="flex flex-col">
+                            <CardHeader>
+                                <CardTitle>{addon.name}</CardTitle>
+                                <CardDescription>{addon.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-1">
+                                <div className="text-2xl font-bold">{addon.price}<span className="text-base font-normal text-muted-foreground">/mo</span></div>
+                            </CardContent>
+                            <CardFooter>
+                                <Button 
+                                    className="w-full"
+                                    disabled={!!loadingKey}
+                                    onClick={() => handleCheckout(addon.lookupKey)}
+                                >
+                                    {loadingKey === addon.lookupKey ? "Processing..." : "Add to Plan"}
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    ))}
+                </div>
             </div>
         </div>
       </main>
