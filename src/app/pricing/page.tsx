@@ -7,31 +7,92 @@ import { Footer } from "@/components/layout/footer";
 import { createCheckoutSession } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { plans, addOns } from "@/lib/plans";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
+
+const plans = {
+  monthly: [
+    {
+      title: 'Free',
+      lookupKey: 'free',
+      price: '$0',
+      period: '/mo',
+      description: 'For starters trying FlowBank.',
+      features: [
+        'Connect 1 bank account',
+        'Manual allocations',
+        'Basic support',
+      ],
+      action: 'signup',
+    },
+    {
+      title: 'Pro',
+      lookupKey: 'pro_month_usd',
+      price: '$29',
+      period: '/mo',
+      description: 'Advanced features & automation.',
+      features: [
+        'Everything in Free',
+        'Automatic allocations',
+        'AI suggestions',
+        'Dashboard analytics',
+        'Priority support',
+      ],
+      action: 'checkout',
+    },
+  ],
+  annually: [
+     {
+      title: 'Free',
+      lookupKey: 'free',
+      price: '$0',
+      period: '/yr',
+      description: 'For starters trying FlowBank.',
+      features: [
+        'Connect 1 bank account',
+        'Manual allocations',
+        'Basic support',
+      ],
+      action: 'signup',
+    },
+    {
+      title: 'Pro',
+      lookupKey: 'pro_year_usd',
+      price: '$290',
+      period: '/yr',
+      description: 'Power users & teams at a discount.',
+      features: [
+        'Everything in Pro Monthly',
+        '2 months free',
+      ],
+      action: 'checkout',
+    },
+  ],
+};
+
 
 export default function Pricing() {
-  const { user, idToken } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const [loading, setLoading] = useState(''); // Store ID of plan being loaded
+  const [loadingKey, setLoadingKey] = useState('');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annually'>('monthly');
 
-  const pricingTiers = [
-      { id: "pro_month_usd", name: "Pro", price: 29, freq: "/mo", features: ["Automatic allocations", "AI suggestions", "Priority support"], action: "checkout" },
-      { id: "pro_year_usd", name: "Pro", price: 290, freq: "/yr", features: ["All Pro features", "2 months free"], action: "checkout" },
-      { id: "enterprise_month_usd", name: "Enterprise", price: 249, freq: "/mo", features: ["Advanced rule automation", "SLA & dedicated success", "Custom integrations"], action: "contact" },
-  ];
+  const tiers = plans[billingCycle];
 
-  async function checkout(lookup_key: string) {
-    if (!user || !idToken) {
+  async function handleCheckout(lookup_key: string) {
+    if (!user) {
         router.push('/login?next=/pricing');
         return;
     }
-    setLoading(lookup_key);
+    setLoadingKey(lookup_key);
     try {
         const { url, error } = await createCheckoutSession([{ lookup_key }]);
         if (url) {
@@ -43,32 +104,48 @@ export default function Pricing() {
         const error = e as Error;
         toast({title: "Checkout Error", description: error.message, variant: "destructive"});
     } finally {
-        setLoading('');
+        setLoadingKey('');
     }
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-secondary">
       <Header />
-      <main className="flex-1 bg-secondary">
+      <main className="flex-1">
         <div className="container mx-auto max-w-6xl py-12 px-4">
-            <h1 className="text-3xl font-bold text-center mb-2">Pricing Plans</h1>
-            <p className="text-muted-foreground text-center mb-8">Choose the plan that's right for your business.</p>
+            <header className="text-center mb-12">
+              <h1 className="text-4xl font-bold tracking-tight">Pricing Plans</h1>
+              <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                Choose the plan that's right for your business.
+              </p>
+            </header>
 
-            <div className="grid md:grid-cols-3 gap-6">
-                {pricingTiers.map(p => (
-                <Card key={p.id} className="flex flex-col">
+            <div className="flex items-center justify-center space-x-2 mb-10">
+              <Label htmlFor="billing-cycle" className={cn(billingCycle === 'monthly' && 'text-primary')}>Monthly</Label>
+              <Switch 
+                id="billing-cycle" 
+                checked={billingCycle === 'annually'}
+                onCheckedChange={(checked) => setBillingCycle(checked ? 'annually' : 'monthly')}
+              />
+              <Label htmlFor="billing-cycle" className={cn(billingCycle === 'annually' && 'text-primary')}>Annually</Label>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                {tiers.map((p) => (
+                <Card key={p.lookupKey} className="flex flex-col">
                     <CardHeader>
-                        <CardTitle className="flex justify-between items-baseline">
-                            {p.name}
-                            <span className="text-2xl font-bold">${p.price}<span className="text-sm font-normal text-muted-foreground">{p.freq}</span></span>
-                        </CardTitle>
+                        <CardTitle>{p.title}</CardTitle>
+                        <CardDescription>{p.description}</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-1">
+                    <CardContent className="flex-1 space-y-4">
+                        <div className="text-3xl font-bold">
+                            {p.price}
+                            <span className="text-base font-normal text-muted-foreground">{p.period}</span>
+                        </div>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                         {p.features.map(f => (
                             <li key={f} className="flex items-center gap-2">
-                                <Check className="h-4 w-4 text-primary"/>
+                                <Check className="h-4 w-4 text-green-500"/>
                                 {f}
                             </li>
                         ))}
@@ -78,19 +155,40 @@ export default function Pricing() {
                       {p.action === 'checkout' ? (
                           <Button 
                               className="w-full"
-                              disabled={!!loading}
-                              onClick={() => checkout(p.id)}
+                              disabled={!!loadingKey}
+                              onClick={() => handleCheckout(p.lookupKey)}
                           >
-                              {loading === p.id ? "Redirecting..." : "Get Started"}
+                              {loadingKey === p.lookupKey ? "Processing..." : "Get Started"}
                           </Button>
                       ) : (
                           <Button asChild className="w-full" variant="outline">
-                            <Link href="/contact">Contact Sales</Link>
+                            <Link href="/login">Get Started</Link>
                           </Button>
                       )}
                     </CardFooter>
                 </Card>
                 ))}
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Enterprise</CardTitle>
+                        <CardDescription>Custom solutions for teams & orgs.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 space-y-4">
+                        <div className="text-3xl font-bold">
+                           Custom
+                        </div>
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                            <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500"/>Advanced rule automation</li>
+                            <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500"/>SLA & dedicated success</li>
+                            <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500"/>Custom integrations</li>
+                        </ul>
+                    </CardContent>
+                    <CardFooter>
+                        <Button asChild className="w-full" variant="secondary">
+                            <Link href="/contact">Contact Sales</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
             </div>
         </div>
       </main>
