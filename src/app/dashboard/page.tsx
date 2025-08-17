@@ -79,11 +79,11 @@ export default function Dashboard() {
   async function openPortal() {
     setIsPortalLoading(true);
     try {
-        const { url } = await createPortalSession();
+        const { url, error } = await createPortalSession();
         if (url) {
             window.location.href = url;
         } else {
-            throw new Error("Could not create a portal session.");
+            throw new Error(error || "Could not create a portal session.");
         }
     } catch (e) {
         const error = e as Error;
