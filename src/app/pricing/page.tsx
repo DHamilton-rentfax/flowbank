@@ -221,7 +221,7 @@ export default function Pricing() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Features</th>
-                    {tiers.map(p => (
+                    {plans.monthly.map(p => (
                       <th key={p.title} scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">{p.title}</th>
                     ))}
                     <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">Enterprise</th>
@@ -231,9 +231,9 @@ export default function Pricing() {
                   {allFeatures.map(feature => (
                     <tr key={feature} className="odd:bg-white even:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{feature}</td>
-                       {tiers.map(p => (
-                        <td key={p.title} className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                          {renderCheck(p.features[feature as keyof typeof p.features])}
+                       {(billingCycle === 'annually' ? [{}, ...tiers] : tiers).map((p, i) => (
+                        <td key={p.title || i} className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                          {p.title && renderCheck(p.features[feature as keyof typeof p.features])}
                         </td>
                        ))}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
@@ -243,24 +243,28 @@ export default function Pricing() {
                   ))}
                   <tr className="bg-gray-50">
                     <th scope="row" className="px-6 py-5 text-left text-sm font-medium"></th>
-                    {tiers.map(p => (
-                      <td key={p.title} className="px-6 py-5 text-center">
-                        <div className="text-xl font-bold mb-2">
-                          {p.price} <span className="text-sm font-normal text-muted-foreground">{p.period}</span>
-                        </div>
-                        {p.action === 'checkout' ? (
-                          <Button 
-                            className="w-full"
-                            disabled={!!loadingKey}
-                            onClick={() => handleCheckout(p.lookupKey)}
-                          >
-                            {loadingKey === p.lookupKey ? "Processing..." : "Get Started"}
-                          </Button>
-                        ) : (
-                          <Button asChild className="w-full" variant="outline">
-                            <Link href="/login">Get Started</Link>
-                          </Button>
-                        )}
+                    {(billingCycle === 'annually' ? [{}, ...tiers] : tiers).map((p, i) => (
+                      <td key={p.title || i} className="px-6 py-5 text-center">
+                        {p.title ? (
+                          <>
+                            <div className="text-xl font-bold mb-2">
+                              {p.price} <span className="text-sm font-normal text-muted-foreground">{p.period}</span>
+                            </div>
+                            {p.action === 'checkout' ? (
+                              <Button 
+                                className="w-full"
+                                disabled={!!loadingKey}
+                                onClick={() => handleCheckout(p.lookupKey)}
+                              >
+                                {loadingKey === p.lookupKey ? "Processing..." : "Get Started"}
+                              </Button>
+                            ) : (
+                              <Button asChild className="w-full" variant="outline">
+                                <Link href="/login">Get Started</Link>
+                              </Button>
+                            )}
+                          </>
+                        ) : null}
                       </td>
                     ))}
                     <td className="px-6 py-5 text-center">
@@ -287,6 +291,7 @@ export default function Pricing() {
                         <Card key={addon.lookupKey} className="flex flex-col">
                             <CardHeader>
                                 <CardTitle>{addon.name}</CardTitle>
+
                                 <CardDescription>{addon.description}</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1">
