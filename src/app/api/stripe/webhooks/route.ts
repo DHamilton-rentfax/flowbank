@@ -41,7 +41,7 @@ function parseAddonsFromMetadata(items: Stripe.SubscriptionItem[]) {
     if (!lookupKey) continue;
     if (lookupKey.startsWith('addon_analytics')) addons.advanced_analytics = true;
     if (lookupKey.startsWith('addon_support')) addons.priority_support = true;
-    if (lookupKey.startsWith('addon_ai')) addons.ai_optimization = true; // Assuming a key like 'addon_ai_optimization'
+    if (lookupKey.startsWith('addon_ai_optimization')) addons.ai_optimization = true;
     if (lookupKey.startsWith('addon_seat')) addons.extra_seats = item.quantity || 0;
   }
   return addons;
@@ -49,14 +49,12 @@ function parseAddonsFromMetadata(items: Stripe.SubscriptionItem[]) {
 
 
 function deriveFeatures(lookupKeys: string[] = [], addons: Record<string, boolean | number>) {
-  const has = (key: string) => lookupKeys.includes(key);
+  const has = (key: string) => lookupKeys.some(k => k.startsWith(key));
 
-  const isFree     = has('free_month_usd');
-  const isStarter  = has('starter_month_usd') || has('starter_year_usd');
-  const isPro      = has('pro_month_usd')     || has('pro_year_usd');
-  const isEntBaseM = has('enterprise_base_month_usd');
-  const isEntBaseY = has('enterprise_base_year_usd');
-  const isEnterprise = isEntBaseM || isEntBaseY;
+  const isFree     = has('free');
+  const isStarter  = has('starter');
+  const isPro      = has('pro');
+  const isEnterprise = has('enterprise');
 
   const plan =
     isEnterprise ? 'enterprise' :
@@ -92,7 +90,9 @@ function summarizeSubscription(sub: Stripe.Subscription) {
   
   let includedSeats = 0;
   if (lookupKeys.some(k => k.includes('enterprise'))) includedSeats = 10;
-  else if (lookupKeys.some(k => k.includes('pro') || k.includes('starter'))) includedSeats = 1;
+  else if (lookupKeys.some(k => k.includes('pro'))) includedSeats = 5;
+  else if (lookupKeys.some(k => k.includes('starter'))) includedSeats = 1;
+
 
   const totalSeats = includedSeats + extraSeats;
 
@@ -163,7 +163,7 @@ export async function POST(req: Request) {
 
                     // If a subscription was created, sync it immediately
                     if (data.subscription) {
-                        const subscription = await stripe.subscriptions.retrieve(data.subscription);
+                        const subscription = await stripe.subscriptions.retrieve(data.subscription, { expand: ['items.data.price'] });
                         const userRef = db.collection('users').doc(uid);
                         const summary = summarizeSubscription(subscription);
                         const { plan, features, addons } = deriveFeatures(summary.lookupKeys, parseAddonsFromMetadata(subscription.items.data));
@@ -193,8 +193,11 @@ export async function POST(req: Request) {
                 
                 const userRef = db.collection('users').doc(uid);
                 const subscription = event.data.object as Stripe.Subscription;
-                const summary = summarizeSubscription(subscription);
-                const { plan, features, addons } = deriveFeatures(summary.lookupKeys, parseAddonsFromMetadata(subscription.items.data));
+                // We need to retrieve it again to expand the price object with lookup_key
+                const fullSubscription = await stripe.subscriptions.retrieve(subscription.id, { expand: ['items.data.price'] });
+                
+                const summary = summarizeSubscription(fullSubscription);
+                const { plan, features, addons } = deriveFeatures(summary.lookupKeys, parseAddonsFromMetadata(fullSubscription.items.data));
 
                 const planData = {
                     plan: { id: plan, name: plan.charAt(0).toUpperCase() + plan.slice(1) },

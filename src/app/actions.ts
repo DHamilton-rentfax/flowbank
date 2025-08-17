@@ -223,7 +223,11 @@ export async function createCheckoutSession(items: { lookup_key: string, quantit
             const prices = await stripe.prices.list({ lookup_keys: [item.lookup_key], active: true });
             const price = prices.data[0];
             if (!price) throw new Error(`Price not found for ${item.lookup_key}`);
-            return { price: price.id, quantity: item.quantity ?? 1 };
+            const lineItem: any = { price: price.id };
+            if (item.quantity && price.recurring?.usage_type !== 'metered') {
+                 lineItem.quantity = item.quantity;
+            }
+            return lineItem;
         }));
         
         const session = await stripe.checkout.sessions.create({
@@ -252,6 +256,8 @@ export async function createPortalSession() {
     let customerId = userDoc.data()?.stripeCustomerId;
 
     if (!customerId) {
+        // This case should ideally not happen for an active user trying to manage billing.
+        // But we handle it defensively.
         const firebaseUser = await getAdminAuth().getUser(userId);
         const customer = await stripe.customers.create({
             email: firebaseUser.email,
