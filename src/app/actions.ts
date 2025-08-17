@@ -2,6 +2,7 @@
 "use server";
 
 import { suggestAllocationPlan, type SuggestAllocationPlanInput } from "@/ai/flows/suggest-allocation-plan";
+import { analyzeTransactions, type AnalyzeTransactionsInput, type AnalyzeTransactionsOutput } from "@/ai/flows/analyze-transactions";
 import { plaidClient } from "@/lib/plaid";
 import { Products, TransactionsSyncRequest } from "plaid";
 import { CountryCode } from "plaid";
@@ -325,7 +326,7 @@ export async function getAnalyticsSnapshot(sinceDate: string | null) {
     return snapshot;
 }
 
-// AI Suggestions
+// AI Functions
 export async function getAISuggestion(businessType: string) {
     try {
       const result = await suggestAllocationPlan({ businessType });
@@ -340,6 +341,17 @@ export async function getAISuggestion(businessType: string) {
       return { success: false, error: errorMessage };
     }
 }
+
+export async function getAIFinancialAnalysis(input: AnalyzeTransactionsInput): Promise<AnalyzeTransactionsOutput> {
+    try {
+        const result = await analyzeTransactions(input);
+        return result;
+    } catch (error) {
+        console.error('Error getting AI financial analysis:', error);
+        throw error;
+    }
+}
+
 
 // Admin Actions
 export async function grantHighestTierPlan(email: string) {
@@ -371,5 +383,3 @@ export async function grantHighestTierPlan(email: string) {
         return { success: false, error: errorMessage };
     }
 }
-
-    

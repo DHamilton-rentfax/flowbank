@@ -5,10 +5,14 @@ import React, { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { useApp } from "@/contexts/app-provider";
 import PlanGate from "@/components/PlanGate";
-import { getAISuggestion, getAnalyticsSnapshot, createPortalSession } from "../actions";
+import { getAISuggestion, getAnalyticsSnapshot, createPortalSession, getAIFinancialAnalysis, syncAllTransactions } from "../actions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { AlertCircle, Lightbulb, Wallet } from "lucide-react";
+import { AnalyzeTransactionsOutput } from "@/ai/flows/analyze-transactions";
 
 
 function Stat({ title, value }: { title: string, value: string }) {
@@ -22,13 +26,16 @@ function Stat({ title, value }: { title: string, value: string }) {
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion } = useApp();
-  const { idToken } = useAuth();
+  const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion, transactions } = useApp();
+  const { idToken, user } = useAuth();
   const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+  const [financialAnalysis, setFinancialAnalysis] = useState<AnalyzeTransactionsOutput | null>(null);
 
   React.useEffect(()=>{ 
     async function fetchData() {
         if (idToken) {
+          await syncAllTransactions();
           const snap = await getAnalyticsSnapshot(null);
           setAnalyticsSnapshot(snap);
         }
@@ -36,7 +43,7 @@ export default function Dashboard() {
     fetchData();
   },[idToken, setAnalyticsSnapshot]);
 
-  async function getAi() {
+  async function getAiAllocation() {
     try {
         const { plan } = await getAISuggestion("Software business"); // Using a default for now
         if (plan) {
@@ -45,6 +52,27 @@ export default function Dashboard() {
         }
     } catch (e) {
         toast({ title: "Error", description: "Could not get AI suggestion.", variant: "destructive" });
+    }
+  }
+
+  async function handleFinancialAnalysis() {
+    if (!transactions || transactions.length === 0) {
+      toast({ title: "No Transactions", description: "Sync your bank account to analyze transactions.", variant: "destructive" });
+      return;
+    }
+    setIsAnalysisLoading(true);
+    try {
+      const analysisResult = await getAIFinancialAnalysis({
+        businessType: "Software Freelancer", // This could be dynamic
+        transactions: transactions.map(t => ({ name: t.name, amount: t.amount, date: t.date }))
+      });
+      setFinancialAnalysis(analysisResult);
+      toast({ title: "Analysis Complete", description: "Your financial insights are ready." });
+    } catch (e) {
+      const error = e as Error;
+      toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsAnalysisLoading(false);
     }
   }
 
@@ -97,10 +125,71 @@ export default function Dashboard() {
       </section>
 
       <PlanGate required="pro">
+        <Card>
+            <CardHeader>
+                <CardTitle>AI Financial Advisor</CardTitle>
+                <CardDescription>Analyze your recent transactions to uncover savings, tax deductions, and spending patterns.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button onClick={handleFinancialAnalysis} disabled={isAnalysisLoading}>
+                    {isAnalysisLoading ? "Analyzing..." : "Analyze My Finances"}
+                </Button>
+                
+                {financialAnalysis && (
+                    <div className="mt-6 space-y-4">
+                      <p className="text-sm text-muted-foreground">{financialAnalysis.spendingSummary}</p>
+                      
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="deductions">
+                          <AccordionTrigger>
+                            <div className="flex items-center gap-2">
+                              <Wallet className="h-5 w-5 text-primary" />
+                              Potential Tax Deductions
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <ul className="space-y-2 pt-2">
+                              {financialAnalysis.potentialDeductions.map((item, index) => (
+                                <li key={index} className="p-3 bg-secondary rounded-lg">
+                                  <p className="font-semibold">{item.transactionName} - <span className="font-mono">${item.amount.toFixed(2)}</span></p>
+                                  <p className="text-sm text-muted-foreground">{item.reason}</p>
+                                </li>
+                              ))}
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+                        <AccordionItem value="savings">
+                           <AccordionTrigger>
+                            <div className="flex items-center gap-2">
+                              <Lightbulb className="h-5 w-5 text-amber-500" />
+                              Savings Suggestions
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                              <ul className="space-y-2 pt-2">
+                              {financialAnalysis.savingsSuggestions.map((item, index) => (
+                                <li key={index} className="p-3 bg-secondary rounded-lg">
+                                  <p className="font-semibold">{item.title}</p>
+                                  <p className="text-sm text-muted-foreground">{item.suggestion}</p>
+                                </li>
+                              ))}
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                      
+                      <p className="text-xs text-center text-muted-foreground italic pt-4">{financialAnalysis.disclaimer}</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+      </PlanGate>
+
+       <PlanGate required="pro">
         <section className="border rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-bold">AI Allocation Suggestions</h3>
-            <button onClick={getAi} className="px-3 py-1 rounded bg-black text-white">Generate</button>
+            <button onClick={getAiAllocation} className="px-3 py-1 rounded bg-black text-white">Generate</button>
           </div>
           {aiSuggestion ? (
             <ul className="grid sm:grid-cols-3 gap-2">
