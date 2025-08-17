@@ -28,7 +28,27 @@ async function findUidForCustomer(customerId: string, session?: any): Promise<st
     return null;
 }
 
-function deriveFeatures(lookupKeys: string[] = []) {
+function parseAddonsFromMetadata(items: Stripe.SubscriptionItem[]) {
+  const addons: Record<string, boolean | number> = {
+    ai_optimization: false,
+    priority_support: false,
+    extra_seats: 0,
+    advanced_analytics: false,
+  };
+  
+  for (const item of items) {
+    const lookupKey = item.price.lookup_key;
+    if (!lookupKey) continue;
+    if (lookupKey.startsWith('addon_analytics')) addons.advanced_analytics = true;
+    if (lookupKey.startsWith('addon_support')) addons.priority_support = true;
+    if (lookupKey.startsWith('addon_ai')) addons.ai_optimization = true; // Assuming a key like 'addon_ai_optimization'
+    if (lookupKey.startsWith('addon_seat')) addons.extra_seats = item.quantity || 0;
+  }
+  return addons;
+}
+
+
+function deriveFeatures(lookupKeys: string[] = [], addons: Record<string, boolean | number>) {
   const has = (key: string) => lookupKeys.includes(key);
 
   const isFree     = has('free_month_usd');
@@ -38,36 +58,42 @@ function deriveFeatures(lookupKeys: string[] = []) {
   const isEntBaseY = has('enterprise_base_year_usd');
   const isEnterprise = isEntBaseM || isEntBaseY;
 
-  const addAnalytics = has('addon_analytics_month_usd');
-  const addPriority  = has('addon_support_month_usd');
-
-  // Default feature set
-  const features = {
-    bankLinking: true, // Always available
-    manualAllocations: true, // Always available
-    autoAllocations: isStarter || isPro || isEnterprise,
-    aiAllocations: isPro || isEnterprise,
-    advancedRules: isPro || isEnterprise,
-    analyticsBasic: true, // Always available
-    analyticsAdvanced: addAnalytics || isPro || isEnterprise,
-    prioritySupport: addPriority || isPro || isEnterprise,
-  };
-
   const plan =
     isEnterprise ? 'enterprise' :
     isPro        ? 'pro' :
     isStarter    ? 'starter' :
     isFree       ? 'free' : 'unknown';
 
-  return { plan, features };
+  // Default feature set based on plan, then override with addons
+  const features = {
+    bankLinking: true,
+    manualAllocations: true,
+    autoAllocations: isStarter || isPro || isEnterprise,
+    aiSuggestions: isStarter || isPro || isEnterprise, // Basic AI
+    advancedRules: isPro || isEnterprise,
+    prioritySupport: isPro || isEnterprise,
+    analyticsAdvanced: isPro || isEnterprise,
+    aiTaxCoach: false, // Add-on only
+  };
+  
+  if(addons.priority_support) features.prioritySupport = true;
+  if(addons.advanced_analytics) features.analyticsAdvanced = true;
+  if(addons.ai_optimization) features.aiTaxCoach = true;
+
+
+  return { plan, features, addons };
 }
 
 function summarizeSubscription(sub: Stripe.Subscription) {
   const items = sub.items?.data || [];
   const lookupKeys = items.map(i => i.price.lookup_key).filter(Boolean) as string[];
-  const seatItem = items.find(i => i.price.lookup_key === 'enterprise_addon_seat_month_usd'); // Or your actual seat lookup key
+  const seatItem = items.find(i => i.price.lookup_key?.includes('seat'));
   const extraSeats = seatItem?.quantity || 0;
-  const includedSeats = sub.metadata?.plan === 'enterprise' ? 10 : 1; // Example logic
+  
+  let includedSeats = 0;
+  if (lookupKeys.some(k => k.includes('enterprise'))) includedSeats = 10;
+  else if (lookupKeys.some(k => k.includes('pro') || k.includes('starter'))) includedSeats = 1;
+
   const totalSeats = includedSeats + extraSeats;
 
   return {
@@ -80,6 +106,7 @@ function summarizeSubscription(sub: Stripe.Subscription) {
     lookupKeys,
     seats: totalSeats,
     latestInvoiceId: sub.latest_invoice as string | null,
+    items: items.map(item => ({ priceId: item.price.id, lookupKey: item.price.lookup_key, quantity: item.quantity }))
   };
 }
 
@@ -133,6 +160,26 @@ export async function POST(req: Request) {
                         billingEmail: data.customer_details?.email || null,
                         updatedAt: FieldValue.serverTimestamp(),
                     }, { merge: true });
+
+                    // If a subscription was created, sync it immediately
+                    if (data.subscription) {
+                        const subscription = await stripe.subscriptions.retrieve(data.subscription);
+                        const userRef = db.collection('users').doc(uid);
+                        const summary = summarizeSubscription(subscription);
+                        const { plan, features, addons } = deriveFeatures(summary.lookupKeys, parseAddonsFromMetadata(subscription.items.data));
+                         const planData = {
+                            plan: { id: plan, name: plan.charAt(0).toUpperCase() + plan.slice(1) },
+                            features,
+                            addons,
+                            seats: summary.seats,
+                            subscription: summary,
+                            subscriptionStatus: summary.status,
+                            planLookupKeys: summary.lookupKeys,
+                            updatedAt: FieldValue.serverTimestamp(),
+                        };
+                        await userRef.set(planData, { merge: true });
+                        console.log(`Synced initial plan for ${userRef.id}: ${plan} (${summary.status})`);
+                    }
                 }
                 break;
             }
@@ -147,11 +194,12 @@ export async function POST(req: Request) {
                 const userRef = db.collection('users').doc(uid);
                 const subscription = event.data.object as Stripe.Subscription;
                 const summary = summarizeSubscription(subscription);
-                const { plan, features } = deriveFeatures(summary.lookupKeys);
+                const { plan, features, addons } = deriveFeatures(summary.lookupKeys, parseAddonsFromMetadata(subscription.items.data));
 
                 const planData = {
-                    plan,
+                    plan: { id: plan, name: plan.charAt(0).toUpperCase() + plan.slice(1) },
                     features,
+                    addons,
                     seats: summary.seats,
                     subscription: summary,
                     subscriptionStatus: summary.status,
@@ -171,6 +219,7 @@ export async function POST(req: Request) {
                         tax: invoice.tax,
                         tax_percent: invoice.tax_percent,
                         total_tax_amounts: invoice.total_tax_amounts,
+                        tax_breakdown: (invoice as any).tax_breakdown,
                     };
                     // Log specific tax details to the billing event for auditing
                     const eventLogRef = db.collection('users').doc(uid).collection('billingEvents').doc();
