@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertCircle, Lightbulb, Wallet } from "lucide-react";
+import { Wallet, Lightbulb } from "lucide-react";
 import { AnalyzeTransactionsOutput } from "@/ai/flows/analyze-transactions";
 
 
