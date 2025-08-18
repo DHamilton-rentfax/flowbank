@@ -29,11 +29,11 @@ interface Log {
 function getLogSummary(log: Log) {
     switch(log.type) {
         case 'MEMBER_INVITED':
-            return `Invited ${log.details.invitedEmail}`;
+            return `Invited ${log.details.invitedEmail}.`;
         case 'MEMBER_JOINED':
             return `${log.details.joinedEmail} joined the team.`;
         case 'MEMBER_REMOVED':
-            return `Removed ${log.details.removedEmail}.`;
+            return `Removed member ${log.details.removedEmail}.`;
         default:
             return 'Unknown action';
     }
@@ -42,7 +42,8 @@ function getLogSummary(log: Log) {
 function getBadgeVariant(logType: string) {
     if (logType.includes('JOINED')) return 'default';
     if (logType.includes('REMOVED')) return 'destructive';
-    return 'secondary';
+    if (logType.includes('INVITED')) return 'secondary';
+    return 'outline';
 }
 
 export default function TeamAuditLogPage() {

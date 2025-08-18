@@ -28,6 +28,7 @@ export default function TeamPage() {
 
   const fetchTeamInfo = React.useCallback(async () => {
     if (idToken) {
+      setLoading(true);
       try {
         const info = await getTeamInfo();
         setTeamInfo(info);
@@ -152,7 +153,7 @@ export default function TeamPage() {
           
           <Card>
             <CardHeader>
-              <CardTitle>Active Members</CardTitle>
+              <CardTitle>Team Members</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="border rounded-lg">

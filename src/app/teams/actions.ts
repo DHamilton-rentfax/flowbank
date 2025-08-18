@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getAdminAuth, getAdminDb } from '@/firebase/server';
@@ -60,7 +61,8 @@ export async function inviteTeamMember(email: string) {
   
   const userSnap = await db.collection('users').doc(userId).get();
   const userData = userSnap.data();
-  const proPlanBaseSeats = userData?.plan?.id === 'pro' ? 5 : 1;
+  // Base seats on Pro plan is 5, otherwise 1. This could be made more dynamic.
+  const proPlanBaseSeats = (userData?.plan?.id === 'pro' || userData?.plan?.id === 'enterprise') ? 5 : 1;
   const extraSeats = userData?.addons?.extra_seats || 0;
   const maxSeats = proPlanBaseSeats + extraSeats;
 
@@ -75,11 +77,12 @@ export async function inviteTeamMember(email: string) {
   if (!existingMemberQuery.empty) {
     return { success: false, error: 'This user is already a member.' };
   }
-  const existingInviteQuery = await teamRef.collection('invites').where('email', '==', email).get();
+  const existingInviteQuery = await teamRef.collection('invites').where('email', '==', email).where('status', '==', 'invited').get();
    if (!existingInviteQuery.empty) {
     return { success: false, error: 'This user already has a pending invitation.' };
   }
 
+  // Using email as ID for simplicity to prevent duplicate invites.
   const inviteId = Buffer.from(email).toString('base64');
   const inviteData = {
     email,
@@ -100,10 +103,12 @@ export async function inviteTeamMember(email: string) {
   return { success: true, message: `Invitation sent to ${email}.` };
 }
 
-export async function acceptTeamInvitation(inviteId: string) {
+export async function acceptTeamInvitation(token: string) {
     const userId = await getUserId();
     const db = getAdminDb();
     
+    // In a real app, the token would be a secure, unique ID. Here we use the base64 email.
+    const inviteId = token; 
     const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
     const inviteRef = teamRef.collection('invites').doc(inviteId);
     const inviteSnap = await inviteRef.get();
@@ -133,7 +138,7 @@ export async function acceptTeamInvitation(inviteId: string) {
             type: 'MEMBER_JOINED',
             timestamp: firestore.FieldValue.serverTimestamp(),
             actorId: userId,
-            details: { joinedEmail: user.email }
+            details: { joinedEmail: user.email, joinedId: userId }
         });
     });
 
@@ -159,7 +164,7 @@ export async function getTeamInfo() {
     const userSnap = await db.collection('users').doc(userId).get();
     const userData = userSnap.data();
 
-    const proPlanBaseSeats = userData?.plan?.id === 'pro' ? 5 : 1;
+    const proPlanBaseSeats = (userData?.plan?.id === 'pro' || userData?.plan?.id === 'enterprise') ? 5 : 1;
     const extraSeats = userData?.addons?.extra_seats || 0;
     const maxSeats = proPlanBaseSeats + extraSeats;
     
@@ -194,6 +199,7 @@ export async function removeTeamMember(memberId: string) {
     if (!memberDoc.exists) {
          return { success: false, error: 'Member not found.' };
     }
+    const memberEmail = memberDoc.data()?.email;
     
     await memberRef.delete();
     
@@ -201,7 +207,7 @@ export async function removeTeamMember(memberId: string) {
         type: 'MEMBER_REMOVED',
         timestamp: firestore.FieldValue.serverTimestamp(),
         actorId: userId,
-        details: { removedEmail: memberDoc.data()?.email, removedId: memberId }
+        details: { removedEmail: memberEmail, removedId: memberId }
     });
 
     return { success: true, message: 'Member removed successfully.' };
