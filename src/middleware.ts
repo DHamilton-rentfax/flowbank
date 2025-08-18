@@ -2,27 +2,47 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+const PROTECTED_ROUTES = [
+    '/dashboard',
+    '/rules',
+    '/onboarding',
+    '/invite',
+];
+
+const ADMIN_ROUTES = [
+    '/admin',
+];
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (pathname.startsWith('/admin')) {
-    // This is a basic check. For production, you'd use a more robust session management.
-    // This assumes you set a 'role' cookie on login for admin users.
-    const role = req.cookies.get('role')?.value;
-    const hasSession = req.cookies.has('__session'); // Example session cookie name
+  const sessionToken = req.cookies.get('__session')?.value; // Example session cookie name
+  const userRole = req.cookies.get('role')?.value;
 
-    if (!hasSession) {
-      const url = req.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('next', pathname);
-      return NextResponse.redirect(url);
-    }
-    if (role !== 'admin') {
-      const url = req.nextUrl.clone();
-      url.pathname = '/'; // Redirect to home if not admin
-      return NextResponse.redirect(url);
-    }
+  const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+  const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route));
+
+  if (!sessionToken && (isProtectedRoute || isAdminRoute)) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/login';
+    url.searchParams.set('next', pathname);
+    return NextResponse.redirect(url);
   }
+
+  if (sessionToken && isAdminRoute && userRole !== 'admin') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/dashboard'; // Redirect non-admins away from admin routes
+    return NextResponse.redirect(url);
+  }
+
   return NextResponse.next();
 }
 
-export const config = { matcher: ['/admin/:path*'] };
+export const config = { 
+  matcher: [
+    '/dashboard/:path*',
+    '/rules/:path*',
+    '/onboarding/:path*',
+    '/invite/:path*',
+    '/admin/:path*',
+  ] 
+};
