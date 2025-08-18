@@ -22,6 +22,7 @@ export function Header() {
           {user ? (
             <>
               <Link href="/dashboard" className="text-sm hover:underline">Dashboard</Link>
+              <Link href="/dashboard/team" className="text-sm hover:underline">Team</Link>
               <Badge variant="outline" className="capitalize">
                 {planName}
               </Badge>
