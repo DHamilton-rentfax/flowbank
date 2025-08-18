@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useTransition, useMemo } from 'react';
 import { getTeamInfo, inviteTeamMember, removeTeamMember } from '@/app/teams/actions';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { Trash2, UserPlus } from 'lucide-react';
+import { Trash2, UserPlus, Send } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TeamPage() {
@@ -45,7 +46,10 @@ export default function TeamPage() {
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail) return;
+    if (!inviteEmail || !inviteEmail.includes('@')) {
+        toast({ title: 'Invalid Email', description: 'Please enter a valid email address.', variant: 'destructive' });
+        return;
+    }
 
     startTransition(async () => {
       const { success, error, message } = await inviteTeamMember(inviteEmail);
@@ -82,6 +86,11 @@ export default function TeamPage() {
     }
   };
 
+  const seatUsageText = useMemo(() => {
+    if (!teamInfo?.seats) return '...';
+    return `${teamInfo.seats.used} of ${teamInfo.seats.total} seats used`;
+  }, [teamInfo]);
+
   if (loading) {
     return (
        <div className="flex flex-col min-h-screen">
@@ -109,19 +118,23 @@ export default function TeamPage() {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1 bg-secondary py-8">
-        <div className="container mx-auto max-w-4xl">
-          <Card>
-            <CardHeader className="flex flex-row justify-between items-start">
+        <div className="container mx-auto max-w-4xl space-y-8">
+            <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Manage Team</CardTitle>
-                  <CardDescription>Invite members, manage roles, and view seat usage.</CardDescription>
+                    <h1 className="text-2xl font-bold text-primary">Team Management</h1>
+                    <p className="text-muted-foreground">{seatUsageText}</p>
                 </div>
-                <Button asChild variant="outline">
+                 <Button asChild variant="outline">
                     <Link href="/dashboard/team/audit-log">View Audit Log</Link>
                 </Button>
+            </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Invite New Member</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleInvite} className="flex items-center gap-2 mb-6 p-4 bg-muted/50 rounded-lg">
+              <form onSubmit={handleInvite} className="flex items-center gap-2">
                 <Input
                   type="email"
                   placeholder="new.member@example.com"
@@ -130,19 +143,18 @@ export default function TeamPage() {
                   disabled={isPending}
                 />
                 <Button type="submit" disabled={isPending}>
-                  <UserPlus className="mr-2 h-4 w-4" />
+                  <Send className="mr-2 h-4 w-4" />
                   {isPending ? 'Sending...' : 'Send Invite'}
                 </Button>
               </form>
-
-              <div className="mb-6">
-                 <div className="flex justify-between items-center mb-2 text-sm">
-                    <span className="font-medium text-muted-foreground">Seats</span>
-                    <span>{teamInfo.seats.used} of {teamInfo.seats.total} used</span>
-                 </div>
-                 <Progress value={(teamInfo.seats.used / teamInfo.seats.total) * 100} />
-              </div>
-
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Members</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="border rounded-lg">
                 <Table>
                   <TableHeader>
@@ -168,26 +180,34 @@ export default function TeamPage() {
                         </TableCell>
                       </TableRow>
                     ))}
-                     {teamInfo.invites.map((invite: any) => (
-                      <TableRow key={invite.id} className="opacity-60">
-                        <TableCell className="font-medium">{invite.email}</TableCell>
-                        <TableCell className="capitalize">{invite.role}</TableCell>
-                        <TableCell>
-                           <div className="flex items-center gap-2">
-                            {renderStatusBadge(invite.status)}
-                            <span className="text-xs text-muted-foreground">
-                                (Invited {formatDistanceToNow(invite.invitedAt.toDate(), { addSuffix: true })})
-                            </span>
-                           </div>
-                        </TableCell>
-                         <TableCell className="text-right" />
-                      </TableRow>
-                    ))}
                   </TableBody>
                 </Table>
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>Pending Invites</CardTitle>
+            </CardHeader>
+            <CardContent>
+                 <ul className="space-y-2 text-sm">
+                    {teamInfo.invites.length === 0 ? (
+                    <li className="text-muted-foreground text-center py-4">No pending invites.</li>
+                    ) : (
+                    teamInfo.invites.map((invite: any) => (
+                        <li key={invite.id} className="flex justify-between items-center border-b p-2">
+                        <span>{invite.email}</span>
+                        <span className="text-muted-foreground text-xs">
+                            Invited {formatDistanceToNow(invite.invitedAt.toDate(), { addSuffix: true })}
+                        </span>
+                        </li>
+                    ))
+                    )}
+                </ul>
+            </CardContent>
+          </Card>
+
         </div>
       </main>
       <Footer />
