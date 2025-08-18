@@ -6,6 +6,7 @@ import type { Account, AllocationRule, Transaction, UserPlan, PaymentLink, UserD
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/firebase/client';
 import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
+import { AnalyzeTransactionsOutput } from '@/ai/flows/analyze-transactions';
 
 // Define the shape of the context
 interface AppContextType {
@@ -19,6 +20,7 @@ interface AppContextType {
   setAnalyticsSnapshot: (snap: any) => void;
   aiSuggestion: any;
   setAiSuggestion: (suggestion: any) => void;
+  aiFinancialAnalysis: (AnalyzeTransactionsOutput & { analyzedAt?: string }) | null;
   loadingData: boolean;
 }
 
@@ -41,6 +43,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [features, setFeatures] = useState<{ [key: string]: boolean }>({});
   const [analyticsSnapshot, setAnalyticsSnapshot] = useState(null);
   const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [aiFinancialAnalysis, setAiFinancialAnalysis] = useState(null);
 
   useEffect(() => {
     if (user?.uid) {
@@ -60,10 +63,10 @@ export function AppProvider({ children }: AppProviderProps) {
         }),
         onSnapshot(collection(db, "users", user.uid, "accounts"), (snapshot) => {
           setAccounts(snapshot.docs.map(doc => doc.data() as Account));
-          setLoadingData(false);
         }),
         onSnapshot(query(collection(db, "users", user.uid, "transactions"), orderBy("date", "desc")), (snapshot) => {
           setTransactions(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Transaction)));
+          setLoadingData(false); // Consider data loaded after transactions arrive
         }),
         onSnapshot(doc(db, "users", user.uid, "analytics", "latest"), (snapshot) => {
           if (snapshot.exists()) {
@@ -73,6 +76,11 @@ export function AppProvider({ children }: AppProviderProps) {
         onSnapshot(doc(db, "users", user.uid, "settings", "aiAllocations"), (snapshot) => {
             if (snapshot.exists()) {
                 setAiSuggestion(snapshot.data().suggestion);
+            }
+        }),
+        onSnapshot(doc(db, "users", user.uid, "aiInsights", "latest"), (snapshot) => {
+            if (snapshot.exists()) {
+                setAiFinancialAnalysis(snapshot.data() as any);
             }
         })
       ];
@@ -87,6 +95,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setFeatures({});
       setAnalyticsSnapshot(null);
       setAiSuggestion(null);
+      setAiFinancialAnalysis(null);
       setLoadingData(true);
     }
   }, [user]);
@@ -102,6 +111,7 @@ export function AppProvider({ children }: AppProviderProps) {
     setAnalyticsSnapshot,
     aiSuggestion,
     setAiSuggestion,
+    aiFinancialAnalysis,
     loadingData,
   };
 

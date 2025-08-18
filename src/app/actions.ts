@@ -65,11 +65,18 @@ export async function exchangePublicToken(publicToken: string) {
       const response = await plaidClient.itemPublicTokenExchange({ public_token: publicToken });
       const { access_token, item_id } = response.data;
 
+      // Immediately trigger a historical pull. Webhook will handle future updates.
+      const initialSync = await plaidClient.transactionsSync({ access_token, count: 100 });
+
       await getAdminDb().collection("users").doc(userId).collection("plaidItems").doc(item_id).set({
         accessToken: access_token,
         itemId: item_id,
         linkedAt: new Date().toISOString(),
+        cursor: initialSync.data.next_cursor
       }, { merge: true });
+
+       // Now, trigger the first transaction sync manually
+      await syncAllTransactions();
   
       return { success: true, message: "Bank account linked successfully!" };
 
@@ -339,8 +346,15 @@ export async function getAISuggestion(businessType: string) {
 }
 
 export async function getAIFinancialAnalysis(input: AnalyzeTransactionsInput): Promise<AnalyzeTransactionsOutput> {
+    const userId = await getUserId();
+    const db = getAdminDb();
     try {
         const result = await analyzeTransactions(input);
+        await db.collection("users").doc(userId).collection("aiInsights").doc("latest").set({
+            ...result,
+            analyzedAt: new Date().toISOString(),
+            transactionCount: input.transactions.length,
+        }, { merge: true });
         return result;
     } catch (error) {
         console.error('Error getting AI financial analysis:', error);

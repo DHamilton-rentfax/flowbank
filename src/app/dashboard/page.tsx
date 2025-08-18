@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { useApp } from "@/contexts/app-provider";
 import PlanGate from "@/components/PlanGate";
@@ -11,10 +11,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Wallet, Lightbulb, Sparkles } from "lucide-react";
+import { Wallet, Lightbulb, Sparkles, RefreshCw } from "lucide-react";
 import { AnalyzeTransactionsOutput } from "@/ai/flows/analyze-transactions";
 import Link from "next/link";
-
+import { format, parseISO } from 'date-fns';
 
 function Stat({ title, value }: { title: string, value: string }) {
   return (
@@ -27,57 +27,66 @@ function Stat({ title, value }: { title: string, value: string }) {
 
 function AIFinancialAdvisor() {
   const { toast } = useToast();
-  const { transactions } = useApp();
-  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
-  const [financialAnalysis, setFinancialAnalysis] = useState<AnalyzeTransactionsOutput | null>(null);
+  const { transactions, aiFinancialAnalysis } = useApp();
+  const [isAnalysisLoading, startTransition] = useTransition();
 
   async function handleFinancialAnalysis() {
     if (!transactions || transactions.length === 0) {
       toast({ title: "No Transactions", description: "Sync your bank account to analyze transactions.", variant: "destructive" });
       return;
     }
-    setIsAnalysisLoading(true);
-    try {
-      const analysisResult = await getAIFinancialAnalysis({
-        businessType: "Software Freelancer", // This could be dynamic
-        transactions: transactions.map(t => ({ name: t.name, amount: t.amount, date: t.date }))
-      });
-      setFinancialAnalysis(analysisResult);
-      toast({ title: "Analysis Complete", description: "Your financial insights are ready." });
-    } catch (e) {
-      const error = e as Error;
-      toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
-    } finally {
-      setIsAnalysisLoading(false);
-    }
+
+    startTransition(async () => {
+      try {
+        await getAIFinancialAnalysis({
+          businessType: "Software Freelancer", // This could be dynamic
+          transactions: transactions.slice(0, 100).map(t => ({ name: t.name, amount: t.amount, date: t.date }))
+        });
+        toast({ title: "Analysis Refresh Complete", description: "Your financial insights have been updated." });
+      } catch (e) {
+        const error = e as Error;
+        toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
+      }
+    });
   }
+
+  const lastAnalyzed = aiFinancialAnalysis?.analyzedAt ? format(parseISO(aiFinancialAnalysis.analyzedAt), "PPP p") : "Never";
 
   return (
      <Card>
         <CardHeader>
-            <CardTitle>AI Financial Advisor</CardTitle>
-            <CardDescription>Analyze your recent transactions to uncover savings, tax deductions, and spending patterns.</CardDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>AI Financial Advisor</CardTitle>
+                <CardDescription>Insights from your recent transactions. Last analyzed: {lastAnalyzed}</CardDescription>
+              </div>
+              <Button onClick={handleFinancialAnalysis} disabled={isAnalysisLoading} variant="outline" size="sm">
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isAnalysisLoading ? 'animate-spin' : ''}`} />
+                  {isAnalysisLoading ? "Analyzing..." : "Refresh"}
+              </Button>
+            </div>
         </CardHeader>
         <CardContent>
-            <Button onClick={handleFinancialAnalysis} disabled={isAnalysisLoading}>
-                {isAnalysisLoading ? "Analyzing..." : "Analyze My Finances"}
-            </Button>
-            
-            {financialAnalysis && (
-                <div className="mt-6 space-y-4">
-                  <p className="text-sm text-muted-foreground">{financialAnalysis.spendingSummary}</p>
+            {!aiFinancialAnalysis ? (
+                 <div className="text-center py-8 text-muted-foreground">
+                    <p>No financial analysis available yet.</p>
+                    <p className="text-sm">Connect your bank and sync transactions, or click "Refresh".</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">{aiFinancialAnalysis.spendingSummary}</p>
                   
-                  <Accordion type="single" collapsible className="w-full">
+                  <Accordion type="single" collapsible className="w-full" defaultValue="deductions">
                     <AccordionItem value="deductions">
                       <AccordionTrigger>
                         <div className="flex items-center gap-2">
                           <Wallet className="h-5 w-5 text-primary" />
-                          Potential Tax Deductions
+                          Potential Tax Deductions ({aiFinancialAnalysis.potentialDeductions.length})
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
                         <ul className="space-y-2 pt-2">
-                          {financialAnalysis.potentialDeductions.map((item, index) => (
+                          {aiFinancialAnalysis.potentialDeductions.map((item, index) => (
                             <li key={index} className="p-3 bg-secondary rounded-lg">
                               <p className="font-semibold">{item.transactionName} - <span className="font-mono">${item.amount.toFixed(2)}</span></p>
                               <p className="text-sm text-muted-foreground">{item.reason}</p>
@@ -90,12 +99,12 @@ function AIFinancialAdvisor() {
                        <AccordionTrigger>
                         <div className="flex items-center gap-2">
                           <Lightbulb className="h-5 w-5 text-amber-500" />
-                          Savings Suggestions
+                          Savings Suggestions ({aiFinancialAnalysis.savingsSuggestions.length})
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
                           <ul className="space-y-2 pt-2">
-                          {financialAnalysis.savingsSuggestions.map((item, index) => (
+                          {aiFinancialAnalysis.savingsSuggestions.map((item, index) => (
                             <li key={index} className="p-3 bg-secondary rounded-lg">
                               <p className="font-semibold">{item.title}</p>
                               <p className="text-sm text-muted-foreground">{item.suggestion}</p>
@@ -106,24 +115,25 @@ function AIFinancialAdvisor() {
                     </AccordionItem>
                   </Accordion>
                   
-                  <p className="text-xs text-center text-muted-foreground italic pt-4">{financialAnalysis.disclaimer}</p>
+                  <p className="text-xs text-center text-muted-foreground italic pt-4">{aiFinancialAnalysis.disclaimer}</p>
                 </div>
             )}
         </CardContent>
-    </Card>>
+    </Card>
   )
 }
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion, transactions, userPlan, features } = useApp();
+  const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion, transactions, userPlan, features, loadingData } = useApp();
   const { idToken } = useAuth();
   const [isPortalLoading, setIsPortalLoading] = useState(false);
 
   React.useEffect(()=>{ 
     async function fetchData() {
         if (idToken) {
-          await syncAllTransactions();
+          // No need to sync here, webhooks will handle it
+          // await syncAllTransactions();
           const snap = await getAnalyticsSnapshot(null);
           setAnalyticsSnapshot(snap);
         }
@@ -162,6 +172,10 @@ export default function Dashboard() {
   
   const hasPlaidLinked = transactions.length > 0;
   const hasAIFeature = features?.aiTaxCoach === true;
+
+  if (loadingData) {
+    return <div className="text-center p-8">Loading dashboard...</div>
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
