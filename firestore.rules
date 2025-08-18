@@ -5,73 +5,73 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper functions
-    function isAuth() {
+    function isSignedIn() {
       return request.auth != null;
     }
-    function userId() {
-      return request.auth.uid;
-    }
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(userId())).data;
-    }
-    function userTeamId() {
-      return getUserData().teamId;
-    }
-    function isTeamOwner(teamId) {
-      return get(/databases/$(database)/documents/teams/$(teamId)).data.owner == userId();
-    }
-    function isTeamMember(teamId) {
-      return exists(/databases/$(database)/documents/teams/$(teamId)/members/$(userId()));
+
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
     }
 
-    // Users can only read/write their own data
-    match /users/{uid}/{documents=**} {
-      allow read, write: if isAuth() && uid == userId();
+    function userHasTeam(uid) {
+        return get(/databases/$(database)/documents/users/$(uid)).data.teamId != null;
     }
 
-    // Blog posts are public
-    match /blogPosts/{postId} {
-      allow read: if true;
-      allow write: if false; // Should be written via admin/server action
+    function getUserTeamId(uid) {
+        return get(/databases/$(database)/documents/users/$(uid)).data.teamId;
     }
 
-    // Teams collection security
-    match /teams/{teamId} {
-      allow read: if isAuth() && isTeamMember(teamId);
-      // Only team owner can update team details (e.g., name)
-      allow update: if isAuth() && isTeamOwner(teamId);
-      // Disallow client-side creation/deletion of teams
-      allow create, delete: if false;
-    }
-
-    match /teams/{teamId}/members/{memberId} {
-      // Any team member can see who else is on the team
-      allow read: if isAuth() && isTeamMember(teamId);
-      // Only the team owner can add/remove members (via server actions)
-      allow create, delete: if isAuth() && isTeamOwner(teamId);
-      // Members cannot update their own role or status directly
-      allow update: if false;
-    }
-
-    match /teams/{teamId}/invites/{inviteId} {
-        // Team members can see pending invites
-        allow read: if isAuth() && isTeamMember(teamId);
-        // Only owner can create/delete invites (via server actions)
-        allow create, delete: if isAuth() && isTeamOwner(teamId);
-        allow update: if false;
+    function isTeamOwner(teamId, uid) {
+        return get(/databases/$(database)/documents/teams/$(teamId)).data.owner == uid;
     }
     
-    match /teams/{teamId}/auditLogs/{logId} {
-        // Team members can read audit logs for their team
-        allow read: if isAuth() && isTeamMember(teamId);
-        // Logs are append-only, written by server actions
-        allow write: if false;
+    function isTeamMember(teamId, uid) {
+        return exists(/databases/$(database)/documents/teams/$(teamId)/members/$(uid));
     }
 
-    // Letters collection
-    match /letters/{letterId} {
+
+    // USERS collection
+    match /users/{uid} {
+      allow read, update: if isUser(uid);
+      allow create: if isSignedIn();
+      
+      // Subcollections
+      match /{subcollection}/{docId} {
+        allow read, write: if isUser(uid);
+      }
+    }
+
+    // TEAMS collection
+    match /teams/{teamId} {
+        allow read: if isTeamMember(teamId, request.auth.uid);
+        allow create, update: if isTeamOwner(teamId, request.auth.uid);
+
+        // MEMBERS subcollection
+        match /members/{memberId} {
+            allow read: if isTeamMember(teamId, request.auth.uid);
+            allow create, delete: if isTeamOwner(teamId, request.auth.uid);
+            allow update: if isTeamOwner(teamId, request.auth.uid) || isUser(memberId); // Member can update their own status (e.g. accepting invite)
+        }
+
+        // INVITES subcollection (used in previous logic, securing it)
+        match /invites/{inviteId} {
+             allow read: if isTeamMember(teamId, request.auth.uid);
+             allow create, delete: if isTeamOwner(teamId, request.auth.uid);
+        }
+
+        // AUDIT LOGS subcollection
+        match /auditLogs/{logId} {
+            allow read: if isTeamMember(teamId, request.auth.uid);
+            allow create: if isTeamMember(teamId, request.auth.uid); // Actions performed by team members create logs
+        }
+    }
+    
+    // BLOG collection (publicly readable)
+    match /blogPosts/{slug} {
       allow read: if true;
-      allow write: if false; // Admin only
+      // Write access should be handled by a secure backend/admin role check,
+      // not open on the client. For now, we disallow direct client writes.
+      allow write: if false; 
     }
   }
 }
