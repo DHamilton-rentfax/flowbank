@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getTeamAuditLogs } from '@/app/teams/actions';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +15,8 @@ import { format } from 'date-fns';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface Log {
     id: string;
@@ -45,6 +48,7 @@ function getBadgeVariant(logType: string) {
 export default function TeamAuditLogPage() {
     const [logs, setLogs] = useState<Log[]>([]);
     const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('ALL');
     const { idToken } = useAuth();
     const { toast } = useToast();
 
@@ -65,6 +69,13 @@ export default function TeamAuditLogPage() {
         }
     }, [idToken, toast]);
 
+    const filteredLogs = useMemo(() => {
+        return logs.filter(log => {
+            if (filter === 'ALL') return true;
+            return log.type === filter;
+        });
+    }, [logs, filter]);
+
     return (
         <div className="flex flex-col min-h-screen">
             <Header />
@@ -84,6 +95,20 @@ export default function TeamAuditLogPage() {
                             <CardDescription>A record of all membership changes for your team.</CardDescription>
                         </CardHeader>
                         <CardContent>
+                             <div className="flex items-center gap-2 mb-4">
+                                <Label htmlFor="filter" className="text-sm">Filter by Action</Label>
+                                <Select value={filter} onValueChange={setFilter}>
+                                    <SelectTrigger id="filter" className="w-[180px]">
+                                        <SelectValue placeholder="Select an action" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">All Actions</SelectItem>
+                                        <SelectItem value="MEMBER_INVITED">Invites</SelectItem>
+                                        <SelectItem value="MEMBER_JOINED">Joins</SelectItem>
+                                        <SelectItem value="MEMBER_REMOVED">Removals</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <div className="border rounded-lg">
                                 <Table>
                                     <TableHeader>
@@ -104,13 +129,13 @@ export default function TeamAuditLogPage() {
                                                     <TableCell className="text-right"><Skeleton className="h-4 w-28" /></TableCell>
                                                 </TableRow>
                                             ))
-                                        ) : logs.length === 0 ? (
+                                        ) : filteredLogs.length === 0 ? (
                                             <TableRow>
                                                 <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
-                                                    No audit records found.
+                                                    No audit records found for this filter.
                                                 </TableCell>
                                             </TableRow>
-                                        ) : logs.map(log => (
+                                        ) : filteredLogs.map(log => (
                                             <TableRow key={log.id}>
                                                 <TableCell>
                                                     <Badge variant={getBadgeVariant(log.type)}>
