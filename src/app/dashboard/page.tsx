@@ -124,7 +124,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <PlanGate required="pro">
+      <PlanGate feature="aiTaxCoach">
         <Card>
             <CardHeader>
                 <CardTitle>AI Financial Advisor</CardTitle>
