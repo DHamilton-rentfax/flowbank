@@ -126,27 +126,51 @@ const plans = {
 const addOns = [
     {
         name: 'AI Optimization Pack',
-        price: '$14.00',
-        lookupKey: 'addon_ai_optimization_month_usd',
-        description: 'Get personalized financial breakdowns, IRS deduction detection, and optimization advice with our AI Coach.'
+        description: 'Get personalized financial breakdowns, IRS deduction detection, and optimization advice with our AI Coach.',
+        monthly: {
+            price: '$14.00',
+            lookupKey: 'addon_ai_optimization_month_usd',
+        },
+        annually: {
+            price: '$140.00',
+            lookupKey: 'addon_ai_optimization_year_usd',
+        }
     },
     {
         name: 'Advanced Analytics Pack',
-        price: '$9.99',
-        lookupKey: 'addon_analytics_month_usd',
-        description: 'Unlock deeper reports, allocation trends, and forecasting.'
+        description: 'Unlock deeper reports, allocation trends, and forecasting.',
+        monthly: {
+          price: '$9.99',
+          lookupKey: 'addon_analytics_month_usd',
+        },
+        annually: {
+          price: '$99.00',
+          lookupKey: 'addon_analytics_year_usd' // Assumes this key exists
+        }
     },
     {
         name: 'Extra Team Seats',
-        price: '$5.00',
-        lookupKey: 'addon_seat_month_usd',
-        description: 'Add 1 additional user to your dashboard team.'
+        description: 'Add 1 additional user to your dashboard team.',
+        monthly: {
+          price: '$5.00',
+          lookupKey: 'addon_seat_month_usd',
+        },
+         annually: {
+          price: '$50.00',
+          lookupKey: 'addon_seat_year_usd' // Assumes this key exists
+        }
     },
     {
         name: 'Priority Support',
-        price: '$19.99',
-        lookupKey: 'addon_support_month_usd',
-        description: 'Fast-track access to our support team with guaranteed 24h response.'
+        description: 'Fast-track access to our support team with guaranteed 24h response.',
+        monthly: {
+          price: '$19.99',
+          lookupKey: 'addon_support_month_usd',
+        },
+        annually: {
+           price: '$199.00',
+           lookupKey: 'addon_support_year_usd' // Assumes this key exists
+        }
     }
 ];
 
@@ -293,27 +317,29 @@ export default function Pricing() {
                     </p>
                 </header>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {addOns.map(addon => (
-                        <Card key={addon.lookupKey} className="flex flex-col">
-                            <CardHeader>
-                                <CardTitle>{addon.name}</CardTitle>
-
-                                <CardDescription>{addon.description}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-1">
-                                <div className="text-2xl font-bold">{addon.price}<span className="text-base font-normal text-muted-foreground">/mo</span></div>
-                            </CardContent>
-                            <CardFooter>
-                                <Button 
-                                    className="w-full"
-                                    disabled={!!loadingKey}
-                                    onClick={() => handleCheckout(addon.lookupKey)}
-                                >
-                                    {loadingKey === addon.lookupKey ? "Processing..." : "Add to Plan"}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    ))}
+                    {addOns.map(addon => {
+                        const currentCycle = addon[billingCycle];
+                        return (
+                            <Card key={currentCycle.lookupKey} className="flex flex-col">
+                                <CardHeader>
+                                    <CardTitle>{addon.name}</CardTitle>
+                                    <CardDescription>{addon.description}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex-1">
+                                    <div className="text-2xl font-bold">{currentCycle.price}<span className="text-base font-normal text-muted-foreground">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span></div>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button 
+                                        className="w-full"
+                                        disabled={!!loadingKey}
+                                        onClick={() => handleCheckout(currentCycle.lookupKey)}
+                                    >
+                                        {loadingKey === currentCycle.lookupKey ? "Processing..." : "Add to Plan"}
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        )
+                    })}
                 </div>
             </div>
         </div>
@@ -322,3 +348,5 @@ export default function Pricing() {
     </div>
   );
 }
+
+    

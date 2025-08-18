@@ -87,6 +87,12 @@
           "recurring": { "interval": "month" },
           "unit_amount": 1400,
           "type": "addon"
+        },
+        {
+          "lookup_key": "addon_ai_optimization_year_usd",
+          "recurring": { "interval": "year" },
+          "unit_amount": 14000,
+          "type": "addon"
         }
       ]
     },
@@ -120,3 +126,5 @@
     }
   ]
 }
+
+    
