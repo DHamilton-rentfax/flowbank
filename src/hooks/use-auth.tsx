@@ -19,9 +19,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const createSession = async (idToken: string) => {
-    // This function can be expanded to create a server-side session cookie if needed
-    console.log("Creating session for token:", idToken.substring(0, 20) + "...");
+// This function handles creating or clearing the server-side session cookie.
+const manageSession = async (idToken: string | null) => {
+    if (idToken) {
+        // User logged in, create the session cookie.
+        try {
+            await fetch('/api/auth/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken }),
+            });
+        } catch (error) {
+            console.error("Failed to create session cookie:", error);
+            // Handle error appropriately, e.g., show a toast to the user
+        }
+    } else {
+        // User logged out, clear the session cookie.
+        try {
+            await fetch('/api/auth/session', { method: 'DELETE' });
+        } catch (error) {
+            console.error("Failed to clear session cookie:", error);
+        }
+    }
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -33,12 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      setLoading(true); // Set loading while we handle the session
       if (user) {
         const token = await user.getIdToken();
         setIdToken(token);
-        await createSession(token);
+        await manageSession(token);
       } else {
         setIdToken(null);
+        await manageSession(null);
       }
       setLoading(false);
     });
@@ -47,19 +68,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const logout = async () => {
     await signOut(auth);
+    // onAuthStateChanged will handle clearing the session
     router.push("/login");
   };
 
   const loginWithEmail = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
-    router.push('/dashboard');
+    // onAuthStateChanged will trigger and handle the redirect/session creation
+    const nextUrl = new URLSearchParams(window.location.search).get('next') || '/dashboard';
+    router.push(nextUrl);
   }
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     await signInWithPopup(auth, provider);
-    router.push('/dashboard');
+    // onAuthStateChanged will trigger and handle the redirect/session creation
+    const nextUrl = new URLSearchParams(window.location.search).get('next') || '/dashboard';
+    router.push(nextUrl);
   }
 
 

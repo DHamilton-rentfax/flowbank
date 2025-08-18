@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getAdminAuth } from './firebase/server';
 
 // Define which routes are protected and require authentication
 const PROTECTED_ROUTES = [
@@ -22,32 +23,51 @@ const ADMIN_ROUTES = [
     '/admin/letters',
 ];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  
-  // In a real production app, you would verify a session cookie here that's set upon login.
-  // For this prototype, we'll assume this cookie (`__session`) is managed by a server-side auth helper.
-  // The client-side Firebase SDK manages state, but middleware runs on the server edge.
-  const sessionToken = req.cookies.get('__session')?.value;
-  
+  const sessionCookie = req.cookies.get('__session')?.value;
+
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
   const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route));
 
-  // If trying to access a protected or admin route without a session, redirect to login
-  if (!sessionToken && (isProtectedRoute || isAdminRoute)) {
+  if (!isProtectedRoute && !isAdminRoute) {
+    return NextResponse.next();
+  }
+
+  if (!sessionCookie) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('next', pathname); // Pass the original path to redirect back after login
+    url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }
-  
-  // NOTE: A full implementation would decode the sessionToken to check for an admin role.
-  // For now, we'll keep this simple and focus on the authentication check.
 
-  return NextResponse.next();
+  try {
+    const decodedToken = await getAdminAuth().verifySessionCookie(sessionCookie, true);
+    
+    // Example of admin role check. Assumes a 'role' custom claim is set on the user.
+    if (isAdminRoute && decodedToken.role !== 'admin') {
+      const url = req.nextUrl.clone();
+      url.pathname = '/dashboard'; // Redirect non-admins away from admin routes
+      return NextResponse.redirect(url);
+    }
+
+    return NextResponse.next();
+
+  } catch (error) {
+    // Session cookie is invalid or expired.
+    console.error('Middleware auth error:', error);
+    const url = req.nextUrl.clone();
+    url.pathname = '/login';
+    url.searchParams.set('next', pathname);
+    
+    // Clear the invalid cookie
+    const response = NextResponse.redirect(url);
+    response.cookies.delete('__session');
+    return response;
+  }
 }
 
-// Apply the middleware to all protected and admin routes
+// Apply the middleware to all relevant routes
 export const config = { 
   matcher: [
     '/dashboard/:path*',
