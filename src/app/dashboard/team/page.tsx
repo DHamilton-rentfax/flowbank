@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition } from 'react';
-import { getTeamInfo, inviteTeamMember } from '@/app/teams/actions';
+import { getTeamInfo, inviteTeamMember, removeTeamMember } from '@/app/teams/actions';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
@@ -14,18 +14,19 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import { Trash2, UserPlus } from 'lucide-react';
+import Link from 'next/link';
 
 export default function TeamPage() {
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isPending, startTransition] = useTransition();
-  const { idToken } = useAuth();
+  const { user, idToken } = useAuth();
   const { toast } = useToast();
 
   const fetchTeamInfo = React.useCallback(async () => {
     if (idToken) {
-      setLoading(true);
       try {
         const info = await getTeamInfo();
         setTeamInfo(info);
@@ -51,11 +52,23 @@ export default function TeamPage() {
       if (success) {
         toast({ title: 'Success!', description: message });
         setInviteEmail('');
-        await fetchTeamInfo(); // Refresh team info
+        await fetchTeamInfo();
       } else {
         toast({ title: 'Invitation Failed', description: error, variant: 'destructive' });
       }
     });
+  };
+  
+  const handleRemove = (memberId: string) => {
+     startTransition(async () => {
+        const { success, error, message } = await removeTeamMember(memberId);
+        if (success) {
+            toast({ title: 'Member Removed', description: message });
+            await fetchTeamInfo();
+        } else {
+            toast({ title: 'Removal Failed', description: error, variant: 'destructive' });
+        }
+     });
   };
 
   const renderStatusBadge = (status: string) => {
@@ -98,12 +111,17 @@ export default function TeamPage() {
       <main className="flex-1 bg-secondary py-8">
         <div className="container mx-auto max-w-4xl">
           <Card>
-            <CardHeader>
-              <CardTitle>Manage Team</CardTitle>
-              <CardDescription>Invite members and manage team settings.</CardDescription>
+            <CardHeader className="flex flex-row justify-between items-start">
+                <div>
+                  <CardTitle>Manage Team</CardTitle>
+                  <CardDescription>Invite members, manage roles, and view seat usage.</CardDescription>
+                </div>
+                <Button asChild variant="outline">
+                    <Link href="/dashboard/team/audit-log">View Audit Log</Link>
+                </Button>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleInvite} className="flex items-center gap-2 mb-6">
+              <form onSubmit={handleInvite} className="flex items-center gap-2 mb-6 p-4 bg-muted/50 rounded-lg">
                 <Input
                   type="email"
                   placeholder="new.member@example.com"
@@ -112,6 +130,7 @@ export default function TeamPage() {
                   disabled={isPending}
                 />
                 <Button type="submit" disabled={isPending}>
+                  <UserPlus className="mr-2 h-4 w-4" />
                   {isPending ? 'Sending...' : 'Send Invite'}
                 </Button>
               </form>
@@ -131,6 +150,7 @@ export default function TeamPage() {
                       <TableHead>Member</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -139,6 +159,13 @@ export default function TeamPage() {
                         <TableCell className="font-medium">{member.email}</TableCell>
                         <TableCell className="capitalize">{member.role}</TableCell>
                         <TableCell>{renderStatusBadge(member.status)}</TableCell>
+                        <TableCell className="text-right">
+                           {teamInfo.owner !== member.id && (
+                             <Button variant="ghost" size="icon" onClick={() => handleRemove(member.id)} disabled={isPending}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                             </Button>
+                           )}
+                        </TableCell>
                       </TableRow>
                     ))}
                      {teamInfo.invites.map((invite: any) => (
@@ -153,6 +180,7 @@ export default function TeamPage() {
                             </span>
                            </div>
                         </TableCell>
+                         <TableCell className="text-right" />
                       </TableRow>
                     ))}
                   </TableBody>

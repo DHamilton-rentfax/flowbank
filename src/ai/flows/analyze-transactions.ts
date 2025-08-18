@@ -1,3 +1,4 @@
+
 // src/ai/flows/analyze-transactions.ts
 "use server";
 /**
@@ -82,6 +83,18 @@ const analyzeTransactionsFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await analyzeTransactionsPrompt(input);
-    return output!;
+    
+    // If the AI fails to generate a valid output, return a default empty state
+    // This prevents the "Unexpected end of JSON input" error downstream.
+    if (!output) {
+      return {
+        potentialDeductions: [],
+        savingsSuggestions: [],
+        spendingSummary: "Could not generate analysis at this time. Please try again.",
+        disclaimer: "AI analysis failed."
+      };
+    }
+    
+    return output;
   }
 );

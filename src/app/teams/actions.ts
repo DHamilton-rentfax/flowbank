@@ -29,14 +29,14 @@ async function getOrCreateTeam(userId: string) {
     const teamSnap = await teamRef.get();
 
     if (!teamSnap.exists) {
+        const user = await getAdminAuth().getUser(userId);
         await teamRef.set({
-            name: 'My Team',
+            name: `${user.displayName || user.email}'s Team`,
             owner: userId,
             createdAt: firestore.FieldValue.serverTimestamp(),
         });
-         // Add owner as the first member
         await teamRef.collection('members').doc(userId).set({
-            email: (await getAdminAuth().getUser(userId)).email,
+            email: user.email,
             role: 'owner',
             status: 'active',
             joinedAt: firestore.FieldValue.serverTimestamp(),
@@ -60,37 +60,42 @@ export async function inviteTeamMember(email: string) {
   
   const userSnap = await db.collection('users').doc(userId).get();
   const userData = userSnap.data();
-
-  // Determine seat limit: Pro plan base seats + purchased extra seats.
   const proPlanBaseSeats = userData?.plan?.id === 'pro' ? 5 : 1;
   const extraSeats = userData?.addons?.extra_seats || 0;
   const maxSeats = proPlanBaseSeats + extraSeats;
 
   const membersSnap = await teamRef.collection('members').get();
+  const invitesSnap = await teamRef.collection('invites').where('status', '==', 'invited').get();
 
-  if (membersSnap.size >= maxSeats) {
+  if (membersSnap.size + invitesSnap.size >= maxSeats) {
     return { success: false, error: 'Seat limit reached. Please upgrade or add more seats.' };
   }
 
-  // Check if user is already invited or a member
   const existingMemberQuery = await teamRef.collection('members').where('email', '==', email).get();
   if (!existingMemberQuery.empty) {
-    return { success: false, error: 'This user is already a member or has a pending invitation.' };
+    return { success: false, error: 'This user is already a member.' };
+  }
+  const existingInviteQuery = await teamRef.collection('invites').where('email', '==', email).get();
+   if (!existingInviteQuery.empty) {
+    return { success: false, error: 'This user already has a pending invitation.' };
   }
 
-  // Create an invitation document. We'll use the email as a temporary ID.
   const inviteId = Buffer.from(email).toString('base64');
-  await teamRef.collection('invites').doc(inviteId).set({
+  const inviteData = {
     email,
     role: 'member',
     status: 'invited',
     invitedAt: firestore.FieldValue.serverTimestamp(),
     invitedBy: userId,
+  };
+  await teamRef.collection('invites').doc(inviteId).set(inviteData);
+  
+  await teamRef.collection('auditLogs').add({
+      type: 'MEMBER_INVITED',
+      timestamp: firestore.FieldValue.serverTimestamp(),
+      actorId: userId,
+      details: { invitedEmail: email }
   });
-
-  // In a real app, you would send an email with an invite link.
-  // The link would be like: /invite?token={inviteId}
-  console.log(`Invite created for ${email}. Invite ID: ${inviteId}`);
 
   return { success: true, message: `Invitation sent to ${email}.` };
 }
@@ -99,7 +104,8 @@ export async function acceptTeamInvitation(inviteId: string) {
     const userId = await getUserId();
     const db = getAdminDb();
     
-    const inviteRef = db.collection('teams').doc(MOCK_TEAM_ID).collection('invites').doc(inviteId);
+    const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
+    const inviteRef = teamRef.collection('invites').doc(inviteId);
     const inviteSnap = await inviteRef.get();
 
     if (!inviteSnap.exists) {
@@ -112,19 +118,26 @@ export async function acceptTeamInvitation(inviteId: string) {
     if (user.email !== inviteData?.email) {
         return { success: false, error: 'This invitation is for a different email address.' };
     }
+    
+    const memberRef = teamRef.collection('members').doc(userId);
 
-    const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
-
-    // Add user to the members subcollection
-    await teamRef.collection('members').doc(userId).set({
-        email: user.email,
-        role: inviteData?.role || 'member',
-        status: 'active',
-        joinedAt: firestore.FieldValue.serverTimestamp(),
+    await db.runTransaction(async (transaction) => {
+        transaction.set(memberRef, {
+            email: user.email,
+            role: inviteData?.role || 'member',
+            status: 'active',
+            joinedAt: firestore.FieldValue.serverTimestamp(),
+        });
+        transaction.delete(inviteRef);
+        transaction.create(teamRef.collection('auditLogs').doc(), {
+            type: 'MEMBER_JOINED',
+            timestamp: firestore.FieldValue.serverTimestamp(),
+            actorId: userId,
+            details: { joinedEmail: user.email }
+        });
     });
 
-    // Delete the invitation so it can't be used again
-    await inviteRef.delete();
+    await db.collection('users').doc(userId).set({ teamId: MOCK_TEAM_ID }, { merge: true });
 
     return { success: true, message: `Successfully joined the team.` };
 }
@@ -160,4 +173,55 @@ export async function getTeamInfo() {
             total: maxSeats,
         }
     };
+}
+
+export async function removeTeamMember(memberId: string) {
+    const userId = await getUserId();
+    const db = getAdminDb();
+
+    const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
+    const teamSnap = await teamRef.get();
+
+    if (teamSnap.data()?.owner !== userId) {
+        return { success: false, error: 'Only the team owner can remove members.' };
+    }
+    if (memberId === userId) {
+        return { success: false, error: 'The team owner cannot be removed.' };
+    }
+    
+    const memberRef = teamRef.collection('members').doc(memberId);
+    const memberDoc = await memberRef.get();
+    if (!memberDoc.exists) {
+         return { success: false, error: 'Member not found.' };
+    }
+    
+    await memberRef.delete();
+    
+    await teamRef.collection('auditLogs').add({
+        type: 'MEMBER_REMOVED',
+        timestamp: firestore.FieldValue.serverTimestamp(),
+        actorId: userId,
+        details: { removedEmail: memberDoc.data()?.email, removedId: memberId }
+    });
+
+    return { success: true, message: 'Member removed successfully.' };
+}
+
+export async function getTeamAuditLogs() {
+    const userId = await getUserId();
+    const db = getAdminDb();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const teamId = userDoc.data()?.teamId || MOCK_TEAM_ID; // Fallback to mock for owner
+
+    if (!teamId) {
+        return { logs: [] };
+    }
+
+    const logsSnap = await db.collection('teams').doc(teamId).collection('auditLogs')
+        .orderBy('timestamp', 'desc')
+        .limit(50)
+        .get();
+
+    const logs = logsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return { logs };
 }
