@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { useApp } from "@/contexts/app-provider";
 import PlanGate from "@/components/PlanGate";
@@ -27,7 +27,7 @@ function Stat({ title, value }: { title: string, value: string }) {
 
 function AIFinancialAdvisor() {
   const { toast } = useToast();
-  const { transactions, aiFinancialAnalysis } = useApp();
+  const { transactions, aiFinancialAnalysis, userPlan } = useApp();
   const [isAnalysisLoading, startTransition] = useTransition();
 
   async function handleFinancialAnalysis() {
@@ -51,6 +51,7 @@ function AIFinancialAdvisor() {
   }
 
   const lastAnalyzed = aiFinancialAnalysis?.analyzedAt ? format(parseISO(aiFinancialAnalysis.analyzedAt), "PPP p") : "Never";
+  const planName = userPlan?.id || 'free';
 
   return (
      <Card>
@@ -86,12 +87,19 @@ function AIFinancialAdvisor() {
                       </AccordionTrigger>
                       <AccordionContent>
                         <ul className="space-y-2 pt-2">
-                          {aiFinancialAnalysis.potentialDeductions.map((item, index) => (
+                          {aiFinancialAnalysis.potentialDeductions.slice(0, planName === 'free' ? 3 : undefined).map((item, index) => (
                             <li key={index} className="p-3 bg-secondary rounded-lg">
                               <p className="font-semibold">{item.transactionName} - <span className="font-mono">${item.amount.toFixed(2)}</span></p>
                               <p className="text-sm text-muted-foreground">{item.reason}</p>
                             </li>
                           ))}
+                           {planName === 'free' && aiFinancialAnalysis.potentialDeductions.length > 3 && (
+                            <li className="text-center p-4 text-sm">
+                                <Button variant="secondary" asChild>
+                                    <Link href="/pricing">Upgrade to see all {aiFinancialAnalysis.potentialDeductions.length} potential deductions</Link>
+                                </Button>
+                            </li>
+                          )}
                         </ul>
                       </AccordionContent>
                     </AccordionItem>
@@ -104,12 +112,19 @@ function AIFinancialAdvisor() {
                       </AccordionTrigger>
                       <AccordionContent>
                           <ul className="space-y-2 pt-2">
-                          {aiFinancialAnalysis.savingsSuggestions.map((item, index) => (
-                            <li key={index} className="p-3 bg-secondary rounded-lg">
-                              <p className="font-semibold">{item.title}</p>
-                              <p className="text-sm text-muted-foreground">{item.suggestion}</p>
-                            </li>
-                          ))}
+                            {aiFinancialAnalysis.savingsSuggestions.slice(0, planName === 'free' ? 2 : undefined).map((item, index) => (
+                                <li key={index} className="p-3 bg-secondary rounded-lg">
+                                <p className="font-semibold">{item.title}</p>
+                                <p className="text-sm text-muted-foreground">{item.suggestion}</p>
+                                </li>
+                            ))}
+                            {planName === 'free' && aiFinancialAnalysis.savingsSuggestions.length > 2 && (
+                                <li className="text-center p-4 text-sm">
+                                    <Button variant="secondary" asChild>
+                                        <Link href="/pricing">Upgrade for more savings insights</Link>
+                                    </Button>
+                                </li>
+                            )}
                         </ul>
                       </AccordionContent>
                     </AccordionItem>
@@ -126,20 +141,18 @@ function AIFinancialAdvisor() {
 export default function Dashboard() {
   const { toast } = useToast();
   const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion, transactions, userPlan, features, loadingData } = useApp();
-  const { idToken } = useAuth();
+  const { idToken, user, loading: authLoading } = useAuth();
   const [isPortalLoading, setIsPortalLoading] = useState(false);
 
-  React.useEffect(()=>{ 
+  useEffect(()=>{ 
     async function fetchData() {
-        if (idToken) {
-          // No need to sync here, webhooks will handle it
-          // await syncAllTransactions();
+        if (user && !loadingData) {
           const snap = await getAnalyticsSnapshot(null);
           setAnalyticsSnapshot(snap);
         }
     }
     fetchData();
-  },[idToken, setAnalyticsSnapshot]);
+  },[user, loadingData, setAnalyticsSnapshot]);
 
   async function getAiAllocation() {
     try {
@@ -172,10 +185,12 @@ export default function Dashboard() {
   
   const hasPlaidLinked = transactions.length > 0;
   const hasAIFeature = features?.aiTaxCoach === true;
+  const planName = userPlan?.id || 'free';
 
-  if (loadingData) {
-    return <div className="text-center p-8">Loading dashboard...</div>
-  }
+  // This check is now handled by the DashboardLayout
+  // if (authLoading || loadingData) {
+  //   return <div className="text-center p-8">Loading dashboard...</div>
+  // }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
@@ -208,26 +223,26 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {hasPlaidLinked && !hasAIFeature && (
+      {hasPlaidLinked && !hasAIFeature && planName === 'free' && (
         <Card className="bg-gradient-to-r from-primary/10 to-accent/10">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Sparkles className="h-8 w-8 text-primary" />
               <div>
-                <CardTitle>Unlock AI Financial Insights</CardTitle>
-                <CardDescription>Try our AI Financial Advisor for personalized deduction detection and savings advice.</CardDescription>
+                <CardTitle>Unlock Full AI Financial Insights</CardTitle>
+                <CardDescription>You are seeing a limited preview. Upgrade to unlock the full AI Financial Advisor for complete deduction detection and savings advice.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
               <Button asChild>
-                <Link href="/pricing">Upgrade to Unlock</Link>
+                <Link href="/pricing">View Add-ons</Link>
               </Button>
           </CardContent>
         </Card>
       )}
 
-      {hasPlaidLinked && hasAIFeature && (
+      {hasPlaidLinked && (planName !== 'free' || hasAIFeature) && (
          <PlanGate feature="aiTaxCoach">
             <AIFinancialAdvisor />
          </PlanGate>

@@ -21,26 +21,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // This function handles creating or clearing the server-side session cookie.
 const manageSession = async (idToken: string | null) => {
-    if (idToken) {
-        // User logged in, create the session cookie.
-        try {
-            await fetch('/api/auth/session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
-            });
-        } catch (error) {
-            console.error("Failed to create session cookie:", error);
-            // Handle error appropriately, e.g., show a toast to the user
-        }
-    } else {
-        // User logged out, clear the session cookie.
-        try {
-            await fetch('/api/auth/session', { method: 'DELETE' });
-        } catch (error) {
-            console.error("Failed to clear session cookie:", error);
-        }
-    }
+    const url = '/api/auth/session';
+    const method = idToken ? 'POST' : 'DELETE';
+    const body = idToken ? JSON.stringify({ idToken }) : undefined;
+    
+    // Fire-and-forget the request.
+    fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body,
+    }).catch(error => {
+        // Log errors but don't block the user.
+        console.error(`Failed to ${idToken ? 'create' : 'clear'} session:`, error);
+    });
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -52,15 +45,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
-      setLoading(true); // Set loading while we handle the session
+      setLoading(true); // Start loading state
       if (user) {
         const token = await user.getIdToken();
         setIdToken(token);
-        await manageSession(token);
+        // Do not await. Let this run in the background.
+        manageSession(token);
       } else {
         setIdToken(null);
-        await manageSession(null);
+        // Do not await.
+        manageSession(null);
       }
+      // End loading state as soon as client state is known
       setLoading(false);
     });
     return () => unsubscribe();
@@ -68,24 +64,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const logout = async () => {
     await signOut(auth);
-    // onAuthStateChanged will handle clearing the session
+    // onAuthStateChanged will handle clearing the session and state
     router.push("/login");
   };
 
   const loginWithEmail = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
     // onAuthStateChanged will trigger and handle the redirect/session creation
-    const nextUrl = new URLSearchParams(window.location.search).get('next') || '/dashboard';
-    router.push(nextUrl);
   }
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     await signInWithPopup(auth, provider);
-    // onAuthStateChanged will trigger and handle the redirect/session creation
-    const nextUrl = new URLSearchParams(window.location.search).get('next') || '/dashboard';
-    router.push(nextUrl);
   }
 
 
