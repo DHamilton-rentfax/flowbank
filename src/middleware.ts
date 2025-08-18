@@ -51,7 +51,14 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    return NextResponse.next();
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-decoded-token', JSON.stringify(decodedToken));
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
 
   } catch (error) {
     // Session cookie is invalid or expired.
@@ -75,5 +82,6 @@ export const config = {
     '/onboarding/:path*',
     '/invite/:path*',
     '/admin/:path*',
-  ] 
+  ],
+  runtime: 'nodejs', // Force Node.js runtime to avoid Edge Runtime conflicts
 };
