@@ -4,6 +4,8 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+
 
 const nextConfig = {
   /* config options here */
@@ -25,6 +27,15 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+  },
+   webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      process: require.resolve('process/browser'),
+      buffer: require.resolve('buffer/'),
+    };
+    config.plugins.push(new NodePolyfillPlugin());
+    return config;
   },
 };
 

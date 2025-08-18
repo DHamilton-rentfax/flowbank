@@ -63,7 +63,7 @@
     "react-hook-form": "latest",
     "react-markdown": "latest",
     "react-plaid-link": "latest",
-    "react-quill": "^2.0.0",
+    "react-quill": "latest",
     "react-window": "^1.8.10",
     "recharts": "latest",
     "stripe": "latest",
@@ -80,8 +80,13 @@
     "@types/react-google-recaptcha": "latest",
     "@types/react-window": "^1.8.8",
     "cross-env": "latest",
+    "node-polyfill-webpack-plugin": "latest",
     "postcss": "latest",
     "tailwindcss": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "webpack": "latest"
+  },
+  "overrides": {
+    "caniuse-lite": "latest"
   }
 }
