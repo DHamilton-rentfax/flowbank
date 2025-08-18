@@ -116,7 +116,7 @@ function AIFinancialAdvisor() {
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion, transactions, userPlan } = useApp();
+  const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion, transactions, userPlan, features } = useApp();
   const { idToken } = useAuth();
   const [isPortalLoading, setIsPortalLoading] = useState(false);
 
@@ -161,7 +161,7 @@ export default function Dashboard() {
   }
   
   const hasPlaidLinked = transactions.length > 0;
-  const planId = userPlan?.id || 'free';
+  const hasAIFeature = features?.aiTaxCoach === true;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
@@ -194,7 +194,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {hasPlaidLinked && planId === 'free' && (
+      {hasPlaidLinked && !hasAIFeature && (
         <Card className="bg-gradient-to-r from-primary/10 to-accent/10">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -213,13 +213,12 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {hasPlaidLinked && planId !== 'free' && (
+      {hasPlaidLinked && hasAIFeature && (
          <PlanGate feature="aiTaxCoach">
             <AIFinancialAdvisor />
          </PlanGate>
       )}
       
-
        <PlanGate required="pro">
         <section className="border rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2">

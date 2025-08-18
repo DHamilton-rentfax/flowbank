@@ -65,19 +65,6 @@
       ]
     },
     {
-      "slug": "addon_analytics",
-      "name": "Analytics Pack",
-      "description": "Advanced dashboards and reporting.",
-      "prices": [
-        {
-          "lookup_key": "addon_analytics_month_usd",
-          "recurring": { "interval": "month" },
-          "unit_amount": 999,
-          "type": "addon"
-        }
-      ]
-    },
-    {
       "slug": "addon_ai_optimization",
       "name": "AI Optimization",
       "description": "Unlock full access to FlowBank's AI Financial Advisor. Get personalized tax coaching, spending insights, subscription analysis, and savings opportunities—powered by the IRS tax code and your real transactions.",
@@ -105,6 +92,12 @@
           "lookup_key": "addon_support_month_usd",
           "recurring": { "interval": "month" },
           "unit_amount": 1900,
+          "type": "addon"
+        },
+        {
+          "lookup_key": "addon_support_year_usd",
+          "recurring": { "interval": "year" },
+          "unit_amount": 19000,
           "type": "addon"
         }
       ]

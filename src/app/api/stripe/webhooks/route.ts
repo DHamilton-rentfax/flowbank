@@ -39,10 +39,11 @@ function parseAddonsFromMetadata(items: Stripe.SubscriptionItem[]) {
   for (const item of items) {
     const lookupKey = item.price.lookup_key;
     if (!lookupKey) continue;
+    
     if (lookupKey.startsWith('addon_analytics')) addons.advanced_analytics = true;
     if (lookupKey.startsWith('addon_support')) addons.priority_support = true;
-    if (lookupKey.startsWith('addon_ai_optimization') || lookupKey.startsWith('addon_ai_upgrade')) addons.ai_optimization = true;
-    if (lookupKey.startsWith('addon_seat') || lookupKey.startsWith('addon_extra_seats') || lookupKey.startsWith('addon_seat_month_usd')) addons.extra_seats = item.quantity || 0;
+    if (lookupKey.startsWith('addon_ai_optimization')) addons.ai_optimization = true;
+    if (lookupKey.startsWith('addon_seat')) addons.extra_seats = item.quantity || 0;
   }
   return addons;
 }

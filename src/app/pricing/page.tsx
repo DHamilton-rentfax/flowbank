@@ -80,6 +80,26 @@ const plans = {
     },
   ],
   annually: [
+     {
+      title: 'Free',
+      lookupKey: 'free',
+      price: '$0',
+      period: '/yr',
+      description: 'For starters trying FlowBank.',
+      features: {
+        'Connect Bank Account': true,
+        'Create and Customize Splits': true,
+        'Automatic Allocations': false,
+        'AI Suggestions': false,
+        'Priority Support': false,
+        'Weekly Insights': false,
+        'Dashboard Analytics': false,
+        'Multi-Bank Support': false,
+        'Audit Logging': false,
+        'Add-ons Available': false,
+      },
+      action: 'signup',
+    },
     {
       title: 'Starter',
       lookupKey: 'starter_year_usd',
@@ -137,38 +157,14 @@ const addOns = [
         }
     },
     {
-        name: 'Advanced Analytics Pack',
-        description: 'Unlock deeper reports, allocation trends, and forecasting.',
-        monthly: {
-          price: '$9.99',
-          lookupKey: 'addon_analytics_month_usd',
-        },
-        annually: {
-          price: '$99.00',
-          lookupKey: 'addon_analytics_year_usd'
-        }
-    },
-    {
-        name: 'Extra Team Seats',
-        description: 'Add 1 additional user to your dashboard team.',
-        monthly: {
-          price: '$5.00',
-          lookupKey: 'addon_seat_month_usd',
-        },
-         annually: {
-          price: '$50.00',
-          lookupKey: 'addon_seat_year_usd'
-        }
-    },
-    {
         name: 'Priority Support',
         description: 'Fast-track access to our support team with guaranteed 24h response.',
         monthly: {
-          price: '$19.99',
+          price: '$19.00',
           lookupKey: 'addon_support_month_usd',
         },
         annually: {
-           price: '$199.00',
+           price: '$190.00',
            lookupKey: 'addon_support_year_usd'
         }
     }
@@ -242,7 +238,7 @@ export default function Pricing() {
                 checked={billingCycle === 'annually'}
                 onCheckedChange={(checked) => setBillingCycle(checked ? 'annually' : 'monthly')}
               />
-              <Label htmlFor="billing-cycle" className={cn(billingCycle === 'annually' && 'text-primary')}>Annually (2 months free)</Label>
+              <Label htmlFor="billing-cycle" className={cn(billingCycle === 'annually' && 'text-primary')}>Annually (Save ~16%)</Label>
             </div>
 
             {/* Pricing Table */}
@@ -261,7 +257,7 @@ export default function Pricing() {
                   {allFeatures.map(feature => (
                     <tr key={feature} className="odd:bg-white even:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{feature}</td>
-                       {(billingCycle === 'annually' ? [{}, ...tiers] : tiers).map((p, i) => (
+                       {tiers.map((p, i) => (
                         <td key={p.title || i} className="px-6 py-4 whitespace-nowrap text-sm text-center">
                           {p.title && renderCheck(p.features[feature as keyof typeof p.features])}
                         </td>
@@ -273,7 +269,7 @@ export default function Pricing() {
                   ))}
                   <tr className="bg-gray-50">
                     <th scope="row" className="px-6 py-5 text-left text-sm font-medium"></th>
-                    {(billingCycle === 'annually' ? [{}, ...tiers] : tiers).map((p, i) => (
+                    {tiers.map((p, i) => (
                       <td key={p.title || i} className="px-6 py-5 text-center">
                         {p.title ? (
                           <>
