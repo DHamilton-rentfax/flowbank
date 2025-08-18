@@ -50,11 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const token = await user.getIdToken();
         setIdToken(token);
         // Do not await. Let this run in the background.
-        manageSession(token);
+        manageSession(token).catch(console.error);
       } else {
         setIdToken(null);
         // Do not await.
-        manageSession(null);
+        manageSession(null).catch(console.error);
       }
       // End loading state as soon as client state is known
       setLoading(false);
