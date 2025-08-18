@@ -79,8 +79,8 @@
     },
     {
       "slug": "addon_ai_optimization",
-      "name": "AI Optimization Pack",
-      "description": "Unlock the AI Financial Advisor for tax and savings insights.",
+      "name": "AI Optimization",
+      "description": "Unlock full access to FlowBank's AI Financial Advisor. Get personalized tax coaching, spending insights, subscription analysis, and savings opportunities—powered by the IRS tax code and your real transactions.",
       "prices": [
         {
           "lookup_key": "addon_ai_optimization_month_usd",
@@ -126,5 +126,3 @@
     }
   ]
 }
-
-    

@@ -125,8 +125,8 @@ const plans = {
 
 const addOns = [
     {
-        name: 'AI Optimization Pack',
-        description: 'Get personalized financial breakdowns, IRS deduction detection, and optimization advice with our AI Coach.',
+        name: 'AI Optimization',
+        description: "Unlock full access to FlowBank's AI Financial Advisor. Get personalized tax coaching, spending insights, subscription analysis, and savings opportunities—powered by the IRS tax code and your real transactions.",
         monthly: {
             price: '$14.00',
             lookupKey: 'addon_ai_optimization_month_usd',
@@ -145,7 +145,7 @@ const addOns = [
         },
         annually: {
           price: '$99.00',
-          lookupKey: 'addon_analytics_year_usd' // Assumes this key exists
+          lookupKey: 'addon_analytics_year_usd'
         }
     },
     {
@@ -157,7 +157,7 @@ const addOns = [
         },
          annually: {
           price: '$50.00',
-          lookupKey: 'addon_seat_year_usd' // Assumes this key exists
+          lookupKey: 'addon_seat_year_usd'
         }
     },
     {
@@ -169,7 +169,7 @@ const addOns = [
         },
         annually: {
            price: '$199.00',
-           lookupKey: 'addon_support_year_usd' // Assumes this key exists
+           lookupKey: 'addon_support_year_usd'
         }
     }
 ];
@@ -348,5 +348,3 @@ export default function Pricing() {
     </div>
   );
 }
-
-    
