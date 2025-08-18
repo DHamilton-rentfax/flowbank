@@ -11,8 +11,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Wallet, Lightbulb } from "lucide-react";
+import { Wallet, Lightbulb, Sparkles } from "lucide-react";
 import { AnalyzeTransactionsOutput } from "@/ai/flows/analyze-transactions";
+import Link from "next/link";
 
 
 function Stat({ title, value }: { title: string, value: string }) {
@@ -24,13 +25,100 @@ function Stat({ title, value }: { title: string, value: string }) {
   );
 }
 
-export default function Dashboard() {
+function AIFinancialAdvisor() {
   const { toast } = useToast();
-  const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion, transactions } = useApp();
-  const { idToken, user } = useAuth();
-  const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const { transactions } = useApp();
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [financialAnalysis, setFinancialAnalysis] = useState<AnalyzeTransactionsOutput | null>(null);
+
+  async function handleFinancialAnalysis() {
+    if (!transactions || transactions.length === 0) {
+      toast({ title: "No Transactions", description: "Sync your bank account to analyze transactions.", variant: "destructive" });
+      return;
+    }
+    setIsAnalysisLoading(true);
+    try {
+      const analysisResult = await getAIFinancialAnalysis({
+        businessType: "Software Freelancer", // This could be dynamic
+        transactions: transactions.map(t => ({ name: t.name, amount: t.amount, date: t.date }))
+      });
+      setFinancialAnalysis(analysisResult);
+      toast({ title: "Analysis Complete", description: "Your financial insights are ready." });
+    } catch (e) {
+      const error = e as Error;
+      toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsAnalysisLoading(false);
+    }
+  }
+
+  return (
+     <Card>
+        <CardHeader>
+            <CardTitle>AI Financial Advisor</CardTitle>
+            <CardDescription>Analyze your recent transactions to uncover savings, tax deductions, and spending patterns.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Button onClick={handleFinancialAnalysis} disabled={isAnalysisLoading}>
+                {isAnalysisLoading ? "Analyzing..." : "Analyze My Finances"}
+            </Button>
+            
+            {financialAnalysis && (
+                <div className="mt-6 space-y-4">
+                  <p className="text-sm text-muted-foreground">{financialAnalysis.spendingSummary}</p>
+                  
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="deductions">
+                      <AccordionTrigger>
+                        <div className="flex items-center gap-2">
+                          <Wallet className="h-5 w-5 text-primary" />
+                          Potential Tax Deductions
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ul className="space-y-2 pt-2">
+                          {financialAnalysis.potentialDeductions.map((item, index) => (
+                            <li key={index} className="p-3 bg-secondary rounded-lg">
+                              <p className="font-semibold">{item.transactionName} - <span className="font-mono">${item.amount.toFixed(2)}</span></p>
+                              <p className="text-sm text-muted-foreground">{item.reason}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="savings">
+                       <AccordionTrigger>
+                        <div className="flex items-center gap-2">
+                          <Lightbulb className="h-5 w-5 text-amber-500" />
+                          Savings Suggestions
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                          <ul className="space-y-2 pt-2">
+                          {financialAnalysis.savingsSuggestions.map((item, index) => (
+                            <li key={index} className="p-3 bg-secondary rounded-lg">
+                              <p className="font-semibold">{item.title}</p>
+                              <p className="text-sm text-muted-foreground">{item.suggestion}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                  
+                  <p className="text-xs text-center text-muted-foreground italic pt-4">{financialAnalysis.disclaimer}</p>
+                </div>
+            )}
+        </CardContent>
+    </Card>>
+  )
+}
+
+export default function Dashboard() {
+  const { toast } = useToast();
+  const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion, transactions, userPlan } = useApp();
+  const { idToken } = useAuth();
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
 
   React.useEffect(()=>{ 
     async function fetchData() {
@@ -55,27 +143,6 @@ export default function Dashboard() {
     }
   }
 
-  async function handleFinancialAnalysis() {
-    if (!transactions || transactions.length === 0) {
-      toast({ title: "No Transactions", description: "Sync your bank account to analyze transactions.", variant: "destructive" });
-      return;
-    }
-    setIsAnalysisLoading(true);
-    try {
-      const analysisResult = await getAIFinancialAnalysis({
-        businessType: "Software Freelancer", // This could be dynamic
-        transactions: transactions.map(t => ({ name: t.name, amount: t.amount, date: t.date }))
-      });
-      setFinancialAnalysis(analysisResult);
-      toast({ title: "Analysis Complete", description: "Your financial insights are ready." });
-    } catch (e) {
-      const error = e as Error;
-      toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
-    } finally {
-      setIsAnalysisLoading(false);
-    }
-  }
-
   async function openPortal() {
     setIsPortalLoading(true);
     try {
@@ -92,6 +159,9 @@ export default function Dashboard() {
         setIsPortalLoading(false);
     }
   }
+  
+  const hasPlaidLinked = transactions.length > 0;
+  const planId = userPlan?.id || 'free';
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
@@ -124,66 +194,31 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <PlanGate feature="aiTaxCoach">
-        <Card>
-            <CardHeader>
-                <CardTitle>AI Financial Advisor</CardTitle>
-                <CardDescription>Analyze your recent transactions to uncover savings, tax deductions, and spending patterns.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button onClick={handleFinancialAnalysis} disabled={isAnalysisLoading}>
-                    {isAnalysisLoading ? "Analyzing..." : "Analyze My Finances"}
-                </Button>
-                
-                {financialAnalysis && (
-                    <div className="mt-6 space-y-4">
-                      <p className="text-sm text-muted-foreground">{financialAnalysis.spendingSummary}</p>
-                      
-                      <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="deductions">
-                          <AccordionTrigger>
-                            <div className="flex items-center gap-2">
-                              <Wallet className="h-5 w-5 text-primary" />
-                              Potential Tax Deductions
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <ul className="space-y-2 pt-2">
-                              {financialAnalysis.potentialDeductions.map((item, index) => (
-                                <li key={index} className="p-3 bg-secondary rounded-lg">
-                                  <p className="font-semibold">{item.transactionName} - <span className="font-mono">${item.amount.toFixed(2)}</span></p>
-                                  <p className="text-sm text-muted-foreground">{item.reason}</p>
-                                </li>
-                              ))}
-                            </ul>
-                          </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="savings">
-                           <AccordionTrigger>
-                            <div className="flex items-center gap-2">
-                              <Lightbulb className="h-5 w-5 text-amber-500" />
-                              Savings Suggestions
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                              <ul className="space-y-2 pt-2">
-                              {financialAnalysis.savingsSuggestions.map((item, index) => (
-                                <li key={index} className="p-3 bg-secondary rounded-lg">
-                                  <p className="font-semibold">{item.title}</p>
-                                  <p className="text-sm text-muted-foreground">{item.suggestion}</p>
-                                </li>
-                              ))}
-                            </ul>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                      
-                      <p className="text-xs text-center text-muted-foreground italic pt-4">{financialAnalysis.disclaimer}</p>
-                    </div>
-                )}
-            </CardContent>
+      {hasPlaidLinked && planId === 'free' && (
+        <Card className="bg-gradient-to-r from-primary/10 to-accent/10">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-8 w-8 text-primary" />
+              <div>
+                <CardTitle>Unlock AI Financial Insights</CardTitle>
+                <CardDescription>Try our AI Financial Advisor for personalized deduction detection and savings advice.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+              <Button asChild>
+                <Link href="/pricing">Upgrade to Unlock</Link>
+              </Button>
+          </CardContent>
         </Card>
-      </PlanGate>
+      )}
+
+      {hasPlaidLinked && planId !== 'free' && (
+         <PlanGate feature="aiTaxCoach">
+            <AIFinancialAdvisor />
+         </PlanGate>
+      )}
+      
 
        <PlanGate required="pro">
         <section className="border rounded-2xl p-4">

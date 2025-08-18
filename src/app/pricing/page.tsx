@@ -126,9 +126,9 @@ const plans = {
 const addOns = [
     {
         name: 'AI Optimization Pack',
-        price: '$15.00',
+        price: '$14.00',
         lookupKey: 'addon_ai_optimization_month_usd',
-        description: 'Unlock tax deductions, savings ideas, and financial summaries.'
+        description: 'Get personalized financial breakdowns, IRS deduction detection, and optimization advice with our AI Coach.'
     },
     {
         name: 'Advanced Analytics Pack',

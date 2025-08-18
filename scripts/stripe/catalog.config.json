@@ -72,7 +72,7 @@
         {
           "lookup_key": "addon_analytics_month_usd",
           "recurring": { "interval": "month" },
-          "unit_amount": 900,
+          "unit_amount": 999,
           "type": "addon"
         }
       ]
@@ -85,7 +85,7 @@
         {
           "lookup_key": "addon_ai_optimization_month_usd",
           "recurring": { "interval": "month" },
-          "unit_amount": 1500,
+          "unit_amount": 1400,
           "type": "addon"
         }
       ]
