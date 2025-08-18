@@ -1,4 +1,3 @@
-
 /** @type {import('next').NextConfig} */
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -31,7 +30,6 @@ const nextConfig = {
    webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
-      process: require.resolve('process/browser'),
       buffer: require.resolve('buffer/'),
     };
     config.plugins.push(new NodePolyfillPlugin());
