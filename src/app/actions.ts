@@ -12,7 +12,7 @@ import { getAdminDb, getAdminAuth } from "@/firebase/server";
 import { plans, addOns } from "@/lib/plans";
 import type { Account, UserPlan, UserData, PaymentLink, AllocationRule, Transaction } from "@/lib/types";
 import { Resend } from 'resend';
-import { doc, setDoc, getDocs, collection } from "firebase/firestore";
+import { doc, setDoc, getDoc, getDocs, collection, addDoc, FieldValue } from "firebase/firestore";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -698,4 +698,45 @@ export async function sendCampaignDigest() {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }
+}
+
+export async function getCronConfig() {
+    const userId = await getUserId();
+    const auth = getAdminAuth();
+    const db = getAdminDb();
+
+    // Verify admin privileges
+    const currentUserClaims = (await auth.getUser(userId)).customClaims;
+    if (currentUserClaims?.role !== 'admin') {
+        throw new Error("You do not have permission to access this action.");
+    }
+    
+    const cronRef = doc(db, "config", "cron");
+    const snap = await getDoc(cronRef);
+    const cronValue = snap.exists() ? snap.data()?.campaignDigest : "0 9 * * *";
+    return { cron: cronValue };
+}
+
+export async function saveCronConfig(cron: string) {
+    const userId = await getUserId();
+    const auth = getAdminAuth();
+    const db = getAdminDb();
+
+    // Verify admin privileges
+    const currentUserClaims = (await auth.getUser(userId)).customClaims;
+    if (currentUserClaims?.role !== 'admin') {
+        throw new Error("You do not have permission to access this action.");
+    }
+
+    const cronRef = doc(db, "config", "cron");
+    await setDoc(cronRef, { campaignDigest: cron }, { merge: true });
+
+    await addDoc(collection(db, "logs"), {
+        type: "cron_config_updated",
+        actor: currentUserClaims.email,
+        message: `Updated campaign digest cron to: ${cron}`,
+        timestamp: new Date().toISOString()
+    });
+    
+    return { success: true, message: "Cron configuration saved." };
 }

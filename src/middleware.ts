@@ -23,6 +23,7 @@ const ADMIN_ROUTES = [
     '/admin/enterprise-onboard',
     '/admin/letters',
     '/admin/ai-campaign',
+    '/admin/cron-config',
 ];
 
 export async function middleware(req: NextRequest) {

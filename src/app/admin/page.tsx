@@ -91,6 +91,11 @@ export default function AdminPage() {
                             title="AI Upsell Campaign"
                             description="Target users for AI feature adoption."
                         />
+                        <AdminNavLink
+                            href="/admin/cron-config"
+                            title="Cron Job Settings"
+                            description="Configure scheduled tasks like daily digests."
+                        />
                     </div>
                     
                     <Card>
