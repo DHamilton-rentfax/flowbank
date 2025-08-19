@@ -5,6 +5,7 @@ import { getAdminDb } from '@/firebase/server';
 export async function GET(req: NextRequest) {
   try {
     const db = getAdminDb();
+    // Note: The collection is 'teamAuditLogs', not 'audit_logs' as per the existing actions.
     const snapshot = await db.collection('teamAuditLogs').orderBy('timestamp', 'desc').limit(100).get();
     
     const logs = snapshot.docs.map(doc => {
@@ -18,10 +19,10 @@ export async function GET(req: NextRequest) {
         };
     });
 
-    return NextResponse.json({ ok: true, logs });
+    return NextResponse.json({ logs });
   } catch (error) {
     console.error('Audit Log API Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch logs';
-    return NextResponse.json({ ok: false, error: errorMessage }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
