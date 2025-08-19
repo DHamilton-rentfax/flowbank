@@ -1,4 +1,3 @@
-
 {
   "name": "flow-bank",
   "version": "0.1.0",
@@ -59,7 +58,7 @@
     "otpauth": "latest",
     "pdf-lib": "^1.17.1",
     "plaid": "latest",
-    "process": "^0.11.10",
+    "process": "latest",
     "raw-body": "latest",
     "react": "latest",
     "react-day-picker": "latest",
