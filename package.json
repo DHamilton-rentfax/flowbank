@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -55,6 +55,7 @@
     "next": "latest",
     "node-fetch": "^3.3.2",
     "otpauth": "latest",
+    "pdf-lib": "^1.17.1",
     "plaid": "latest",
     "raw-body": "latest",
     "react": "latest",
