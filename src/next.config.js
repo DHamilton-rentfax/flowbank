@@ -34,7 +34,10 @@ const nextConfig = {
     };
     
     if (!isServer) {
-        config.resolve.fallback.process = require.resolve('process/browser');
+        config.resolve.fallback = {
+            ...config.resolve.fallback,
+            process: require.resolve('process/browser')
+        }
     }
     config.plugins.push(new NodePolyfillPlugin());
 
