@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Signup() {
   const { signUpWithEmail, user, loading: authLoading } = useAuth();
@@ -24,6 +25,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [businessType, setBusinessType] = useState("");
+  const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,9 +40,15 @@ export default function Signup() {
         toast({ title: "Missing Field", description: "Please select a business type.", variant: "destructive" });
         return;
     }
+    if (!agree) {
+      toast({ title: "Agreement Required", description: "You must agree to the Terms of Service and Privacy Policy.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
     try {
         await signUpWithEmail(email, password, businessType);
+        toast({ title: "Account created!", description: "Welcome to FlowBank. Let's get you set up." });
         // The useEffect will handle the redirect after state update
     } catch(e) {
         const error = e as Error;
@@ -97,8 +105,8 @@ export default function Signup() {
                     </div>
                      <div className="grid gap-2">
                         <Label htmlFor="businessType">I am a...</Label>
-                        <Select value={businessType} onValueChange={setBusinessType} required>
-                            <SelectTrigger id="businessType" disabled={loading}>
+                        <Select value={businessType} onValueChange={setBusinessType} required disabled={loading}>
+                            <SelectTrigger id="businessType">
                                 <SelectValue placeholder="Select your business type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -110,6 +118,17 @@ export default function Signup() {
                             </SelectContent>
                         </Select>
                     </div>
+
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="terms" checked={agree} onCheckedChange={(checked) => setAgree(Boolean(checked))} />
+                        <label
+                            htmlFor="terms"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                            I agree to the <Link href="/terms" className="underline">Terms</Link> and <Link href="/privacy" className="underline">Privacy Policy</Link>.
+                        </label>
+                    </div>
+
                     <Button type="submit" disabled={loading} className="w-full">
                         {loading ? "Creating Account..." : "Create Account"}
                     </Button>
