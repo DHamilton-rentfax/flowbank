@@ -58,13 +58,9 @@ export default function TeamAuditLogPage() {
         const loadLogs = async () => {
             setLoading(true);
             try {
+                // This now calls the client-safe fetch function
                 const { logs: fetchedLogs } = await getTeamAuditLogs();
-                // Firestore timestamps need to be converted to Date objects
-                const formattedLogs = fetchedLogs.map((log: any) => ({
-                    ...log,
-                    timestamp: log.timestamp ? new Date(log.timestamp._seconds * 1000) : new Date()
-                }));
-                setLogs(formattedLogs as Log[]);
+                setLogs(fetchedLogs as Log[]);
             } catch (error) {
                 const err = error as Error;
                 toast({ title: 'Error', description: `Could not fetch audit logs: ${err.message}`, variant: 'destructive' });
@@ -152,7 +148,7 @@ export default function TeamAuditLogPage() {
                                                 <TableCell>{getLogSummary(log)}</TableCell>
                                                 <TableCell className="font-mono text-xs">{log.actorId}</TableCell>
                                                 <TableCell className="text-right text-muted-foreground">
-                                                    {log.timestamp ? format(log.timestamp, 'PPP p') : '—'}
+                                                    {log.timestamp ? format(new Date(log.timestamp), 'PPP p') : '—'}
                                                 </TableCell>
                                             </TableRow>
                                         ))}

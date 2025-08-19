@@ -20,6 +20,10 @@ function makeApp(): App {
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     }
 
+    if (!serviceAccountCert.privateKey) {
+        throw new Error("FIREBASE_PRIVATE_KEY is not set. Ensure your environment variables are configured correctly.");
+    }
+
     return initializeApp({
         credential: cert(serviceAccountCert),
     });

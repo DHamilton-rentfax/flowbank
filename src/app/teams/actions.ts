@@ -260,9 +260,12 @@ export async function updateTeamMemberRole(memberId: string, newRole: string) {
     return { success: true, message: `Updated ${memberEmail}'s role to ${newRole}.` };
 }
 
-// This function now safely calls the API route from the client
+// This function is now client-safe and calls the API route.
 export async function getTeamAuditLogs() {
   const res = await fetch('/api/team/audit-logs', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch logs');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred' }));
+    throw new Error(errorData.error || 'Failed to fetch logs');
+  }
   return res.json();
 }
