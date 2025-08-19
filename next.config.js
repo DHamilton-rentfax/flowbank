@@ -28,10 +28,13 @@ const nextConfig = {
     ],
   },
    webpack: (config, { isServer }) => {
-    // Required for Browser based modules.
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "node:process": "process/browser",
+    };
     if (!isServer) {
       config.resolve.fallback = {
-        ...config.resolve.fallback,
+        ...(config.resolve.fallback || {}),
         "process": require.resolve("process/browser"),
         "buffer": require.resolve("buffer/"),
       };
