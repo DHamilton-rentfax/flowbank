@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { getAiCampaignTargets, sendAiTrialInvite, exportCampaignData } from '@/app/actions';
+import { getAiCampaignTargets, exportCampaignData } from '@/app/actions';
+import { sendAiTrialInvite } from '../actions';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';

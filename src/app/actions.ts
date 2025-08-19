@@ -13,7 +13,6 @@ import { plans, addOns } from "@/lib/plans";
 import type { Account, UserPlan, UserData, PaymentLink, AllocationRule, Transaction, CronRun } from "@/lib/types";
 import { Resend } from 'resend';
 import { doc, setDoc, getDoc, getDocs, collection, addDoc, FieldValue, query, where, orderBy, limit } from "firebase/firestore";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -368,37 +367,6 @@ export async function getAIFinancialAnalysis(input: AnalyzeTransactionsInput): P
 }
 
 
-// Admin Actions
-export async function grantHighestTierPlan(email: string) {
-    // This is an admin-only function. In a real app, you'd protect this.
-    // For now, we assume it's called from a trusted environment.
-    const auth = getAdminAuth();
-    const db = getAdminDb();
-
-    try {
-        const user = await auth.getUserByEmail(email);
-        const proPlan = plans.find(p => p.id === 'pro');
-        if (!proPlan) throw new Error("Pro plan not found in configuration.");
-
-        const userPlan: UserPlan = {
-            id: proPlan.id,
-            name: proPlan.name,
-        };
-
-        // Set in Firestore
-        await db.collection("users").doc(user.uid).set({ plan: userPlan }, { merge: true });
-
-        // Set custom claims
-        await auth.setCustomUserClaims(user.uid, { plan: proPlan.id, role: 'user' });
-
-        return { success: true, message: `Successfully upgraded ${email} to the ${proPlan.name} plan.` };
-    } catch (error) {
-        console.error("Error granting plan:", error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        return { success: false, error: errorMessage };
-    }
-}
-
 export async function getAllUsers() {
     const currentUserId = await getUserId();
     const auth = getAdminAuth();
@@ -537,52 +505,6 @@ export async function getAiCampaignTargets() {
     return { targets };
 }
 
-export async function sendAiTrialInvite(email: string) {
-    const userId = await getUserId();
-    const auth = getAdminAuth();
-    const db = getAdminDb();
-
-    // Verify admin privileges
-    const currentUserClaims = (await auth.getUser(userId)).customClaims;
-    if (currentUserClaims?.role !== 'admin') {
-      throw new Error("You do not have permission to access admin actions.");
-    }
-
-    try {
-        await resend.emails.send({
-          from: "FlowBank <support@flowbank.ai>",
-          to: email,
-          subject: "🎁 Enjoy 7 Days of AI Financial Coaching on Us",
-          html: `
-            <div style="font-family: sans-serif; padding: 20px">
-              <h2>Hello from FlowBank 👋</h2>
-              <p>We noticed you're on a paid plan but haven't explored our AI Financial Advisor yet.</p>
-              <p><strong>We'd love to give you a 7-day free trial of our AI-powered coaching and insights — starting now.</strong></p>
-              <p>No credit card required, just click below to activate it:</p>
-              <p><a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard" style="background:#4A90E2;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block">Activate Free Trial</a></p>
-              <p>If you have any questions, just reply to this email. Cheers!</p>
-              <br />
-              <p>– The FlowBank Team</p>
-            </div>
-          `
-        });
-    
-        await db.collection("campaigns").doc(email).set({
-          offer: "7-day AI trial",
-          email,
-          sentAt: new Date().toISOString(),
-          type: "ai_trial_invite"
-        }, { merge: true });
-    
-        return { success: true, message: `Trial invite sent to ${email}.` };
-
-      } catch (error) {
-        console.error("Failed to send AI trial email:", error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        return { success: false, message: errorMessage };
-    }
-}
-
 export async function exportCampaignData() {
     const userId = await getUserId();
     const auth = getAdminAuth();
@@ -629,27 +551,6 @@ export async function exportCampaignData() {
     return `${header}\n${body}`;
 }
 
-async function generateCampaignSummaryPDF(data: any[]) {
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([612, 792]);
-    const { width, height } = page.getSize();
-  
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const draw = (text: string, y: number) => page.drawText(text, { x: 40, y, size: 12, font, color: rgb(0, 0, 0) });
-  
-    draw("FlowBank – AI Trial Campaign Summary", height - 50);
-    draw(`Generated: ${new Date().toLocaleString()}`, height - 70);
-  
-    let y = height - 110;
-    for (let i = 0; i < data.length && y > 60; i++) {
-      const row = data[i];
-      draw(`${i + 1}. ${row.Email} | ${row.Activated} | Sent: ${new Date(row.SentAt).toLocaleDateString()}`, y);
-      y -= 20;
-    }
-  
-    const pdfBytes = await pdfDoc.save();
-    return Buffer.from(pdfBytes);
-}
 
 export async function sendCampaignDigest() {
     const userId = await getUserId();
@@ -692,9 +593,6 @@ export async function sendCampaignDigest() {
         const totalInvites = campaignData.length;
         const totalActivations = campaignData.filter(c => c.Activated === "Yes").length;
 
-        // Generate PDF
-        const pdfBuffer = await generateCampaignSummaryPDF(campaignData);
-
         // Send email
         await resend.emails.send({
             from: "FlowBank Digest <digest@flowbank.ai>",
@@ -715,8 +613,8 @@ export async function sendCampaignDigest() {
             `,
             attachments: [
                 {
-                    filename: 'campaign-summary.pdf',
-                    content: pdfBuffer,
+                    filename: 'campaign-summary.csv',
+                    content: await exportCampaignData(),
                 },
             ],
         });

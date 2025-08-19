@@ -56,7 +56,6 @@
     "next": "latest",
     "node-fetch": "^3.3.2",
     "otpauth": "latest",
-    "pdf-lib": "^1.17.1",
     "plaid": "latest",
     "process": "latest",
     "raw-body": "latest",

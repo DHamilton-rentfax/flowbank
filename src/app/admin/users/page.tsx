@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { grantHighestTierPlan } from '../actions';
 
 interface User {
     uid: string;
@@ -73,6 +74,27 @@ export default function AdminUsersPage() {
             }
         });
     };
+    
+    const handleGrantPro = (email: string) => {
+        startTransition(async () => {
+            try {
+                const result = await grantHighestTierPlan(email);
+                 if (result.success) {
+                    toast({ title: "Success!", description: result.message });
+                    await fetchUsers();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                 const err = error as Error;
+                toast({
+                    title: "Failed to grant plan",
+                    description: err.message,
+                    variant: "destructive"
+                });
+            }
+        });
+    }
 
     return (
         <div className="flex flex-col min-h-screen">
@@ -94,6 +116,7 @@ export default function AdminUsersPage() {
                                             <TableHead>Email</TableHead>
                                             <TableHead>Plan</TableHead>
                                             <TableHead>Role</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -102,6 +125,7 @@ export default function AdminUsersPage() {
                                                 <TableRow key={i}>
                                                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                                                     <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                                                    <TableCell><Skeleton className="h-8 w-28" /></TableCell>
                                                     <TableCell><Skeleton className="h-8 w-28" /></TableCell>
                                                 </TableRow>
                                             ))
@@ -123,6 +147,18 @@ export default function AdminUsersPage() {
                                                             <SelectItem value="admin">Admin</SelectItem>
                                                         </SelectContent>
                                                     </Select>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {user.plan === 'free' && (
+                                                        <Button 
+                                                            variant="secondary"
+                                                            size="sm"
+                                                            disabled={isPending}
+                                                            onClick={() => handleGrantPro(user.email)}
+                                                        >
+                                                            Grant Pro
+                                                        </Button>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
