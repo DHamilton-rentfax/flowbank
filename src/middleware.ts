@@ -76,5 +76,4 @@ export const config = {
     '/invite/:path*',
     '/admin/:path*',
   ],
-  runtime: 'nodejs', // Force Node.js runtime to avoid Edge Runtime conflicts
 };

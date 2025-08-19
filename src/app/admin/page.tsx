@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -95,6 +96,11 @@ export default function AdminPage() {
                             href="/admin/cron-config"
                             title="Cron Job Settings"
                             description="Configure scheduled tasks like daily digests."
+                        />
+                         <AdminNavLink
+                            href="/admin/cron-history"
+                            title="Cron Job Run History"
+                            description="View the execution history of scheduled tasks."
                         />
                     </div>
                     

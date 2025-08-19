@@ -82,6 +82,7 @@ export interface UserData {
     features?: { [key: string]: boolean };
     seats?: number;
     planLookupKeys?: string[];
+    aiTrialActivatedAt?: string;
 }
 
 
@@ -106,4 +107,13 @@ export interface Post {
     readTime: number;
     content: string; // This will now be HTML
     published?: boolean;
+}
+
+export interface CronRun {
+    id: string;
+    job: string;
+    runAt: string;
+    triggeredBy: string;
+    success: boolean;
+    error?: string;
 }

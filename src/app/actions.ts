@@ -10,9 +10,9 @@ import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import { getAdminDb, getAdminAuth } from "@/firebase/server";
 import { plans, addOns } from "@/lib/plans";
-import type { Account, UserPlan, UserData, PaymentLink, AllocationRule, Transaction } from "@/lib/types";
+import type { Account, UserPlan, UserData, PaymentLink, AllocationRule, Transaction, CronRun } from "@/lib/types";
 import { Resend } from 'resend';
-import { doc, setDoc, getDoc, getDocs, collection, addDoc, FieldValue, query, where, orderBy } from "firebase/firestore";
+import { doc, setDoc, getDoc, getDocs, collection, addDoc, FieldValue, query, where, orderBy, limit } from "firebase/firestore";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -655,44 +655,45 @@ export async function sendCampaignDigest() {
     const userId = await getUserId();
     const auth = getAdminAuth();
      const db = getAdminDb();
+    const runAt = new Date().toISOString();
 
-    // Verify admin privileges
-    const currentUserClaims = (await auth.getUser(userId)).customClaims;
-    if (currentUserClaims?.role !== 'admin') {
-        throw new Error("You do not have permission to access this action.");
-    }
-    
-    // Fetch data
-    const campaignsSnap = await getDocs(collection(db, "campaigns"));
-    const usersSnap = await getDocs(collection(db, "users"));
-    const usersByEmail = usersSnap.docs.reduce((acc, doc) => {
-        const data = doc.data();
-        if (data.email) { acc[data.email] = data; }
-        return acc;
-    }, {} as { [email: string]: UserData });
-
-    const campaignData = campaignsSnap.docs.map(d => {
-        const campaign = d.data();
-        const user = usersByEmail[campaign.email];
-        return {
-            Email: campaign.email,
-            Offer: campaign.offer,
-            SentAt: campaign.sentAt,
-            Type: campaign.type,
-            Activated: user?.features?.aiTaxCoach ? "Yes" : "No",
-            ActivatedAt: user?.aiTrialActivatedAt || "",
-            Plan: user?.plan?.id || 'N/A'
-        };
-    });
-
-    const totalInvites = campaignData.length;
-    const totalActivations = campaignData.filter(c => c.Activated === "Yes").length;
-
-    // Generate PDF
-    const pdfBuffer = await generateCampaignSummaryPDF(campaignData);
-
-    // Send email
     try {
+        // Verify admin privileges
+        const currentUserClaims = (await auth.getUser(userId)).customClaims;
+        if (currentUserClaims?.role !== 'admin') {
+            throw new Error("You do not have permission to access this action.");
+        }
+        
+        // Fetch data
+        const campaignsSnap = await getDocs(collection(db, "campaigns"));
+        const usersSnap = await getDocs(collection(db, "users"));
+        const usersByEmail = usersSnap.docs.reduce((acc, doc) => {
+            const data = doc.data();
+            if (data.email) { acc[data.email] = data; }
+            return acc;
+        }, {} as { [email: string]: UserData });
+
+        const campaignData = campaignsSnap.docs.map(d => {
+            const campaign = d.data();
+            const user = usersByEmail[campaign.email];
+            return {
+                Email: campaign.email,
+                Offer: campaign.offer,
+                SentAt: campaign.sentAt,
+                Type: campaign.type,
+                Activated: user?.features?.aiTaxCoach ? "Yes" : "No",
+                ActivatedAt: user?.aiTrialActivatedAt || "",
+                Plan: user?.plan?.id || 'N/A'
+            };
+        });
+
+        const totalInvites = campaignData.length;
+        const totalActivations = campaignData.filter(c => c.Activated === "Yes").length;
+
+        // Generate PDF
+        const pdfBuffer = await generateCampaignSummaryPDF(campaignData);
+
+        // Send email
         await resend.emails.send({
             from: "FlowBank Digest <digest@flowbank.ai>",
             to: "support@flowbank.ai", // Send to admin
@@ -717,10 +718,28 @@ export async function sendCampaignDigest() {
                 },
             ],
         });
+
+        await addDoc(collection(db, "cron_runs"), {
+            job: "campaign_digest",
+            runAt,
+            triggeredBy: currentUserClaims.email, // Or "auto-schedule"
+            success: true
+        });
+
         return { success: true, message: "Digest sent successfully." };
     } catch (error) {
         console.error("Failed to send digest email:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        
+        const currentUserClaims = (await auth.getUser(userId))?.customClaims;
+        await addDoc(collection(db, "cron_runs"), {
+            job: "campaign_digest",
+            runAt,
+            triggeredBy: currentUserClaims?.email || "unknown",
+            success: false,
+            error: errorMessage,
+        });
+
         return { success: false, error: errorMessage };
     }
 }
@@ -767,4 +786,23 @@ export async function saveCronConfig(cron: string, enabled: boolean) {
     });
     
     return { success: true, message: "Cron configuration saved." };
+}
+
+export async function getCronRunHistory() {
+    const userId = await getUserId();
+    const auth = getAdminAuth();
+    const db = getAdminDb();
+
+    // Verify admin privileges
+    const currentUserClaims = (await auth.getUser(userId)).customClaims;
+    if (currentUserClaims?.role !== 'admin') {
+        throw new Error("You do not have permission to access this action.");
+    }
+
+    const ref = collection(db, "cron_runs");
+    const q = query(ref, orderBy("runAt", "desc"), limit(100));
+    const snapshot = await getDocs(q);
+
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CronRun));
+    return { runs: data };
 }
