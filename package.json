@@ -1,3 +1,4 @@
+
 {
   "name": "flow-bank",
   "version": "0.1.0",
@@ -40,7 +41,6 @@
     "@radix-ui/react-toast": "latest",
     "@radix-ui/react-tooltip": "latest",
     "ai": "latest",
-    "buffer": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
     "cross-env": "latest",
@@ -57,7 +57,6 @@
     "node-fetch": "^3.3.2",
     "otpauth": "latest",
     "plaid": "latest",
-    "process": "latest",
     "raw-body": "latest",
     "react": "latest",
     "react-day-picker": "latest",
@@ -85,8 +84,7 @@
     "@types/react-window": "^1.8.8",
     "postcss": "latest",
     "tailwindcss": "latest",
-    "typescript": "latest",
-    "webpack": "latest"
+    "typescript": "latest"
   },
   "overrides": {
     "caniuse-lite": "latest"
