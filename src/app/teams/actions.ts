@@ -55,6 +55,7 @@ export async function inviteTeamMember(email: string) {
   const teamSnap = await teamRef.get();
   const teamData = teamSnap.data();
 
+  // In a real app, you'd check for 'admin' or 'owner' role from the member list
   if (teamData?.owner !== userId) {
     return { success: false, error: 'Only the team owner can invite members.' };
   }
@@ -191,6 +192,7 @@ export async function removeTeamMember(memberId: string) {
     const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
     const teamSnap = await teamRef.get();
 
+    // In a real app, you'd check roles. For now, only the owner can remove.
     if (teamSnap.data()?.owner !== userId) {
         return { success: false, error: 'Only the team owner can remove members.' };
     }
@@ -226,6 +228,7 @@ export async function updateTeamMemberRole(memberId: string, newRole: string) {
     const teamSnap = await teamRef.get();
     const teamOwnerId = teamSnap.data()?.owner;
 
+    // A real app would check for 'admin' role here too.
     if (teamOwnerId !== actorId) {
         return { success: false, error: 'Only the team owner can change roles.' };
     }

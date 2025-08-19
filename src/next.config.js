@@ -38,6 +38,7 @@ const nextConfig = {
         "process": require.resolve("process/browser"),
         "buffer": require.resolve("buffer/"),
       };
+      
       config.plugins.push(
         new webpack.ProvidePlugin({
           process: "process/browser",

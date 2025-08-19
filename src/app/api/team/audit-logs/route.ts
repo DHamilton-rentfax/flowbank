@@ -2,11 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/firebase/server';
 
+export const dynamic = 'force-dynamic'; // Disable caching for this route
+
+const AUDIT_LOG_COLLECTION = 'teamAuditLogs';
+
 export async function GET(req: NextRequest) {
   try {
     const db = getAdminDb();
     // Note: The collection is 'teamAuditLogs', not 'audit_logs' as per the existing actions.
-    const snapshot = await db.collection('teamAuditLogs').orderBy('timestamp', 'desc').limit(100).get();
+    const snapshot = await db.collection(AUDIT_LOG_COLLECTION).orderBy('timestamp', 'desc').limit(100).get();
     
     const logs = snapshot.docs.map(doc => {
         const data = doc.data();

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useTransition } from 'react';
@@ -40,10 +41,9 @@ function getLogSummary(log: Log) {
 }
 
 function getBadgeVariant(logType: string) {
-    if (logType.includes('JOINED')) return 'default';
+    if (logType.includes('JOINED') || logType.includes('UPDATED')) return 'default';
     if (logType.includes('REMOVED')) return 'destructive';
     if (logType.includes('INVITED')) return 'secondary';
-    if (logType.includes('UPDATED')) return 'outline';
     return 'outline';
 }
 
@@ -117,7 +117,7 @@ export default function TeamAuditLogPage() {
                                         <TableRow>
                                             <TableHead>Action</TableHead>
                                             <TableHead>Details</TableHead>
-                                            <TableHead>Performed By (User ID)</TableHead>
+                                            <TableHead>Performed By</TableHead>
                                             <TableHead className="text-right">Date</TableHead>
                                         </TableRow>
                                     </TableHeader>

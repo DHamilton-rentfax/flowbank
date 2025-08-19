@@ -287,8 +287,8 @@ export async function createPortalSession() {
 
 // Analytics
 export async function getAnalyticsSnapshot(sinceDate: string | null) {
-    if (!process.env.FIREBASE_ADMIN_CERT_B64) {
-        console.warn("FIREBASE_ADMIN_CERT_B64 not set. Skipping server-side analytics.");
+    if (!process.env.FIREBASE_PRIVATE_KEY) {
+        console.warn("Firebase Admin SDK not configured. Skipping server-side analytics.");
         return { since: null, income: 0, expenses: 0, net: 0, series: [] };
     }
     const userId = await getUserId();
@@ -606,17 +606,11 @@ export async function sendCampaignDigest() {
                         <li><strong>Total Invites Sent:</strong> ${totalInvites}</li>
                         <li><strong>Total Activations:</strong> ${totalActivations}</li>
                     </ul>
-                    <p>See the attached PDF for a detailed breakdown.</p>
+                    <p>This is a text-only summary. PDF attachment has been removed to avoid server-side library issues.</p>
                     <br/>
                     <p>– The FlowBank System</p>
                 </div>
             `,
-            attachments: [
-                {
-                    filename: 'campaign-summary.csv',
-                    content: await exportCampaignData(),
-                },
-            ],
         });
 
         await addDoc(collection(db, "cron_runs"), {
