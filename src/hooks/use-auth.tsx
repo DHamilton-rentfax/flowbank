@@ -95,7 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithPopup(auth, provider);
+    const userCredential = await signInWithPopup(auth, provider);
+    const user = userCredential.user;
+    
+    // Create a document in Firestore for the new user on first sign-in
+    await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || user.email,
+        createdAt: serverTimestamp(),
+        plan: { id: 'free', name: 'Free' }
+    }, { merge: true }); // Use merge to avoid overwriting existing data if they've signed up before
   }
 
 
