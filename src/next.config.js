@@ -34,8 +34,9 @@ const nextConfig = {
     };
     
     if (!isServer) {
-        config.plugins.push(new NodePolyfillPlugin());
+        config.resolve.fallback.process = require.resolve('process/browser');
     }
+    config.plugins.push(new NodePolyfillPlugin());
 
     return config;
   },
