@@ -159,7 +159,7 @@ export async function getTeamInfo() {
     const teamSnap = await teamRef.get();
     const teamData = teamSnap.data();
 
-    const membersSnap = await teamRef.collection('members').get();
+    const membersSnap = await teamRef.collection('members').orderBy('email').get();
     const members = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     const invitesSnap = await teamRef.collection('invites').get();
@@ -216,6 +216,48 @@ export async function removeTeamMember(memberId: string) {
     });
 
     return { success: true, message: 'Member removed successfully.' };
+}
+
+export async function updateTeamMemberRole(memberId: string, newRole: string) {
+    const actorId = await getUserId();
+    const db = getAdminDb();
+    const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
+
+    const teamSnap = await teamRef.get();
+    const teamOwnerId = teamSnap.data()?.owner;
+
+    if (teamOwnerId !== actorId) {
+        return { success: false, error: 'Only the team owner can change roles.' };
+    }
+
+    if (memberId === actorId) {
+        return { success: false, error: 'The team owner cannot change their own role.' };
+    }
+
+    const memberRef = teamRef.collection('members').doc(memberId);
+    const memberDoc = await memberRef.get();
+    if (!memberDoc.exists) {
+        return { success: false, error: 'Member not found.' };
+    }
+
+    const oldRole = memberDoc.data()?.role;
+    const memberEmail = memberDoc.data()?.email;
+    await memberRef.update({ role: newRole });
+
+    await db.collection('teamAuditLogs').add({
+        type: 'MEMBER_ROLE_UPDATED',
+        timestamp: firestore.FieldValue.serverTimestamp(),
+        actorId: actorId,
+        teamId: teamRef.id,
+        details: {
+            memberEmail,
+            memberId,
+            oldRole,
+            newRole,
+        }
+    });
+
+    return { success: true, message: `Updated ${memberEmail}'s role to ${newRole}.` };
 }
 
 // This function now safely calls the API route from the client

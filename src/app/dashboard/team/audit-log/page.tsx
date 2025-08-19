@@ -33,6 +33,8 @@ function getLogSummary(log: Log) {
             return `${log.details.joinedEmail} joined the team.`;
         case 'MEMBER_REMOVED':
             return `Removed member ${log.details.removedEmail}.`;
+        case 'MEMBER_ROLE_UPDATED':
+            return `Changed ${log.details.memberEmail}'s role from ${log.details.oldRole} to ${log.details.newRole}.`;
         default:
             return 'Unknown action';
     }
@@ -42,6 +44,7 @@ function getBadgeVariant(logType: string) {
     if (logType.includes('JOINED')) return 'default';
     if (logType.includes('REMOVED')) return 'destructive';
     if (logType.includes('INVITED')) return 'secondary';
+    if (logType.includes('UPDATED')) return 'outline';
     return 'outline';
 }
 
@@ -109,6 +112,7 @@ export default function TeamAuditLogPage() {
                                         <SelectItem value="MEMBER_INVITED">Invites</SelectItem>
                                         <SelectItem value="MEMBER_JOINED">Joins</SelectItem>
                                         <SelectItem value="MEMBER_REMOVED">Removals</SelectItem>
+                                        <SelectItem value="MEMBER_ROLE_UPDATED">Role Changes</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

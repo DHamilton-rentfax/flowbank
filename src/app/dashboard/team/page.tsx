@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition, useMemo } from 'react';
-import { getTeamInfo, inviteTeamMember, removeTeamMember } from '@/app/teams/actions';
+import { getTeamInfo, inviteTeamMember, removeTeamMember, updateTeamMemberRole } from '@/app/teams/actions';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { Trash2, UserPlus, Send } from 'lucide-react';
+import { Trash2, Send, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TeamPage() {
@@ -76,21 +76,24 @@ export default function TeamPage() {
      });
   };
 
-  const renderStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="default">Active</Badge>;
-      case 'invited':
-        return <Badge variant="secondary">Invited</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+  const handleRoleChange = (memberId: string, newRole: string) => {
+    startTransition(async () => {
+      const { success, error, message } = await updateTeamMemberRole(memberId, newRole);
+      if (success) {
+        toast({ title: 'Role Updated!', description: message });
+        await fetchTeamInfo();
+      } else {
+        toast({ title: 'Update Failed', description: error, variant: 'destructive' });
+      }
+    });
   };
 
   const seatUsageText = useMemo(() => {
     if (!teamInfo?.seats) return '...';
     return `${teamInfo.seats.used} of ${teamInfo.seats.total} seats used`;
   }, [teamInfo]);
+  
+  const isOwner = user?.uid === teamInfo?.owner;
 
   if (loading) {
     return (
@@ -141,9 +144,9 @@ export default function TeamPage() {
                   placeholder="new.member@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  disabled={isPending}
+                  disabled={isPending || !isOwner}
                 />
-                <Button type="submit" disabled={isPending}>
+                <Button type="submit" disabled={isPending || !isOwner}>
                   <Send className="mr-2 h-4 w-4" />
                   {isPending ? 'Sending...' : 'Send Invite'}
                 </Button>
@@ -170,13 +173,36 @@ export default function TeamPage() {
                     {teamInfo.members.map((member: any) => (
                       <TableRow key={member.id}>
                         <TableCell className="font-medium">{member.email}</TableCell>
-                        <TableCell className="capitalize">{member.role}</TableCell>
-                        <TableCell>{renderStatusBadge(member.status)}</TableCell>
+                        <TableCell>
+                          {isOwner && member.id !== teamInfo.owner ? (
+                             <Select
+                                value={member.role}
+                                onValueChange={(value) => handleRoleChange(member.id, value)}
+                                disabled={isPending}
+                              >
+                                <SelectTrigger className="w-[120px]">
+                                  <SelectValue placeholder="Select role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="owner">Owner</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="member">Member</SelectItem>
+                                </SelectContent>
+                              </Select>
+                          ) : (
+                            <Badge variant="secondary" className="capitalize">{member.role}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={member.status === 'active' ? 'default' : 'secondary'} className="capitalize">{member.status}</Badge>
+                        </TableCell>
                         <TableCell className="text-right">
-                           {teamInfo.owner !== member.id && (
+                           {isOwner && member.id !== teamInfo.owner ? (
                              <Button variant="ghost" size="icon" onClick={() => handleRemove(member.id)} disabled={isPending}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
                              </Button>
+                           ) : (
+                             <Lock className="h-4 w-4 text-muted-foreground inline-block" />
                            )}
                         </TableCell>
                       </TableRow>
@@ -200,7 +226,7 @@ export default function TeamPage() {
                         <li key={invite.id} className="flex justify-between items-center border-b p-2">
                         <span>{invite.email}</span>
                         <span className="text-muted-foreground text-xs">
-                            Invited {formatDistanceToNow(invite.invitedAt.toDate(), { addSuffix: true })}
+                            Invited {invite.invitedAt ? formatDistanceToNow(invite.invitedAt.toDate(), { addSuffix: true }) : ''}
                         </span>
                         </li>
                     ))
