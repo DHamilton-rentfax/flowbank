@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { getAllUsers, updateUserRole } from '@/app/actions';
+import { getAllUsers } from '@/app/actions/get-all-users';
+import { updateUserRole } from '@/app/actions/update-user-role';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -173,3 +174,5 @@ export default function AdminUsersPage() {
         </div>
     );
 }
+
+    

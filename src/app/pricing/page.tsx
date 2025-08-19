@@ -1,10 +1,9 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { createCheckoutSession } from "@/app/actions";
+import { createCheckoutSession } from "@/app/actions/create-checkout-session";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -200,6 +199,7 @@ export default function Pricing() {
     if (planFromUrl && fromLogin && user) {
         handleCheckout(planFromUrl);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planFromUrl, fromLogin, user]);
 
 

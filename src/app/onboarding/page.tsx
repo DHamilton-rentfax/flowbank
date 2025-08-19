@@ -4,7 +4,8 @@
 import React, { useState } from "react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { createLinkToken, exchangePublicToken } from "@/app/actions";
+import { createLinkToken } from "@/app/actions/create-link-token";
+import { exchangePublicToken } from "@/app/actions/exchange-public-token";
 import { usePlaidLink } from "react-plaid-link";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -111,3 +112,5 @@ export default function Onboarding() {
     </div>
   );
 }
+
+    

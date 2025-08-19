@@ -3,8 +3,6 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
-const webpack = require('webpack');
-
 
 const nextConfig = {
   /* config options here */
@@ -26,27 +24,6 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-  },
-   webpack: (config, { isServer }) => {
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      "node:process": "process/browser",
-    };
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...(config.resolve.fallback || {}),
-        "process": require.resolve("process/browser"),
-        "buffer": require.resolve("buffer/"),
-      };
-      
-      config.plugins.push(
-        new webpack.ProvidePlugin({
-          process: "process/browser",
-          Buffer: ["buffer", "Buffer"],
-        })
-      );
-    }
-    return config;
   },
 };
 

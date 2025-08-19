@@ -1,7 +1,9 @@
+
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
-import { getCronRunHistory, sendCampaignDigest } from "@/app/actions";
+import { getCronRunHistory } from "@/app/actions/get-cron-run-history";
+import { sendCampaignDigest } from "@/app/actions/send-campaign-digest";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -131,3 +133,5 @@ export default function CronHistoryPage() {
     </div>
   );
 }
+
+    

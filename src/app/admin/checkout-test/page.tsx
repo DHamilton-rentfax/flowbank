@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -8,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { createCheckoutSession } from '@/app/actions';
+import { createCheckoutSession } from '@/app/actions/create-checkout-session';
 import { useRouter } from 'next/navigation';
 
 export default function AdminCheckoutTestPage() {

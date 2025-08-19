@@ -5,7 +5,11 @@ import React, { useState, useTransition, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { useApp } from "@/contexts/app-provider";
 import PlanGate from "@/components/PlanGate";
-import { getAISuggestion, getAnalyticsSnapshot, createPortalSession, getAIFinancialAnalysis, syncAllTransactions } from "../actions";
+import { getAISuggestion } from "@/app/actions/get-ai-suggestion";
+import { getAnalyticsSnapshot } from "@/app/actions/get-analytics-snapshot";
+import { createPortalSession } from "@/app/actions/create-portal-session";
+import { getAIFinancialAnalysis } from "@/app/actions/get-ai-financial-analysis";
+import { syncAllTransactions } from "@/app/actions/sync-all-transactions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -109,7 +113,7 @@ function AIFinancialAdvisor() {
                           <Lightbulb className="h-5 w-5 text-amber-500" />
                           Savings Suggestions ({aiFinancialAnalysis.savingsSuggestions.length})
                         </div>
-                      </AccordionTrigger>
+                      </Trigger>
                       <AccordionContent>
                           <ul className="space-y-2 pt-2">
                             {aiFinancialAnalysis.savingsSuggestions.slice(0, planName === 'free' ? 2 : undefined).map((item, index) => (
@@ -141,7 +145,7 @@ function AIFinancialAdvisor() {
 export default function Dashboard() {
   const { toast } = useToast();
   const { analyticsSnapshot, setAnalyticsSnapshot, aiSuggestion, setAiSuggestion, transactions, userPlan, features, loadingData } = useApp();
-  const { idToken, user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [isPortalLoading, setIsPortalLoading] = useState(false);
 
   useEffect(()=>{ 
@@ -186,11 +190,6 @@ export default function Dashboard() {
   const hasPlaidLinked = transactions.length > 0;
   const hasAIFeature = features?.aiTaxCoach === true;
   const planName = userPlan?.id || 'free';
-
-  // This check is now handled by the DashboardLayout
-  // if (authLoading || loadingData) {
-  //   return <div className="text-center p-8">Loading dashboard...</div>
-  // }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
@@ -266,3 +265,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    

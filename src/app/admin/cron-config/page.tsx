@@ -2,7 +2,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { getCronConfig, saveCronConfig } from "@/app/actions";
+import { getCronConfig } from "@/app/actions/get-cron-config";
+import { saveCronConfig } from "@/app/actions/save-cron-config";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -155,3 +156,5 @@ export default function CronConfigPage() {
     </div>
   );
 }
+
+    

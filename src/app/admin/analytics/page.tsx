@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getAdminAnalytics } from '@/app/actions';
+import { getAdminAnalytics } from '@/app/actions/get-admin-analytics';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -149,3 +149,5 @@ export default function AdminAnalyticsPage() {
         </div>
     );
 }
+
+    
