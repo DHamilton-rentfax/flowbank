@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { createCheckoutSession } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -187,14 +187,25 @@ export default function Pricing() {
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loadingKey, setLoadingKey] = useState('');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annually'>('monthly');
 
   const tiers = plans[billingCycle];
 
+  const planFromUrl = searchParams.get('plan');
+  const fromLogin = searchParams.get('fromLogin');
+
+  useEffect(() => {
+    if (planFromUrl && fromLogin && user) {
+        handleCheckout(planFromUrl);
+    }
+  }, [planFromUrl, fromLogin, user]);
+
+
   async function handleCheckout(lookup_key: string) {
     if (!user) {
-        router.push('/login?next=/pricing');
+        router.push(`/login?next=/pricing&plan=${lookup_key}`);
         return;
     }
     setLoadingKey(lookup_key);
