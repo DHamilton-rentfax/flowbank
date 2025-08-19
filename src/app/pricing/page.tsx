@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -195,15 +196,7 @@ export default function Pricing() {
   const planFromUrl = searchParams.get('plan');
   const fromLogin = searchParams.get('fromLogin');
 
-  useEffect(() => {
-    if (planFromUrl && fromLogin && user) {
-        handleCheckout(planFromUrl);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planFromUrl, fromLogin, user]);
-
-
-  async function handleCheckout(lookup_key: string) {
+  const handleCheckout = React.useCallback(async (lookup_key: string) => {
     if (!user) {
         router.push(`/login?next=/pricing&plan=${lookup_key}`);
         return;
@@ -222,7 +215,13 @@ export default function Pricing() {
     } finally {
         setLoadingKey('');
     }
-  }
+  }, [user, router, toast]);
+
+  useEffect(() => {
+    if (planFromUrl && fromLogin && user) {
+        handleCheckout(planFromUrl);
+    }
+  }, [planFromUrl, fromLogin, user, handleCheckout]);
 
   const renderCheck = (value: boolean | string) => {
     if (value === true) return <Check className="h-5 w-5 text-green-500" />;

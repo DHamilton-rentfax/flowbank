@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
@@ -22,25 +23,26 @@ export default function CronHistoryPage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  useEffect(() => {
-    async function fetchHistory() {
-      setLoading(true);
-      try {
-        const { runs: fetchedRuns } = await getCronRunHistory();
-        setRuns(fetchedRuns);
-      } catch (error) {
-        const err = error as Error;
-        toast({
-          title: "Error fetching history",
-          description: err.message,
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
+  const fetchHistory = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const { runs: fetchedRuns } = await getCronRunHistory();
+      setRuns(fetchedRuns);
+    } catch (error) {
+      const err = error as Error;
+      toast({
+        title: "Error fetching history",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    fetchHistory();
   }, [toast]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
   
   const handleManualRun = () => {
     startTransition(async () => {
@@ -48,6 +50,7 @@ export default function CronHistoryPage() {
             const result = await sendCampaignDigest();
             if (result.success) {
                 toast({ title: "Digest sent!", description: "The campaign digest has been successfully sent."});
+                await fetchHistory();
             } else {
                 throw new Error(result.error);
             }

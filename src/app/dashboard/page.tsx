@@ -29,7 +29,7 @@ function Stat({ title, value }: { title: string, value: string }) {
 
 function AIFinancialAdvisor() {
   const { toast } = useToast();
-  const { transactions, aiFinancialAnalysis, userPlan } = useApp();
+  const { transactions, aiFinancialAnalysis, userPlan, features } = useApp();
   const [isAnalysisLoading, startTransition] = useTransition();
 
   async function handleFinancialAnalysis() {
@@ -54,6 +54,8 @@ function AIFinancialAdvisor() {
 
   const lastAnalyzed = aiFinancialAnalysis?.analyzedAt ? format(parseISO(aiFinancialAnalysis.analyzedAt), "PPP p") : "Never";
   const planName = userPlan?.id || 'free';
+  const hasAIFeature = features?.aiTaxCoach === true;
+
 
   return (
      <Card>
@@ -89,13 +91,13 @@ function AIFinancialAdvisor() {
                       </AccordionTrigger>
                       <AccordionContent>
                         <ul className="space-y-2 pt-2">
-                          {aiFinancialAnalysis.potentialDeductions.slice(0, planName === 'free' ? 3 : undefined).map((item, index) => (
+                          {aiFinancialAnalysis.potentialDeductions.slice(0, !hasAIFeature && planName === 'free' ? 3 : undefined).map((item, index) => (
                             <li key={index} className="p-3 bg-secondary rounded-lg">
                               <p className="font-semibold">{item.transactionName} - <span className="font-mono">${item.amount.toFixed(2)}</span></p>
                               <p className="text-sm text-muted-foreground">{item.reason}</p>
                             </li>
                           ))}
-                           {planName === 'free' && aiFinancialAnalysis.potentialDeductions.length > 3 && (
+                           {!hasAIFeature && planName === 'free' && aiFinancialAnalysis.potentialDeductions.length > 3 && (
                             <li className="text-center p-4 text-sm">
                                 <Button variant="secondary" asChild>
                                     <Link href="/pricing">Upgrade to see all {aiFinancialAnalysis.potentialDeductions.length} potential deductions</Link>
@@ -114,13 +116,13 @@ function AIFinancialAdvisor() {
                       </Trigger>
                       <AccordionContent>
                           <ul className="space-y-2 pt-2">
-                            {aiFinancialAnalysis.savingsSuggestions.slice(0, planName === 'free' ? 2 : undefined).map((item, index) => (
+                            {aiFinancialAnalysis.savingsSuggestions.slice(0, !hasAIFeature && planName === 'free' ? 2 : undefined).map((item, index) => (
                                 <li key={index} className="p-3 bg-secondary rounded-lg">
                                 <p className="font-semibold">{item.title}</p>
                                 <p className="text-sm text-muted-foreground">{item.suggestion}</p>
                                 </li>
                             ))}
-                            {planName === 'free' && aiFinancialAnalysis.savingsSuggestions.length > 2 && (
+                            {!hasAIFeature && planName === 'free' && aiFinancialAnalysis.savingsSuggestions.length > 2 && (
                                 <li className="text-center p-4 text-sm">
                                     <Button variant="secondary" asChild>
                                         <Link href="/pricing">Upgrade for more savings insights</Link>
@@ -165,6 +167,7 @@ export default function Dashboard() {
             toast({ title: "AI Suggestion", description: "New allocation plan suggested." });
         }
     } catch (e) {
+        const error = e as Error;
         toast({ title: "Error", description: "Could not get AI suggestion.", variant: "destructive" });
     }
   }
@@ -221,27 +224,27 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {hasPlaidLinked && !hasAIFeature && planName === 'free' && (
+      {hasPlaidLinked && !hasAIFeature && planName !== 'pro' && planName !== 'enterprise' &&(
         <Card className="bg-gradient-to-r from-primary/10 to-accent/10">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Sparkles className="h-8 w-8 text-primary" />
               <div>
                 <CardTitle>Unlock Full AI Financial Insights</CardTitle>
-                <CardDescription>You are seeing a limited preview. Upgrade to unlock the full AI Financial Advisor for complete deduction detection and savings advice.</CardDescription>
+                <CardDescription>You are seeing a limited preview. Upgrade or add the AI enhancement to unlock the full AI Financial Advisor.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
               <Button asChild>
-                <Link href="/pricing">View Add-ons</Link>
+                <Link href="/pricing">View Plans & Add-ons</Link>
               </Button>
           </CardContent>
         </Card>
       )}
 
-      {hasPlaidLinked && (planName !== 'free' || hasAIFeature) && (
-         <PlanGate feature="aiTaxCoach">
+      {hasPlaidLinked && (
+         <PlanGate feature="aiSuggestions">
             <AIFinancialAdvisor />
          </PlanGate>
       )}
@@ -264,5 +267,4 @@ export default function Dashboard() {
     </div>
   );
 }
-
     

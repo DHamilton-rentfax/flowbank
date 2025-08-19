@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useTransition, useMemo } from 'react';
@@ -22,24 +23,22 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isPending, startTransition] = useTransition();
-  const { user, idToken } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const fetchTeamInfo = React.useCallback(async () => {
-    if (idToken) {
-      setLoading(true);
-      try {
-        const info = await getTeamInfo();
-        setTeamInfo(info);
-      } catch (error) {
-        console.error('Failed to fetch team info:', error);
-        const err = error as Error;
-        toast({ title: 'Error', description: err.message, variant: 'destructive' });
-      } finally {
-        setLoading(false);
-      }
+    setLoading(true);
+    try {
+      const info = await getTeamInfo();
+      setTeamInfo(info);
+    } catch (error) {
+      console.error('Failed to fetch team info:', error);
+      const err = error as Error;
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-  }, [idToken, toast]);
+  }, [toast]);
 
   useEffect(() => {
     fetchTeamInfo();
