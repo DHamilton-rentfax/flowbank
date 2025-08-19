@@ -84,7 +84,6 @@
     "@types/react-dom": "latest",
     "@types/react-google-recaptcha": "latest",
     "@types/react-window": "^1.8.8",
-    "node-polyfill-webpack-plugin": "latest",
     "postcss": "latest",
     "tailwindcss": "latest",
     "typescript": "latest",
