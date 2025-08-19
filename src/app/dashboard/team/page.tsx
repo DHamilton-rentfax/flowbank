@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useTransition, useMemo } from 'react';
@@ -34,7 +33,8 @@ export default function TeamPage() {
         setTeamInfo(info);
       } catch (error) {
         console.error('Failed to fetch team info:', error);
-        toast({ title: 'Error', description: 'Could not fetch team details.', variant: 'destructive' });
+        const err = error as Error;
+        toast({ title: 'Error', description: err.message, variant: 'destructive' });
       } finally {
         setLoading(false);
       }

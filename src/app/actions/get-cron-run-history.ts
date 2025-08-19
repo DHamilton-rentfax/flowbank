@@ -1,4 +1,3 @@
-
 "use server";
 
 import { headers } from "next/headers";
@@ -39,5 +38,3 @@ export async function getCronRunHistory() {
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CronRun));
     return { runs: data };
 }
-
-    

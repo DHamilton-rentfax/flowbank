@@ -1,4 +1,3 @@
-
 "use server";
 
 import { headers } from "next/headers";
@@ -87,5 +86,3 @@ export async function manualAllocate(txId: string) {
     await allocateForUserTx(userId, txDoc.data());
     return { success: true };
 }
-
-    

@@ -1,4 +1,3 @@
-
 "use server";
 
 import { headers } from "next/headers";
@@ -65,5 +64,3 @@ export async function getAnalyticsSnapshot(sinceDate: string | null) {
     await db.collection("users").doc(userId).collection("analytics").doc("latest").set(snapshot, { merge: true });
     return snapshot;
 }
-
-    

@@ -1,4 +1,3 @@
-
 'use server';
 
 import { getAdminAuth, getAdminDb } from '@/firebase/server';
@@ -262,3 +261,5 @@ export async function updateTeamMemberRole(memberId: string, newRole: string) {
 
     return { success: true, message: `Updated ${memberEmail}'s role to ${newRole}.` };
 }
+
+    

@@ -1,10 +1,9 @@
-
 "use client";
 
 import React, { useEffect, useState, useTransition } from 'react';
 import { getAiCampaignTargets } from '@/app/actions/get-ai-campaign-targets';
 import { exportCampaignData } from '@/app/actions/export-campaign-data';
-import { sendAiTrialInvite } from '../actions';
+import { sendAiTrialInvite } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -178,5 +177,3 @@ export default function AiCampaignPage() {
         </div>
     );
 }
-
-    

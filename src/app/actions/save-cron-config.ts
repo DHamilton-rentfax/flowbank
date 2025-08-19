@@ -1,4 +1,3 @@
-
 "use server";
 
 import { headers } from "next/headers";
@@ -43,5 +42,3 @@ export async function saveCronConfig(cron: string, enabled: boolean) {
     
     return { success: true, message: "Cron configuration saved." };
 }
-
-    

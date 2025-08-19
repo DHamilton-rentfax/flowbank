@@ -1,4 +1,3 @@
-
 "use server";
 
 import { stripe } from "@/lib/stripe";
@@ -45,5 +44,3 @@ export async function createPortalSession() {
     });
     return { success: true, url: portal.url };
 }
-
-    

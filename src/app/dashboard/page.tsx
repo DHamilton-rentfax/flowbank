@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
@@ -9,7 +8,6 @@ import { getAISuggestion } from "@/app/actions/get-ai-suggestion";
 import { getAnalyticsSnapshot } from "@/app/actions/get-analytics-snapshot";
 import { createPortalSession } from "@/app/actions/create-portal-session";
 import { getAIFinancialAnalysis } from "@/app/actions/get-ai-financial-analysis";
-import { syncAllTransactions } from "@/app/actions/sync-all-transactions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -156,7 +154,8 @@ export default function Dashboard() {
         }
     }
     fetchData();
-  },[user, loadingData, setAnalyticsSnapshot]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[user, loadingData]);
 
   async function getAiAllocation() {
     try {

@@ -1,4 +1,3 @@
-
 "use server";
 
 import { headers } from "next/headers";
@@ -39,5 +38,3 @@ export async function getCronConfig() {
     const data = snap.data();
     return { cron: data?.campaignDigest || "0 9 * * *", enabled: data?.enabled ?? true };
 }
-
-    

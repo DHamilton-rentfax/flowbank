@@ -1,4 +1,3 @@
-
 "use server";
 
 import { analyzeTransactions, type AnalyzeTransactionsInput, type AnalyzeTransactionsOutput } from "@/ai/flows/analyze-transactions";
@@ -36,5 +35,3 @@ export async function getAIFinancialAnalysis(input: AnalyzeTransactionsInput): P
         throw error;
     }
 }
-
-    

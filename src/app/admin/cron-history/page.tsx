@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
@@ -133,5 +132,3 @@ export default function CronHistoryPage() {
     </div>
   );
 }
-
-    

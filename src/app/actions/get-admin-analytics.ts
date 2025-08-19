@@ -1,4 +1,3 @@
-
 "use server";
 
 import { stripe } from "@/lib/stripe";
@@ -72,5 +71,3 @@ export async function getAdminAnalytics() {
         recentUsers,
     };
 }
-
-    

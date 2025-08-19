@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useTransition } from 'react';
@@ -19,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { grantHighestTierPlan } from '../actions';
+import { grantHighestTierPlan } from '@/app/admin/actions';
 
 interface User {
     uid: string;
@@ -174,5 +173,3 @@ export default function AdminUsersPage() {
         </div>
     );
 }
-
-    

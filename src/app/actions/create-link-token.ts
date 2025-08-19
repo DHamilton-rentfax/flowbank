@@ -1,4 +1,3 @@
-
 "use server";
 
 import { plaidClient } from "@/lib/plaid";
@@ -49,5 +48,3 @@ export async function createLinkToken() {
         return { success: false, error: "Failed to create Plaid link token." };
       }
 }
-
-    

@@ -1,4 +1,3 @@
-
 "use server";
 
 import { headers } from "next/headers";
@@ -111,5 +110,3 @@ export async function sendCampaignDigest() {
         return { success: false, error: errorMessage };
     }
 }
-
-    

@@ -1,4 +1,3 @@
-
 "use server";
 
 import { headers } from "next/headers";
@@ -66,5 +65,3 @@ export async function exportCampaignData() {
     
     return `${header}\n${body}`;
 }
-
-    
