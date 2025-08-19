@@ -46,16 +46,32 @@ export default function CronConfigPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (!cron) return;
-    import("cron-parser").then(({ default: parser }) => {
-      try {
-        const interval = parser.parseExpression(cron);
-        setNextRun(interval.next().toString());
-      } catch (err) {
-        setNextRun("Invalid expression");
-      }
-    });
-  }, [cron]);
+    const id = setTimeout(async () => {
+        if (!cron) {
+            setNextRun("—");
+            return;
+        }
+        if (!isEnabled) {
+            setNextRun("Job is paused");
+            return;
+        }
+
+        try {
+            const resp = await fetch(`/api/admin/cron-preview?expr=${encodeURIComponent(cron)}`);
+            const json = await resp.json();
+            if (resp.ok) {
+                 setNextRun(`${json.next} (then ${json.next2})`);
+            } else {
+                 setNextRun(json.error || "Invalid expression");
+            }
+        } catch {
+            setNextRun("Error fetching preview");
+        }
+    }, 400); // Debounce typing
+
+    return () => clearTimeout(id);
+}, [cron, isEnabled]);
+
 
   const handleSave = () => {
     startTransition(async () => {
@@ -105,7 +121,7 @@ export default function CronConfigPage() {
                                         disabled={!isEnabled}
                                     />
                                     <p className="text-sm text-muted-foreground">
-                                        {isEnabled ? `Next scheduled run (local time): ${nextRun}` : 'Job is paused and will not run.'}
+                                        {isEnabled ? `Next scheduled run (UTC): ${nextRun}` : 'Job is paused and will not run.'}
                                     </p>
                                 </div>
                                 <div className="space-y-2">

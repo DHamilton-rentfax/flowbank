@@ -59,6 +59,7 @@
     "otpauth": "latest",
     "pdf-lib": "^1.17.1",
     "plaid": "latest",
+    "process": "^0.11.10",
     "raw-body": "latest",
     "react": "latest",
     "react-day-picker": "latest",
@@ -86,7 +87,6 @@
     "@types/react-window": "^1.8.8",
     "node-polyfill-webpack-plugin": "latest",
     "postcss": "latest",
-    "process": "^0.11.10",
     "tailwindcss": "latest",
     "typescript": "latest",
     "webpack": "latest"
