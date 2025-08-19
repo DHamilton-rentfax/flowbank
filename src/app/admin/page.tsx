@@ -1,61 +1,44 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, 'react';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { grantHighestTierPlan } from '@/app/actions';
-import { Badge } from '@/components/ui/badge';
 import { ArrowRight } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
-function AdminNavLink({ href, title, description }: { href: string, title: string, description: string }) {
+function AdminNavLink({ href, title, description, disabled = false }: { href: string, title: string, description: string, disabled?: boolean }) {
+    const content = (
+        <div className="flex items-center justify-between">
+            <div>
+                <h3 className="font-semibold text-primary">{title}</h3>
+                <p className="text-sm text-muted-foreground">{description}</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+        </div>
+    );
+
+    if (disabled) {
+        return (
+            <div className="block p-4 border rounded-lg bg-secondary/50 cursor-not-allowed opacity-60">
+                {content}
+            </div>
+        )
+    }
+
     return (
         <Link href={href} className="block p-4 border rounded-lg hover:bg-secondary transition-colors">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="font-semibold text-primary">{title}</h3>
-                    <p className="text-sm text-muted-foreground">{description}</p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
+            {content}
         </Link>
     )
 }
 
 export default function AdminPage() {
-    const [email, setEmail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email) {
-            toast({ title: "Error", description: "Please enter an email address.", variant: "destructive" });
-            return;
-        }
-        setIsLoading(true);
-        try {
-            const result = await grantHighestTierPlan(email);
-            if (result.success) {
-                toast({ title: "Success!", description: result.message });
-                setEmail('');
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (error) {
-            const err = error as Error;
-            toast({ title: "Error Granting Plan", description: err.message, variant: "destructive" });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+    const { user } = useAuth();
+    
     return (
         <div className="flex flex-col min-h-screen">
             <Header />
@@ -63,69 +46,86 @@ export default function AdminPage() {
                 <div className="container mx-auto max-w-4xl space-y-8">
                     <div>
                         <h1 className="text-3xl font-bold">Admin Panel</h1>
-                        <p className="text-muted-foreground">Your mission control for FlowBank.</p>
+                        <p className="text-muted-foreground">Welcome, {user?.email || 'Admin'}. Your mission control for FlowBank.</p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <AdminNavLink 
-                            href="/admin/analytics"
-                            title="Analytics Dashboard"
-                            description="View key metrics, MRR, and user stats."
-                        />
-                        <AdminNavLink 
-                            href="/admin/users"
-                            title="User Management"
-                            description="View, edit, and manage user roles."
-                        />
-                        <AdminNavLink 
-                            href="/admin/audit-log"
-                            title="Subscription Audit Log"
-                            description="Track all billing-related events."
-                        />
-                         <AdminNavLink 
-                            href="/admin/blog"
-                            title="Blog Post Editor"
-                            description="Create and manage content for the blog."
-                        />
-                        <AdminNavLink 
-                            href="/admin/ai-campaign"
-                            title="AI Upsell Campaign"
-                            description="Target users for AI feature adoption."
-                        />
-                        <AdminNavLink
-                            href="/admin/cron-config"
-                            title="Cron Job Settings"
-                            description="Configure scheduled tasks like daily digests."
-                        />
-                         <AdminNavLink
-                            href="/admin/cron-history"
-                            title="Cron Job Run History"
-                            description="View the execution history of scheduled tasks."
-                        />
-                    </div>
-                    
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Grant Premium Plan</CardTitle>
-                            <CardDescription>Quickly upgrade a user to the Pro plan for testing or support.</CardDescription>
+                         <CardHeader>
+                            <CardTitle>Dashboards</CardTitle>
+                            <CardDescription>View key metrics, user activity, and system health.</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSubmit} className="flex items-end gap-4">
-                                <div className="space-y-2 flex-1">
-                                    <Label htmlFor="email">User Email</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="user@example.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <Button type="submit" disabled={isLoading}>
-                                    {isLoading ? 'Granting...' : 'Grant Pro Plan'}
-                                </Button>
-                            </form>
+                        <CardContent className="grid md:grid-cols-2 gap-6">
+                            <AdminNavLink 
+                                href="/admin/analytics"
+                                title="Analytics Dashboard"
+                                description="View key metrics, MRR, and user stats."
+                            />
+                             <AdminNavLink 
+                                href="/admin/retention"
+                                title="Retention & Churn"
+                                description="Analyze user cohorts and churn rates."
+                                disabled
+                            />
+                            <AdminNavLink 
+                                href="/admin/funnel"
+                                title="Signup Funnel"
+                                description="Track user conversion through key stages."
+                                disabled
+                            />
+                             <AdminNavLink 
+                                href="/admin/blog-analytics"
+                                title="Blog Analytics"
+                                description="Measure content performance and impact."
+                                disabled
+                            />
+                        </CardContent>
+                    </Card>
+
+                     <Card>
+                         <CardHeader>
+                            <CardTitle>Management</CardTitle>
+                            <CardDescription>Tools for managing users, content, and system settings.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid md:grid-cols-2 gap-6">
+                            <AdminNavLink 
+                                href="/admin/users"
+                                title="User Management"
+                                description="View, edit, and manage user roles."
+                            />
+                            <AdminNavLink 
+                                href="/admin/audit-log"
+                                title="Subscription Audit Log"
+                                description="Track all billing-related events."
+                            />
+                             <AdminNavLink 
+                                href="/admin/blog"
+                                title="Blog Post Editor"
+                                description="Create and manage content for the blog."
+                            />
+                             <AdminNavLink 
+                                href="/admin/ai-campaign"
+                                title="AI Upsell Campaign"
+                                description="Target users for AI feature adoption."
+                            />
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                         <CardHeader>
+                            <CardTitle>Operations</CardTitle>
+                            <CardDescription>Configure and monitor automated system jobs.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid md:grid-cols-2 gap-6">
+                           <AdminNavLink
+                                href="/admin/cron-config"
+                                title="Cron Job Settings"
+                                description="Configure scheduled tasks like daily digests."
+                            />
+                             <AdminNavLink
+                                href="/admin/cron-history"
+                                title="Cron Job Run History"
+                                description="View the execution history of scheduled tasks."
+                            />
                         </CardContent>
                     </Card>
                 </div>
