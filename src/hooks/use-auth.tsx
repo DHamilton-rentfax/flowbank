@@ -2,8 +2,9 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
-import { onAuthStateChanged, signOut, type User, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, getIdToken } from "firebase/auth";
-import { auth } from "@/firebase/client";
+import { onAuthStateChanged, signOut, type User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, getIdToken } from "firebase/auth";
+import { auth, db } from "@/firebase/client";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "./use-toast";
 import { useRouter } from "next/navigation";
 import type { UserAddress } from "@/lib/types";
@@ -14,6 +15,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => void;
   loginWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, businessType: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
 }
 
@@ -73,6 +75,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // onAuthStateChanged will trigger and handle the redirect/session creation
   }
 
+  const signUpWithEmail = async (email: string, password: string, businessType: string) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Create a document in Firestore for the new user
+    await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.email, // Default display name to email
+        businessType: businessType,
+        createdAt: serverTimestamp(),
+        plan: { id: 'free', name: 'Free' } // Default to free plan
+    });
+
+    // onAuthStateChanged will handle the session creation and redirect
+  };
+
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
@@ -81,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <AuthContext.Provider value={{ user, idToken, loading, logout, loginWithEmail, loginWithGoogle }}>
+    <AuthContext.Provider value={{ user, idToken, loading, logout, loginWithEmail, signUpWithEmail, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );

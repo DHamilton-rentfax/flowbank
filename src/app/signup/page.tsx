@@ -1,0 +1,115 @@
+
+"use client";
+
+import React, { useState } from "react";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+export default function Signup() {
+  const { signUpWithEmail, user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [businessType, setBusinessType] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (!authLoading && user) {
+        router.replace('/onboarding');
+    }
+  }, [user, authLoading, router]);
+
+  const handleEmailSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!businessType) {
+        toast({ title: "Missing Field", description: "Please select a business type.", variant: "destructive" });
+        return;
+    }
+    setLoading(true);
+    try {
+        await signUpWithEmail(email, password, businessType);
+        // The useEffect will handle the redirect after state update
+    } catch(e) {
+        const error = e as Error;
+        toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
+    } finally {
+        setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-1 flex items-center justify-center bg-secondary p-4">
+        <Card className="w-full max-w-md shadow-xl rounded-xl">
+            <CardHeader className="text-center">
+                <CardTitle className="text-2xl">Create your Account</CardTitle>
+                <CardDescription>Join FlowBank to automate your finances.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={handleEmailSignup} className="grid gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                            id="email"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            disabled={loading}
+                        />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            disabled={loading}
+                        />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="businessType">I am a...</Label>
+                        <Select value={businessType} onValueChange={setBusinessType} required>
+                            <SelectTrigger id="businessType" disabled={loading}>
+                                <SelectValue placeholder="Select your business type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="freelancer">Freelancer</SelectItem>
+                                <SelectItem value="solo-entrepreneur">Solo Entrepreneur</SelectItem>
+                                <SelectItem value="llc-corp">Corporation / LLC</SelectItem>
+                                <SelectItem value="non-profit">Non-profit</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Button type="submit" disabled={loading} className="w-full">
+                        {loading ? "Creating Account..." : "Create Account"}
+                    </Button>
+                </form>
+                
+                 <div className="mt-4 text-center text-sm text-muted-foreground">
+                    Already have an account? <Link href="/login" className="text-primary underline hover:text-primary/80">Sign in</Link>
+                </div>
+            </CardContent>
+        </Card>
+      </main>
+      <Footer />
+    </div>
+  );
+}
