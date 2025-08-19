@@ -9,10 +9,9 @@ import { CountryCode } from "plaid";
 import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import { getAdminDb, getAdminAuth } from "@/firebase/server";
-import { plans, addOns } from "@/lib/plans";
-import type { Account, UserPlan, UserData, PaymentLink, AllocationRule, Transaction, CronRun } from "@/lib/types";
+import type { AllocationRule, CronRun, UserData } from "@/lib/types";
 import { Resend } from 'resend';
-import { doc, setDoc, getDoc, getDocs, collection, addDoc, FieldValue, query, where, orderBy, limit } from "firebase/firestore";
+import { doc, setDoc, getDoc, getDocs, collection, addDoc, query, where, orderBy, limit } from "firebase/firestore";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
