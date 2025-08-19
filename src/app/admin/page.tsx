@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -10,6 +11,22 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { grantHighestTierPlan } from '@/app/actions';
+import { Badge } from '@/components/ui/badge';
+import { ArrowRight } from 'lucide-react';
+
+function AdminNavLink({ href, title, description }: { href: string, title: string, description: string }) {
+    return (
+        <Link href={href} className="block p-4 border rounded-lg hover:bg-secondary transition-colors">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-semibold text-primary">{title}</h3>
+                    <p className="text-sm text-muted-foreground">{description}</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+        </Link>
+    )
+}
 
 export default function AdminPage() {
     const [email, setEmail] = useState('');
@@ -43,15 +60,43 @@ export default function AdminPage() {
         <div className="flex flex-col min-h-screen">
             <Header />
             <main className="flex-1 bg-secondary py-8">
-                <div className="container mx-auto max-w-lg">
+                <div className="container mx-auto max-w-4xl space-y-8">
+                    <div>
+                        <h1 className="text-3xl font-bold">Admin Panel</h1>
+                        <p className="text-muted-foreground">Your mission control for FlowBank.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <AdminNavLink 
+                            href="/admin/analytics"
+                            title="Analytics Dashboard"
+                            description="View key metrics, MRR, and user stats."
+                        />
+                        <AdminNavLink 
+                            href="/admin/users"
+                            title="User Management"
+                            description="View, edit, and manage user roles."
+                        />
+                        <AdminNavLink 
+                            href="/admin/audit-log"
+                            title="Subscription Audit Log"
+                            description="Track all billing-related events."
+                        />
+                         <AdminNavLink 
+                            href="/admin/blog"
+                            title="Blog Post Editor"
+                            description="Create and manage content for the blog."
+                        />
+                    </div>
+                    
                     <Card>
                         <CardHeader>
-                            <CardTitle>Admin Panel</CardTitle>
-                            <CardDescription>Grant premium plans to users.</CardDescription>
+                            <CardTitle>Grant Premium Plan</CardTitle>
+                            <CardDescription>Quickly upgrade a user to the Pro plan for testing or support.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="space-y-2">
+                            <form onSubmit={handleSubmit} className="flex items-end gap-4">
+                                <div className="space-y-2 flex-1">
                                     <Label htmlFor="email">User Email</Label>
                                     <Input
                                         id="email"

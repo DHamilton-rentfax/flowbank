@@ -16,6 +16,7 @@ const PROTECTED_ROUTES = [
 // Define which routes are only for admins
 const ADMIN_ROUTES = [
     '/admin',
+    '/admin/analytics',
     '/admin/audit-log',
     '/admin/blog',
     '/admin/checkout-test',
