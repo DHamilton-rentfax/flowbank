@@ -12,7 +12,7 @@ import { getAdminDb, getAdminAuth } from "@/firebase/server";
 import { plans, addOns } from "@/lib/plans";
 import type { Account, UserPlan, UserData, PaymentLink, AllocationRule, Transaction } from "@/lib/types";
 import { Resend } from 'resend';
-import { doc, setDoc, getDoc, getDocs, collection, addDoc, FieldValue } from "firebase/firestore";
+import { doc, setDoc, getDoc, getDocs, collection, addDoc, FieldValue, query, where, orderBy } from "firebase/firestore";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -399,6 +399,31 @@ export async function grantHighestTierPlan(email: string) {
     }
 }
 
+export async function getAllUsers() {
+    const currentUserId = await getUserId();
+    const auth = getAdminAuth();
+    const db = getAdminDb();
+
+    // Verify that the current user is an admin
+    const currentUserClaims = (await auth.getUser(currentUserId)).customClaims;
+    if (currentUserClaims?.role !== 'admin') {
+        throw new Error("You do not have permission to view users.");
+    }
+    
+    const usersSnap = await db.collection('users').orderBy('email').get();
+    const users = usersSnap.docs.map(doc => {
+        const data = doc.data();
+        return {
+            uid: doc.id,
+            email: data.email || 'N/A',
+            role: data.role || 'user',
+            plan: data.plan?.id || 'free',
+        };
+    });
+    
+    return { users };
+}
+
 export async function updateUserRole(targetUid: string, newRole: 'admin' | 'user') {
     const currentUserId = await getUserId();
     const auth = getAdminAuth();
@@ -421,7 +446,7 @@ export async function updateUserRole(targetUid: string, newRole: 'admin' | 'user
         }
 
         // 3. Update Custom Claims (for backend access control)
-        await auth.setCustomUserClaims(targetUid, { role: newRole });
+        await auth.setCustomUserClaims(targetUid, { ...targetUser.customClaims, role: newRole });
 
         // 4. Update Firestore (for UI display and client-side logic)
         await db.collection('users').doc(targetUid).set({ 
@@ -713,11 +738,14 @@ export async function getCronConfig() {
     
     const cronRef = doc(db, "config", "cron");
     const snap = await getDoc(cronRef);
-    const cronValue = snap.exists() ? snap.data()?.campaignDigest : "0 9 * * *";
-    return { cron: cronValue };
+    if (!snap.exists()) {
+        return { cron: "0 9 * * *", enabled: true };
+    }
+    const data = snap.data();
+    return { cron: data?.campaignDigest || "0 9 * * *", enabled: data?.enabled ?? true };
 }
 
-export async function saveCronConfig(cron: string) {
+export async function saveCronConfig(cron: string, enabled: boolean) {
     const userId = await getUserId();
     const auth = getAdminAuth();
     const db = getAdminDb();
@@ -729,12 +757,12 @@ export async function saveCronConfig(cron: string) {
     }
 
     const cronRef = doc(db, "config", "cron");
-    await setDoc(cronRef, { campaignDigest: cron }, { merge: true });
+    await setDoc(cronRef, { campaignDigest: cron, enabled: enabled }, { merge: true });
 
     await addDoc(collection(db, "logs"), {
         type: "cron_config_updated",
         actor: currentUserClaims.email,
-        message: `Updated campaign digest cron to: ${cron}`,
+        message: `Updated campaign digest cron to: ${cron} (Enabled: ${enabled})`,
         timestamp: new Date().toISOString()
     });
     

@@ -9,21 +9,11 @@ const PROTECTED_ROUTES = [
     '/rules',
     '/onboarding',
     '/invite',
-    '/dashboard/team',
-    '/dashboard/team/audit-log'
 ];
 
 // Define which routes are only for admins
 const ADMIN_ROUTES = [
     '/admin',
-    '/admin/analytics',
-    '/admin/audit-log',
-    '/admin/blog',
-    '/admin/checkout-test',
-    '/admin/enterprise-onboard',
-    '/admin/letters',
-    '/admin/ai-campaign',
-    '/admin/cron-config',
 ];
 
 export async function middleware(req: NextRequest) {
