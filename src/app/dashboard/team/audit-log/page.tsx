@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { getTeamAuditLogs } from '@/app/teams/actions';
+import { getTeamAuditLogs } from '@/lib/client/team';
 
 interface Log {
     id: string;

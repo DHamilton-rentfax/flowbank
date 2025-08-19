@@ -3,7 +3,7 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+const webpack = require('webpack');
 
 
 const nextConfig = {
@@ -28,19 +28,23 @@ const nextConfig = {
     ],
   },
    webpack: (config, { isServer }) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      buffer: require.resolve('buffer/'),
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "node:process": "process/browser",
     };
-    
     if (!isServer) {
-        config.resolve.fallback = {
-            ...config.resolve.fallback,
-            process: require.resolve('process/browser')
-        }
+      config.resolve.fallback = {
+        ...(config.resolve.fallback || {}),
+        "process": require.resolve("process/browser"),
+        "buffer": require.resolve("buffer/"),
+      };
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          process: "process/browser",
+          Buffer: ["buffer", "Buffer"],
+        })
+      );
     }
-    config.plugins.push(new NodePolyfillPlugin());
-
     return config;
   },
 };
