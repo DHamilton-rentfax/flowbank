@@ -28,6 +28,11 @@ const nextConfig = {
     ],
   },
    webpack: (config, { isServer }) => {
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "node:process": "process/browser",
+      "node:buffer": "buffer/",
+    };
     if (!isServer) {
       config.resolve.fallback = {
         ...(config.resolve.fallback || {}),
