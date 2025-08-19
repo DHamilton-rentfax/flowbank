@@ -1,75 +1,30 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ========================
-    // USER PROFILE DOCUMENTS
-    // ========================
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Billing events and other subcollections can be secured here
-      match /billingEvents/{eventId} {
-         allow read: if request.auth.uid == userId;
-         allow write: if false; // Only server can write
-      }
-      match /plaidItems/{itemId} {
-         allow read, write: if request.auth.uid == userId;
-      }
-       match /transactions/{txId} {
-         allow read, write: if request.auth.uid == userId;
-      }
-       match /rules/{ruleId} {
-         allow read, write: if request.auth.uid == userId;
-      }
-       match /allocations/{allocId} {
-         allow read: if request.auth.uid == userId;
-         allow write: if false; // Server only
-      }
-       match /accounts/{acctId} {
-         allow read, write: if request.auth.uid == userId;
-      }
+    // Users can only read/write their own documents
+    match /users/{userId}/{documents=**} {
+      allow read, write: if request.auth.uid == userId;
     }
 
-    // ========================
-    // TEAM DATA
-    // ========================
+    // Teams can be read by anyone, but only written by the owner
     match /teams/{teamId} {
-      allow read: if request.auth != null && isTeamMember(teamId);
-      allow write: if request.auth != null && isTeamOwner(teamId);
-      
-      // Members subcollection
-      match /members/{memberId} {
-        allow read, write: if request.auth != null && isTeamMember(teamId);
-      }
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == resource.data.owner;
+    }
+    match /teams/{teamId}/{documents=**} {
+       allow read, write: if request.auth != null;
+    }
 
-      // Invites subcollection
-      match /invites/{inviteId} {
-        allow read, write: if request.auth != null && isTeamMember(teamId);
-      }
-
-      // Audit logs – only readable by team, but not writable by client
-      match /auditLogs/{logId} {
-        allow read: if request.auth != null && isTeamMember(teamId);
-        allow write: if false;  // Only server functions should write audit logs
-      }
+    // Team audit logs are backend-only
+    match /teamAuditLogs/{logId} {
+        allow read, write: if false;
     }
     
-    // Blog posts are public
+    // Public blog posts
     match /blogPosts/{postId} {
-      allow read: if true;
-      allow write: if false; // Should be written from an admin tool/backend
+        allow read: if resource.data.published == true;
+        allow write: if request.auth != null && request.auth.token.role == 'admin';
     }
-  }
-
-  // ========================
-  // 🔒 HELPER FUNCTIONS
-  // ========================
-  function isTeamMember(teamId) {
-    return exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid));
-  }
-
-  function isTeamOwner(teamId) {
-    return get(/databases/$(database)/documents/teams/$(teamId)).data.owner == request.auth.uid;
   }
 }

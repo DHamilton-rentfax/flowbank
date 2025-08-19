@@ -93,10 +93,11 @@ export async function inviteTeamMember(email: string) {
   };
   await teamRef.collection('invites').doc(inviteId).set(inviteData);
   
-  await teamRef.collection('auditLogs').add({
+  await db.collection('teamAuditLogs').add({
       type: 'MEMBER_INVITED',
       timestamp: firestore.FieldValue.serverTimestamp(),
       actorId: userId,
+      teamId: teamRef.id,
       details: { invitedEmail: email }
   });
 
@@ -134,10 +135,13 @@ export async function acceptTeamInvitation(token: string) {
             joinedAt: firestore.FieldValue.serverTimestamp(),
         });
         transaction.delete(inviteRef);
-        transaction.create(teamRef.collection('auditLogs').doc(), {
+        
+        const auditLogRef = db.collection('teamAuditLogs').doc();
+        transaction.create(auditLogRef, {
             type: 'MEMBER_JOINED',
             timestamp: firestore.FieldValue.serverTimestamp(),
             actorId: userId,
+            teamId: teamRef.id,
             details: { joinedEmail: user.email, joinedId: userId }
         });
     });
@@ -203,10 +207,11 @@ export async function removeTeamMember(memberId: string) {
     
     await memberRef.delete();
     
-    await teamRef.collection('auditLogs').add({
+    await db.collection('teamAuditLogs').add({
         type: 'MEMBER_REMOVED',
         timestamp: firestore.FieldValue.serverTimestamp(),
         actorId: userId,
+        teamId: teamRef.id,
         details: { removedEmail: memberEmail, removedId: memberId }
     });
 

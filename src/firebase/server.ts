@@ -9,38 +9,19 @@ let _auth: Auth | null = null;
 let _db: Firestore | null = null;
 
 function makeApp(): App {
-    if (getApps().length > 0) {
-        return getApp();
+    const apps = getApps();
+    if (apps.length > 0) {
+        return apps[0];
     }
 
-    // This is the recommended way for Vercel/Next.js
-    const serviceAccount = {
+    const serviceAccountCert = {
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     }
 
-    if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
-        // Fallback for local development using Base64 env var
-        const serviceAccountB64 = process.env.FIREBASE_ADMIN_CERT_B64;
-        if (serviceAccountB64) {
-             try {
-                const serviceAccountJson = Buffer.from(serviceAccountB64, 'base64').toString('utf8');
-                const parsedServiceAccount = JSON.parse(serviceAccountJson);
-                 return initializeApp({
-                    credential: cert(parsedServiceAccount),
-                });
-            } catch (error) {
-                console.error("Failed to parse FIREBASE_ADMIN_CERT_B64:", error);
-                throw new Error("Invalid FIREBASE_ADMIN_CERT_B64 value.");
-            }
-        }
-        // Fallback for emulators or environments with GOOGLE_APPLICATION_CREDENTIALS
-        return initializeApp();
-    }
-
     return initializeApp({
-        credential: cert(serviceAccount),
+        credential: cert(serviceAccountCert),
     });
 }
 
