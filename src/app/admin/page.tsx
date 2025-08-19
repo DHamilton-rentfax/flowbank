@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -86,6 +85,11 @@ export default function AdminPage() {
                             href="/admin/blog"
                             title="Blog Post Editor"
                             description="Create and manage content for the blog."
+                        />
+                        <AdminNavLink 
+                            href="/admin/ai-campaign"
+                            title="AI Upsell Campaign"
+                            description="Target users for AI feature adoption."
                         />
                     </div>
                     

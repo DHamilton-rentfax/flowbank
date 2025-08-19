@@ -484,3 +484,46 @@ export async function getAdminAnalytics() {
     };
 }
     
+export async function getAiCampaignTargets() {
+    const userId = await getUserId();
+    const auth = getAdminAuth();
+    const db = getAdminDb();
+
+    // Verify admin privileges
+    const currentUserClaims = (await auth.getUser(userId)).customClaims;
+    if (currentUserClaims?.role !== 'admin') {
+        throw new Error("You do not have permission to access admin actions.");
+    }
+
+    const usersSnap = await db.collection('users').get();
+    const users = usersSnap.docs.map(doc => doc.data() as UserData);
+
+    // Filter for users on a paid plan (e.g., 'pro') who haven't used the AI feature
+    const targets = users.filter(user => 
+        (user.plan?.id === 'pro' || user.plan?.id === 'starter') &&
+        !user.features?.aiTaxCoach
+    ).map(user => ({ email: user.email, plan: user.plan?.id, aiUsed: false }));
+
+    return { targets };
+}
+
+export async function sendAiTrialInvite(email: string) {
+    const userId = await getUserId();
+    const auth = getAdminAuth();
+
+    // Verify admin privileges
+    const currentUserClaims = (await auth.getUser(userId)).customClaims;
+    if (currentUserClaims?.role !== 'admin') {
+        throw new Error("You do not have permission to access admin actions.");
+    }
+
+    // In a real app, you would integrate with an email service like Resend or Mailchimp here.
+    // For now, we'll just log it to the console.
+    console.log(`[Admin Action] Sending 7-day AI trial invite to: ${email}`);
+    
+    // You could also log this campaign action to Firestore for tracking.
+    // await getAdminDb().collection('campaigns').add({ ... });
+
+    return { success: true, message: `Trial invite sent to ${email}.` };
+}
+

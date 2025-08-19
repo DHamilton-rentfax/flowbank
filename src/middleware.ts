@@ -22,6 +22,7 @@ const ADMIN_ROUTES = [
     '/admin/checkout-test',
     '/admin/enterprise-onboard',
     '/admin/letters',
+    '/admin/ai-campaign',
 ];
 
 export async function middleware(req: NextRequest) {
