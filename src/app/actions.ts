@@ -393,3 +393,43 @@ export async function grantHighestTierPlan(email: string) {
         return { success: false, error: errorMessage };
     }
 }
+
+export async function updateUserRole(targetUid: string, newRole: 'admin' | 'user') {
+    const currentUserId = await getUserId();
+    const auth = getAdminAuth();
+    const db = getAdminDb();
+
+    try {
+        // 1. Verify that the current user is an admin
+        const currentUserClaims = (await auth.getUser(currentUserId)).customClaims;
+        if (currentUserClaims?.role !== 'admin') {
+            throw new Error("You do not have permission to change user roles.");
+        }
+
+        // 2. Fetch the target user to prevent self-modification or modifying the root admin
+        const targetUser = await auth.getUser(targetUid);
+        if (targetUser.uid === currentUserId) {
+            throw new Error("Admins cannot change their own role.");
+        }
+        if (targetUser.email === process.env.NEXT_PUBLIC_ROOT_ADMIN_EMAIL) {
+             throw new Error("The root admin's role cannot be changed.");
+        }
+
+        // 3. Update Custom Claims (for backend access control)
+        await auth.setCustomUserClaims(targetUid, { role: newRole });
+
+        // 4. Update Firestore (for UI display and client-side logic)
+        await db.collection('users').doc(targetUid).set({ 
+            role: newRole 
+        }, { merge: true });
+
+        return { success: true, message: `Successfully updated ${targetUser.email || targetUid} to ${newRole}.` };
+
+    } catch (error) {
+        console.error("Error updating user role:", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
+
+    
