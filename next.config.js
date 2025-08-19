@@ -28,16 +28,14 @@ const nextConfig = {
     ],
   },
    webpack: (config, { isServer }) => {
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      "node:process": "process/browser",
-    };
+    // Required for Browser based modules.
     if (!isServer) {
       config.resolve.fallback = {
-        ...(config.resolve.fallback || {}),
+        ...config.resolve.fallback,
         "process": require.resolve("process/browser"),
         "buffer": require.resolve("buffer/"),
       };
+      
       config.plugins.push(
         new webpack.ProvidePlugin({
           process: "process/browser",
