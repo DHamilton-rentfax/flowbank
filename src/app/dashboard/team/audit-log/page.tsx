@@ -1,9 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { getTeamAuditLogs } from '@/app/teams/actions';
-import { useAuth } from '@/hooks/use-auth';
+import React, { useState, useEffect, useMemo, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -24,6 +22,16 @@ interface Log {
     actorId: string;
     details: any;
     timestamp: any;
+}
+
+async function fetchAuditLogs(): Promise<Log[]> {
+    const res = await fetch('/api/team/audit-logs');
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to fetch logs' }));
+        throw new Error(errorData.error);
+    }
+    const data = await res.json();
+    return data.logs || [];
 }
 
 function getLogSummary(log: Log) {
@@ -50,25 +58,28 @@ export default function TeamAuditLogPage() {
     const [logs, setLogs] = useState<Log[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('ALL');
-    const { idToken } = useAuth();
     const { toast } = useToast();
 
     useEffect(() => {
-        if (idToken) {
-            const fetchLogs = async () => {
-                setLoading(true);
-                try {
-                    const { logs: fetchedLogs } = await getTeamAuditLogs();
-                    setLogs(fetchedLogs as Log[]);
-                } catch (error) {
-                    toast({ title: 'Error', description: 'Could not fetch audit logs.', variant: 'destructive' });
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchLogs();
-        }
-    }, [idToken, toast]);
+        const loadLogs = async () => {
+            setLoading(true);
+            try {
+                const fetchedLogs = await fetchAuditLogs();
+                // Firestore timestamps need to be converted to Date objects
+                const formattedLogs = fetchedLogs.map(log => ({
+                    ...log,
+                    timestamp: log.timestamp ? new Date(log.timestamp._seconds * 1000) : new Date()
+                }));
+                setLogs(formattedLogs as Log[]);
+            } catch (error) {
+                const err = error as Error;
+                toast({ title: 'Error', description: `Could not fetch audit logs: ${err.message}`, variant: 'destructive' });
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadLogs();
+    }, [toast]);
 
     const filteredLogs = useMemo(() => {
         return logs.filter(log => {
@@ -146,7 +157,7 @@ export default function TeamAuditLogPage() {
                                                 <TableCell>{getLogSummary(log)}</TableCell>
                                                 <TableCell className="font-mono text-xs">{log.actorId}</TableCell>
                                                 <TableCell className="text-right text-muted-foreground">
-                                                    {log.timestamp ? format(log.timestamp.toDate(), 'PPP p') : '—'}
+                                                    {log.timestamp ? format(log.timestamp, 'PPP p') : '—'}
                                                 </TableCell>
                                             </TableRow>
                                         ))}

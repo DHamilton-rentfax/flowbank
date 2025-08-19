@@ -212,22 +212,3 @@ export async function removeTeamMember(memberId: string) {
 
     return { success: true, message: 'Member removed successfully.' };
 }
-
-export async function getTeamAuditLogs() {
-    const userId = await getUserId();
-    const db = getAdminDb();
-    const userDoc = await db.collection('users').doc(userId).get();
-    const teamId = userDoc.data()?.teamId || MOCK_TEAM_ID; // Fallback to mock for owner
-
-    if (!teamId) {
-        return { logs: [] };
-    }
-
-    const logsSnap = await db.collection('teams').doc(teamId).collection('auditLogs')
-        .orderBy('timestamp', 'desc')
-        .limit(50)
-        .get();
-
-    const logs = logsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return { logs };
-}
