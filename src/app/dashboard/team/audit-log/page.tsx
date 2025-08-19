@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { getTeamAuditLogs } from '@/app/teams/actions';
 
 interface Log {
     id: string;
@@ -22,16 +23,6 @@ interface Log {
     actorId: string;
     details: any;
     timestamp: any;
-}
-
-async function fetchAuditLogs(): Promise<Log[]> {
-    const res = await fetch('/api/team/audit-logs');
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Failed to fetch logs' }));
-        throw new Error(errorData.error);
-    }
-    const data = await res.json();
-    return data.logs || [];
 }
 
 function getLogSummary(log: Log) {
@@ -64,9 +55,9 @@ export default function TeamAuditLogPage() {
         const loadLogs = async () => {
             setLoading(true);
             try {
-                const fetchedLogs = await fetchAuditLogs();
+                const { logs: fetchedLogs } = await getTeamAuditLogs();
                 // Firestore timestamps need to be converted to Date objects
-                const formattedLogs = fetchedLogs.map(log => ({
+                const formattedLogs = fetchedLogs.map((log: any) => ({
                     ...log,
                     timestamp: log.timestamp ? new Date(log.timestamp._seconds * 1000) : new Date()
                 }));

@@ -212,3 +212,10 @@ export async function removeTeamMember(memberId: string) {
 
     return { success: true, message: 'Member removed successfully.' };
 }
+
+// This function now safely calls the API route from the client
+export async function getTeamAuditLogs() {
+  const res = await fetch('/api/team/audit-logs', { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch logs');
+  return res.json();
+}
