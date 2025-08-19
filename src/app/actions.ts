@@ -12,7 +12,7 @@ import { getAdminDb, getAdminAuth } from "@/firebase/server";
 import { plans, addOns } from "@/lib/plans";
 import type { Account, UserPlan, UserData, PaymentLink, AllocationRule, Transaction } from "@/lib/types";
 import { Resend } from 'resend';
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection } from "firebase/firestore";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -500,7 +500,7 @@ export async function getAiCampaignTargets() {
     }
 
     const usersSnap = await db.collection('users').get();
-    const users = usersSnap.docs.map(doc => doc.data() as UserData);
+    const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserData & { id: string }));
 
     // Filter for users on a paid plan (e.g., 'pro') who haven't used the AI feature
     const targets = users.filter(user => 
@@ -555,4 +555,50 @@ export async function sendAiTrialInvite(email: string) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
         return { success: false, message: errorMessage };
     }
+}
+
+export async function exportCampaignData() {
+    const userId = await getUserId();
+    const auth = getAdminAuth();
+    const db = getAdminDb();
+
+    // Verify admin privileges
+    const currentUserClaims = (await auth.getUser(userId)).customClaims;
+    if (currentUserClaims?.role !== 'admin') {
+        throw new Error("You do not have permission to access admin actions.");
+    }
+
+    const campaignsSnap = await getDocs(collection(db, "campaigns"));
+    const campaigns = campaignsSnap.docs.map(d => d.data());
+    
+    const usersSnap = await getDocs(collection(db, "users"));
+    const usersByEmail = usersSnap.docs.reduce((acc, doc) => {
+        const data = doc.data();
+        if (data.email) {
+            acc[data.email] = data;
+        }
+        return acc;
+    }, {} as { [email: string]: UserData });
+
+    const rows = campaigns.map(campaign => {
+        const user = usersByEmail[campaign.email];
+        return {
+            Email: campaign.email,
+            Offer: campaign.offer,
+            SentAt: campaign.sentAt,
+            Type: campaign.type,
+            Activated: user?.features?.aiTaxCoach ? "Yes" : "No",
+            ActivatedAt: user?.aiTrialActivatedAt || "",
+            Plan: user?.plan?.id || 'N/A'
+        };
+    });
+
+    if (rows.length === 0) {
+        return "";
+    }
+
+    const header = Object.keys(rows[0]).join(",");
+    const body = rows.map(row => Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(",")).join("\n");
+    
+    return `${header}\n${body}`;
 }

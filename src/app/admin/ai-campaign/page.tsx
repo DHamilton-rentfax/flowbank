@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { getAiCampaignTargets, sendAiTrialInvite } from '@/app/actions';
+import { getAiCampaignTargets, sendAiTrialInvite, exportCampaignData } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -10,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
+import { Send, Download } from 'lucide-react';
 
 interface TargetUser {
     email: string;
@@ -64,6 +65,35 @@ export default function AiCampaignPage() {
         });
     };
 
+    const handleExport = () => {
+        startTransition(async () => {
+            try {
+                const csvData = await exportCampaignData();
+                if (csvData) {
+                    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', 'campaign_data.csv');
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    toast({ title: "Export complete!", description: "Campaign data has been downloaded." });
+                } else {
+                     toast({ title: "Nothing to export", description: "There is no campaign data to export yet." });
+                }
+            } catch (error) {
+                const err = error as Error;
+                toast({
+                    title: "Export Failed",
+                    description: err.message,
+                    variant: "destructive"
+                });
+            }
+        });
+    };
+
     return (
         <div className="flex flex-col min-h-screen">
             <Header />
@@ -71,11 +101,18 @@ export default function AiCampaignPage() {
                 <div className="container mx-auto max-w-4xl">
                     <Card>
                         <CardHeader>
-                            <CardTitle>AI Upsell Campaign</CardTitle>
-                            <CardDescription>
-                                The users below are on a paid plan but have not used the AI Financial Advisor.
-                                You can send them an invite to a 7-day trial of the feature.
-                            </CardDescription>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>AI Upsell Campaign</CardTitle>
+                                    <CardDescription>
+                                        The users below are on a paid plan but have not used the AI Financial Advisor.
+                                    </CardDescription>
+                                </div>
+                                <Button onClick={handleExport} disabled={isPending} variant="outline">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Export CSV
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <div className="border rounded-lg">
@@ -121,7 +158,7 @@ export default function AiCampaignPage() {
                                                             onClick={() => handleSendInvite(user.email)}
                                                             disabled={isPending}
                                                         >
-                                                            <Send className="mr-2" />
+                                                            <Send className="mr-2 h-4 w-4" />
                                                             Send Trial
                                                         </Button>
                                                     </TableCell>
