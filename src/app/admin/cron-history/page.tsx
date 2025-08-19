@@ -1,8 +1,7 @@
-
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { getCronRunHistory } from "@/app/actions";
+import React, { useEffect, useState, useTransition } from "react";
+import { getCronRunHistory, sendCampaignDigest } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -13,10 +12,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import type { CronRun } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { PlayCircle } from "lucide-react";
 
 export default function CronHistoryPage() {
   const [runs, setRuns] = useState<CronRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,6 +40,22 @@ export default function CronHistoryPage() {
     }
     fetchHistory();
   }, [toast]);
+  
+  const handleManualRun = () => {
+    startTransition(async () => {
+        try {
+            const result = await sendCampaignDigest();
+            if (result.success) {
+                toast({ title: "Digest sent!", description: "The campaign digest has been successfully sent."});
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error) {
+            const err = error as Error;
+            toast({ title: "Failed to send digest", description: err.message, variant: "destructive"});
+        }
+    });
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -46,10 +64,18 @@ export default function CronHistoryPage() {
         <div className="container mx-auto max-w-4xl">
           <Card>
             <CardHeader>
-              <CardTitle>Cron Job Run History</CardTitle>
-              <CardDescription>
-                Showing the last 100 executions of scheduled jobs.
-              </CardDescription>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Cron Job Run History</CardTitle>
+                        <CardDescription>
+                            Showing the last 100 executions of scheduled jobs.
+                        </CardDescription>
+                    </div>
+                    <Button onClick={handleManualRun} disabled={isPending}>
+                        <PlayCircle className="mr-2 h-4 w-4" />
+                        {isPending ? 'Sending...' : 'Run Campaign Digest Now'}
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
               <div className="border rounded-lg">

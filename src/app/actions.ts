@@ -656,13 +656,15 @@ export async function sendCampaignDigest() {
     const auth = getAdminAuth();
      const db = getAdminDb();
     const runAt = new Date().toISOString();
+    let actorEmail = "auto-schedule";
 
     try {
-        // Verify admin privileges
-        const currentUserClaims = (await auth.getUser(userId)).customClaims;
+        // Verify admin privileges if triggered manually
+        const currentUserClaims = (await auth.getUser(userId))?.customClaims;
         if (currentUserClaims?.role !== 'admin') {
             throw new Error("You do not have permission to access this action.");
         }
+        actorEmail = currentUserClaims.email || actorEmail;
         
         // Fetch data
         const campaignsSnap = await getDocs(collection(db, "campaigns"));
@@ -722,7 +724,7 @@ export async function sendCampaignDigest() {
         await addDoc(collection(db, "cron_runs"), {
             job: "campaign_digest",
             runAt,
-            triggeredBy: currentUserClaims.email, // Or "auto-schedule"
+            triggeredBy: actorEmail,
             success: true
         });
 
@@ -731,11 +733,13 @@ export async function sendCampaignDigest() {
         console.error("Failed to send digest email:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         
-        const currentUserClaims = (await auth.getUser(userId))?.customClaims;
+         const currentUserClaims = (await auth.getUser(userId))?.customClaims;
+        actorEmail = currentUserClaims?.email || actorEmail;
+
         await addDoc(collection(db, "cron_runs"), {
             job: "campaign_digest",
             runAt,
-            triggeredBy: currentUserClaims?.email || "unknown",
+            triggeredBy: actorEmail,
             success: false,
             error: errorMessage,
         });
