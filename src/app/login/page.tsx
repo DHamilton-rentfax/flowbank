@@ -28,6 +28,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // This handles the case where a user is already logged in and navigates to /login
     if (!authLoading && user) {
         router.replace(next || '/dashboard');
     }
@@ -39,7 +40,7 @@ export default function Login() {
     try {
         await loginWithEmail(email, password);
         toast({ title: "Signed In!", description: "Welcome back."});
-        // The useEffect will handle the redirect
+        router.push(next || '/dashboard');
     } catch(e) {
         const error = e as Error;
         toast({ title: "Login Failed", description: error.message, variant: "destructive" });
@@ -53,13 +54,22 @@ export default function Login() {
     try {
         await loginWithGoogle();
         toast({ title: "Signed In with Google!", description: "Welcome."});
-         // The useEffect will handle the redirect
+        router.push(next || '/dashboard');
     } catch(e) {
         const error = e as Error;
         toast({ title: "Google Login Failed", description: error.message, variant: "destructive" });
     } finally {
         setLoading(false);
     }
+  }
+
+  // Don't render the form if the user is already logged in and we're about to redirect
+  if (authLoading || user) {
+    return (
+        <div className="flex flex-col min-h-screen items-center justify-center">
+            <p>Loading...</p>
+        </div>
+    );
   }
 
   return (
