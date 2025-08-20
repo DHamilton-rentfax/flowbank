@@ -2,8 +2,6 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
-import { getCronRunHistory } from "@/app/actions/get-cron-run-history";
-import { sendCampaignDigest } from "@/app/actions/send-campaign-digest";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -26,6 +24,7 @@ export default function CronHistoryPage() {
   const fetchHistory = React.useCallback(async () => {
     setLoading(true);
     try {
+      const { getCronRunHistory } = await import('@/app/actions/get-cron-run-history');
       const { runs: fetchedRuns } = await getCronRunHistory();
       setRuns(fetchedRuns);
     } catch (error) {
@@ -47,6 +46,7 @@ export default function CronHistoryPage() {
   const handleManualRun = () => {
     startTransition(async () => {
         try {
+            const { sendCampaignDigest } = await import('@/app/actions/send-campaign-digest');
             const result = await sendCampaignDigest();
             if (result.success) {
                 toast({ title: "Digest sent!", description: "The campaign digest has been successfully sent."});
@@ -135,3 +135,5 @@ export default function CronHistoryPage() {
     </div>
   );
 }
+
+    

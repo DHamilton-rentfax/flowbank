@@ -1,8 +1,7 @@
+
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { getCronConfig } from "@/app/actions/get-cron-config";
-import { saveCronConfig } from "@/app/actions/save-cron-config";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -32,6 +31,7 @@ export default function CronConfigPage() {
     async function fetchConfig() {
       setLoading(true);
       try {
+        const { getCronConfig } = await import('@/app/actions/get-cron-config');
         const { cron: fetchedCron, enabled } = await getCronConfig();
         setCron(fetchedCron);
         setIsEnabled(enabled);
@@ -76,6 +76,7 @@ export default function CronConfigPage() {
   const handleSave = () => {
     startTransition(async () => {
       try {
+        const { saveCronConfig } = await import('@/app/actions/save-cron-config');
         const result = await saveCronConfig(cron, isEnabled);
         if (result.success) {
           toast({ title: "Success!", description: result.message });
@@ -155,3 +156,5 @@ export default function CronConfigPage() {
     </div>
   );
 }
+
+    

@@ -1,10 +1,10 @@
+
 'use client';
 
 import React, { useEffect, useState, useTransition } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { acceptTeamInvitation } from '@/app/teams/actions';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -36,6 +36,7 @@ export default function AcceptInvitePageContent() {
 
     setStatus('processing');
     startTransition(async () => {
+      const { acceptTeamInvitation } = await import('@/app/teams/actions');
       const { success, error, message } = await acceptTeamInvitation(token);
       if (success) {
         setStatus('success');
@@ -83,3 +84,5 @@ export default function AcceptInvitePageContent() {
     </div>
   );
 }
+
+    

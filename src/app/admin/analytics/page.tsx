@@ -1,8 +1,8 @@
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getAdminAnalytics } from '@/app/actions/get-admin-analytics';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -58,6 +58,7 @@ export default function AdminAnalyticsPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
+                const { getAdminAnalytics } = await import('@/app/actions/get-admin-analytics');
                 const analyticsData = await getAdminAnalytics();
                 setData(analyticsData as AnalyticsData);
             } catch (error) {
@@ -148,3 +149,5 @@ export default function AdminAnalyticsPage() {
         </div>
     );
 }
+
+    

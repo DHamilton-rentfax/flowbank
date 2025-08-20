@@ -8,7 +8,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { createCheckoutSession } from '@/app/actions/create-checkout-session';
 import { useRouter } from 'next/navigation';
 
 export default function AdminCheckoutTestPage() {
@@ -25,6 +24,7 @@ export default function AdminCheckoutTestPage() {
         }
         setLoading(lookup_key);
         try {
+            const { createCheckoutSession } = await import('@/app/actions/create-checkout-session');
             const { url, error } = await createCheckoutSession([{ lookup_key }]);
             if (url) {
                 window.location.href = url;
@@ -82,3 +82,5 @@ export default function AdminCheckoutTestPage() {
         </div>
     );
 }
+
+    

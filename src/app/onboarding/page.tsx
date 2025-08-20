@@ -1,10 +1,9 @@
+
 "use client";
 
 import React, { useState } from "react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { createLinkToken } from "@/app/actions/create-link-token";
-import { exchangePublicToken } from "@/app/actions/exchange-public-token";
 import { usePlaidLink } from "react-plaid-link";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -25,6 +24,7 @@ export default function Onboarding() {
     token: linkToken,
     onSuccess: async (public_token) => {
         try {
+            const { exchangePublicToken } = await import('@/app/actions/exchange-public-token');
             await exchangePublicToken(public_token);
             toast({title: "Bank Account Linked!", description: "Your account is now connected and ready to sync."});
             next();
@@ -41,6 +41,7 @@ export default function Onboarding() {
         return;
       }
       try {
+        const { createLinkToken } = await import('@/app/actions/create-link-token');
         const { linkToken: fetchedToken, error } = await createLinkToken();
         if (error) throw new Error(error);
         
@@ -111,3 +112,5 @@ export default function Onboarding() {
     </div>
   );
 }
+
+    
