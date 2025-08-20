@@ -51,7 +51,6 @@ export default function Signup() {
     try {
         await signUpWithEmail(email, password, businessType);
         toast({ title: "Account created!", description: "Welcome to FlowBank. Let's get you set up." });
-        // The useEffect will handle the redirect after state update
     } catch(e) {
         const error = e as Error;
         toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
@@ -64,7 +63,7 @@ export default function Signup() {
     setLoading(true);
     try {
         await loginWithGoogle();
-        // The useEffect will handle the redirect
+        toast({ title: "Signed In with Google!", description: "Welcome."});
     } catch(e) {
         const error = e as Error;
         toast({ title: "Google Login Failed", description: error.message, variant: "destructive" });

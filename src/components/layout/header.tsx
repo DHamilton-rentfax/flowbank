@@ -17,9 +17,10 @@ export function Header() {
     <header className="w-full border-b bg-white">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/" className="font-bold">FlowBank</Link>
-        <div className="flex items-center gap-4">
+        <nav className="flex items-center gap-4">
           <Link href="/pricing" className="text-sm hover:underline">Pricing</Link>
           <Link href="/blog" className="text-sm hover:underline">Blog</Link>
+          <Link href="/faq" className="text-sm hover:underline">FAQ</Link>
           {user ? (
             <>
               <Link href="/dashboard" className="text-sm hover:underline">Dashboard</Link>
@@ -29,11 +30,11 @@ export function Header() {
               <Button variant="ghost" size="sm" onClick={logout}>Logout</Button>
             </>
           ) : (
-            <Link href="/login" className="px-3 py-1 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90">
-              Sign in
-            </Link>
+            <Button asChild size="sm">
+                <Link href="/login">Sign In</Link>
+            </Button>
           )}
-        </div>
+        </nav>
       </div>
     </header>
   );

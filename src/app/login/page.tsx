@@ -21,7 +21,6 @@ export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next');
-  const plan = searchParams.get('plan');
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,13 +29,9 @@ export default function Login() {
 
   useEffect(() => {
     if (!authLoading && user) {
-        let redirectUrl = next || '/dashboard';
-        if (plan) {
-            redirectUrl = `/pricing?plan=${plan}&fromLogin=true`;
-        }
-        router.replace(redirectUrl);
+        router.replace(next || '/dashboard');
     }
-  }, [user, authLoading, next, plan, router]);
+  }, [user, authLoading, next, router]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +39,6 @@ export default function Login() {
     try {
         await loginWithEmail(email, password);
         toast({ title: "Signed In!", description: "Welcome back."});
-        // The useEffect will handle the redirect after state update
     } catch(e) {
         const error = e as Error;
         toast({ title: "Login Failed", description: error.message, variant: "destructive" });
@@ -58,7 +52,6 @@ export default function Login() {
     try {
         await loginWithGoogle();
         toast({ title: "Signed In with Google!", description: "Welcome."});
-        // The useEffect will handle the redirect
     } catch(e) {
         const error = e as Error;
         toast({ title: "Google Login Failed", description: error.message, variant: "destructive" });

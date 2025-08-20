@@ -27,7 +27,7 @@ const createUserDocument = async (user: User, additionalData: any = {}) => {
             await setDoc(userRef, {
                 uid: user.uid,
                 email,
-                displayName: displayName || email,
+                displayName: displayName || email?.split('@')[0],
                 photoURL,
                 createdAt: serverTimestamp(),
                 role: 'user', // default role
@@ -37,7 +37,6 @@ const createUserDocument = async (user: User, additionalData: any = {}) => {
             console.error("Error creating user document", error);
         }
     }
-    return userRef;
 };
 
 
@@ -61,8 +60,11 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        await createUserDocument(user); // Ensure user doc exists
         const userDoc = await getDoc(doc(db, "users", user.uid));
+        // Ensure user doc is created on first Google login
+        if (!userDoc.exists()) {
+            await createUserDocument(user);
+        }
         const userData = userDoc.data();
         
         setUser({

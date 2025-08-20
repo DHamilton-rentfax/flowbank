@@ -1,4 +1,3 @@
-
 // src/firebase/client.ts
 import { initializeApp, getApps, FirebaseApp, getApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
@@ -30,8 +29,6 @@ let app: FirebaseApp;
 
 if (!hasConfig(firebaseConfig)) {
   console.warn("Firebase web config missing (NEXT_PUBLIC_*).");
-  // In a real app, you might want to throw an error or render a fallback UI.
-  // For now, we'll proceed, but Firebase services will fail.
 }
 
 if (getApps().length) {

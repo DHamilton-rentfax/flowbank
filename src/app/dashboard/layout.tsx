@@ -33,16 +33,9 @@ export default function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // A short delay can prevent a flash of the login page if auth state is resolving.
-    // However, the check `!loading && !user` is the most critical part.
-    const timer = setTimeout(() => {
-        if (!loading && !user) {
-          router.push("/login?next=/dashboard");
-        }
-    }, 100); // 100ms delay
-
-    return () => clearTimeout(timer);
-
+    if (!loading && !user) {
+      router.push("/login?next=/dashboard");
+    }
   }, [user, loading, router]);
   
   if (loading || !user) {
