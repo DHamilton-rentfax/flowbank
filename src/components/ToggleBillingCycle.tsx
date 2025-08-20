@@ -1,47 +1,37 @@
+
 "use client";
 
-import * as ToggleGroup from "@radix-ui/react-toggle-group";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
 export default function ToggleBillingCycle({
   billingCycle,
   setBillingCycle,
 }: {
-  billingCycle: "monthly" | "annually";
-  setBillingCycle: (cycle: "monthly" | "annually") => void;
+  billingCycle: "month" | "year";
+  setBillingCycle: (cycle: "month" | "year") => void;
 }) {
+  const isAnnual = billingCycle === "year";
+
+  const handleToggle = (checked: boolean) => {
+    setBillingCycle(checked ? "year" : "month");
+  };
+
   return (
-    <ToggleGroup.Root
-      type="single"
-      value={billingCycle}
-      onValueChange={(val) => {
-        if (val) setBillingCycle(val as "monthly" | "annually");
-      }}
-      className="inline-flex items-center bg-muted p-1 rounded-xl border"
-    >
-      <ToggleGroup.Item
-        value="monthly"
-        className={cn(
-          "text-sm px-4 py-1.5 rounded-lg transition-all",
-          billingCycle === "monthly"
-            ? "bg-white shadow font-medium"
-            : "text-muted-foreground"
-        )}
-      >
+    <div className="flex items-center space-x-3">
+      <Label htmlFor="billing-toggle" className={cn("font-medium", !isAnnual ? "text-primary" : "text-muted-foreground")}>
         Monthly
-      </ToggleGroup.Item>
-      <ToggleGroup.Item
-        value="annually"
-        className={cn(
-          "text-sm px-4 py-1.5 rounded-lg transition-all",
-          billingCycle === "annually"
-            ? "bg-white shadow font-medium"
-            : "text-muted-foreground"
-        )}
-      >
-        Annually <span className="ml-1 text-xs">(Save ~16%)</span>
-      </ToggleGroup.Item>
-    </ToggleGroup.Root>
+      </Label>
+      <Switch
+        id="billing-toggle"
+        checked={isAnnual}
+        onCheckedChange={handleToggle}
+        aria-label="Toggle billing cycle"
+      />
+      <Label htmlFor="billing-toggle" className={cn("font-medium", isAnnual ? "text-primary" : "text-muted-foreground")}>
+        Annually <span className="text-xs font-normal text-accent">(Save ~16%)</span>
+      </Label>
+    </div>
   );
 }
