@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
@@ -20,8 +21,8 @@ import { createPortalSession } from "@/app/actions/create-portal-session";
 
 function Stat({ title, value }: { title: string, value: string }) {
   return (
-    <div className="p-4 border rounded-2xl">
-      <p className="text-sm text-neutral-500">{title}</p>
+    <div className="p-4 border rounded-2xl bg-background">
+      <p className="text-sm text-muted-foreground">{title}</p>
       <p className="text-2xl font-bold">{value}</p>
     </div>
   );
@@ -237,7 +238,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {hasPlaidLinked && !hasAIFeature && planName !== 'pro' && planName !== 'enterprise' &&(
+      {hasPlaidLinked && !hasAIFeature && planName === 'free' &&(
         <Card className="bg-gradient-to-r from-primary/10 to-accent/10">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -263,7 +264,7 @@ export default function Dashboard() {
       )}
       
        <PlanGate required="pro">
-        <section className="border rounded-2xl p-4">
+        <section className="border rounded-2xl p-4 bg-background">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-bold">AI Allocation Suggestions</h3>
             <button onClick={getAiAllocation} className="px-3 py-1 rounded bg-black text-white">Generate</button>
@@ -280,3 +281,6 @@ export default function Dashboard() {
     </div>
   );
 }
+
+
+    
