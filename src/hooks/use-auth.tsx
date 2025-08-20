@@ -9,12 +9,13 @@ import {
     signInWithPopup, 
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
-    signOut
+    signOut,
+    onAuthStateChanged
 } from "firebase/auth";
 import { getClientAuth, db } from "@/firebase/client";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
-// Helper to create a user document
+// Helper to create a user document in Firestore
 const createUserDocument = async (user: User, additionalData: any = {}) => {
     if (!user) return;
     const userRef = doc(db, "users", user.uid);
@@ -22,14 +23,13 @@ const createUserDocument = async (user: User, additionalData: any = {}) => {
 
     if (!snapshot.exists()) {
         const { email, displayName, photoURL } = user;
-        const createdAt = new Date();
         try {
             await setDoc(userRef, {
                 uid: user.uid,
                 email,
-                displayName,
+                displayName: displayName || email,
                 photoURL,
-                createdAt,
+                createdAt: serverTimestamp(),
                 role: 'user', // default role
                 ...additionalData,
             });
@@ -42,7 +42,7 @@ const createUserDocument = async (user: User, additionalData: any = {}) => {
 
 
 interface AuthContextType {
-  user: User | null;
+  user: (User & { role?: string }) | null;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
@@ -53,20 +53,21 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthContextProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthContextType['user']>(null);
   const [loading, setLoading] = useState(true);
   const auth = getClientAuth();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         await createUserDocument(user); // Ensure user doc exists
-        const idTokenResult = await user.getIdTokenResult();
-        const userWithRole = {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const userData = userDoc.data();
+        
+        setUser({
             ...user,
-            role: idTokenResult.claims.role || 'user'
-        };
-        setUser(userWithRole as User);
+            role: userData?.role || 'user'
+        });
       } else {
         setUser(null);
       }
@@ -110,43 +111,11 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
   const logout = useCallback(async () => {
     try {
         await signOut(auth);
-        const response = await fetch('/api/auth/session', { method: 'DELETE' });
-        if (!response.ok) {
-            throw new Error('Failed to clear session cookie');
-        }
+        setUser(null);
+        // Optional: Add API call to clear server-side session if needed
     } catch (error) {
         console.error("Logout error", error);
     }
-  }, [auth]);
-
-  // Session management logic
-  useEffect(() => {
-    let isSubscribed = true;
-    const handleAuthChange = async (user: User | null) => {
-        if (user) {
-            const idToken = await user.getIdToken();
-            // Post the token to the server to create a session cookie
-            await fetch('/api/auth/session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
-            });
-        } else {
-            // Clear the session cookie
-            await fetch('/api/auth/session', { method: 'DELETE' });
-        }
-    };
-    
-    const unsubscribe = auth.onIdTokenChanged(user => {
-        if (isSubscribed) {
-           handleAuthChange(user);
-        }
-    });
-
-    return () => {
-        isSubscribed = false;
-        unsubscribe();
-    };
   }, [auth]);
 
   const value = useMemo(() => ({ user, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, logout }), [user, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, logout]);

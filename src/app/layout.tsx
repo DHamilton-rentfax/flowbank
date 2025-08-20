@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import AuthProvider from "@/providers/AuthProvider";
+import { AppProvider } from "@/contexts/app-provider";
+import { Toaster } from "@/components/ui/toaster";
 
-import AuthProvider from "@/providers/AuthProvider";        // wraps Firebase auth context
-import { AppProvider } from "@/contexts/app-provider";      // <-- real app context
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,7 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthProvider>
-          <AppProvider>{children}</AppProvider>
+          <AppProvider>
+            {children}
+            <Toaster />
+          </AppProvider>
         </AuthProvider>
       </body>
     </html>
