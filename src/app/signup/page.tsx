@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
@@ -22,6 +22,9 @@ export default function Signup() {
   const { signUpWithEmail, loginWithGoogle, user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get('next');
+
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,9 +35,9 @@ export default function Signup() {
 
   useEffect(() => {
     if (!authLoading && user) {
-        router.replace('/onboarding');
+        router.replace(next || '/onboarding');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, next]);
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +54,7 @@ export default function Signup() {
     try {
         await signUpWithEmail(email, password, businessType);
         toast({ title: "Account created!", description: "Welcome to FlowBank. Let's get you set up." });
+        // The useEffect will handle the redirect
     } catch(e) {
         const error = e as Error;
         toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
@@ -64,6 +68,7 @@ export default function Signup() {
     try {
         await loginWithGoogle();
         toast({ title: "Signed In with Google!", description: "Welcome."});
+        // The useEffect will handle the redirect
     } catch(e) {
         const error = e as Error;
         toast({ title: "Google Login Failed", description: error.message, variant: "destructive" });

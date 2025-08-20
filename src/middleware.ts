@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
   const sessionCookie = req.cookies.get('__session')?.value;
 
   // Define public routes that don't require authentication
-  const publicRoutes = ['/login', '/signup', '/pricing', '/faq', '/blog', '/', '/terms', '/privacy'];
+  const publicRoutes = ['/login', '/signup', '/pricing', '/faq', '/blog', '/', '/terms', '/privacy', '/contact'];
 
   // Define admin routes
   const adminRoutes = ['/admin'];
@@ -15,6 +15,11 @@ export async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.some(route => pathname === route || (route.length > 1 && pathname.startsWith(route + '/')));
   const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
 
+  // Allow access to API routes, static files, and images without authentication
+  if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.includes('favicon.ico')) {
+      return NextResponse.next();
+  }
+  
   if (isPublicRoute) {
     // If user is logged in and trying to access login/signup, redirect to dashboard
     if (sessionCookie && (pathname === '/login' || pathname === '/signup')) {
@@ -27,32 +32,24 @@ export async function middleware(req: NextRequest) {
   if (!sessionCookie) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('next', pathname);
+    // Persist the original path and query params as 'next'
+    url.searchParams.set('next', `${pathname}${search}`);
     return NextResponse.redirect(url);
   }
 
   try {
-    // We need a server-side way to verify the cookie.
-    // This requires a call to an API route or using the Admin SDK if available in middleware.
-    // For this example, we'll assume the cookie's presence implies a valid session for route access,
-    // and rely on client-side checks for fine-grained access control.
-    // A more secure implementation would verify the cookie here.
-
-    // If it's an admin route, we should ideally verify the admin role here.
-    // This would require a call to an API that can decode the session cookie and check claims.
-    if (isAdminRoute) {
-        // Placeholder for admin check. In a real app, verify the user's role.
-        // For now, we'll allow access if they have a session cookie.
-    }
+    // In a real production app, you would have an API endpoint to verify the session cookie.
+    // For this prototype, we'll assume a present cookie is a valid one for route protection.
+    // The client-side `useAuth` hook will handle state changes if the cookie is actually invalid.
     
     return NextResponse.next();
 
   } catch (error) {
-    // Session cookie is invalid or expired.
+    // This catch block would be more relevant if we were verifying the cookie server-side.
     console.error('Middleware auth error:', error);
     const url = req.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('next', pathname);
+    url.searchParams.set('next', `${pathname}${search}`);
     
     const response = NextResponse.redirect(url);
     response.cookies.delete('__session');

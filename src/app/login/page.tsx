@@ -39,6 +39,7 @@ export default function Login() {
     try {
         await loginWithEmail(email, password);
         toast({ title: "Signed In!", description: "Welcome back."});
+        // The useEffect will handle the redirect
     } catch(e) {
         const error = e as Error;
         toast({ title: "Login Failed", description: error.message, variant: "destructive" });
@@ -52,6 +53,7 @@ export default function Login() {
     try {
         await loginWithGoogle();
         toast({ title: "Signed In with Google!", description: "Welcome."});
+         // The useEffect will handle the redirect
     } catch(e) {
         const error = e as Error;
         toast({ title: "Google Login Failed", description: error.message, variant: "destructive" });

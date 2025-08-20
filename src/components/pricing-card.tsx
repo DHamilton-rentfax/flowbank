@@ -1,3 +1,4 @@
+
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 interface Plan {
     name: string;
@@ -24,6 +26,7 @@ interface Props {
 
 export function PricingCard({ plan, billingCycle, isAddon = false }: Props) {
   const { user } = useAuth();
+  const router = useRouter();
   const isAnnual = billingCycle === 'annual';
 
   const price = isAnnual ? plan.price.annual : plan.price.monthly;
@@ -31,6 +34,23 @@ export function PricingCard({ plan, billingCycle, isAddon = false }: Props) {
 
   const priceText = plan.contact ? "Custom" : (price !== null ? `$${price}` : '');
   const intervalText = price !== null ? (isAnnual ? '/year' : '/month') : '';
+
+  const handleCtaClick = () => {
+    if (plan.disabled) return;
+    
+    if (plan.contact) {
+        router.push('/contact');
+        return;
+    }
+
+    if (lookupKey) {
+        if (user) {
+            router.push(`/checkout/${lookupKey}`);
+        } else {
+            router.push(`/login?next=/checkout/${lookupKey}`);
+        }
+    }
+  };
 
   return (
     <div
@@ -56,11 +76,10 @@ export function PricingCard({ plan, billingCycle, isAddon = false }: Props) {
         </ul>
       </div>
 
-        <Button asChild className="w-full" disabled={plan.disabled}>
-            <Link href={plan.contact ? '/contact' : (lookupKey ? `/checkout/${lookupKey}` : '#')}>
-                {plan.ctaLabel}
-            </Link>
+        <Button onClick={handleCtaClick} className="w-full" disabled={plan.disabled}>
+            {plan.ctaLabel}
         </Button>
     </div>
   );
 }
+
