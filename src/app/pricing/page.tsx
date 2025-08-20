@@ -1,163 +1,86 @@
-'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+"use client";
 
-interface StripePrice {
-  id: string;
-  unit_amount: number;
-  recurring: { interval: string };
-  metadata: { name: string };
-}
+import { useEffect, useState } from "react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { getPricingPlans } from "@/lib/pricing";
+import { cn } from "@/lib/utils";
+import PricingCard from "@/components/pricing/pricing-card";
+import AddonToggle from "@/components/pricing/addon-toggle";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
 
 export default function PricingPage() {
-  const { user, loading: loadingAuth } = useAuth();
-  const router = useRouter();
-
-  const [monthly, setMonthly] = useState(true);
-  const [prices, setPrices] = useState<StripePrice[]>([]);
-  const [loadingPrices, setLoadingPrices] = useState(true);
-  const [subscribing, setSubscribing] = useState(false);
+  const [interval, setInterval] = useState<"month" | "year">("month");
+  const [plans, setPlans] = useState<any[]>([]);
+  const [addons, setAddons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchPrices = async () => {
+    async function fetchPricing() {
       try {
-        const { getStripePrices } = await import('@/app/actions/get-stripe-prices'); // Dynamic import
-        const fetchedPrices = await getStripePrices();
-        if (fetchedPrices) {
-          setPrices(fetchedPrices);
-        } else {
-          setError('Failed to fetch pricing plans.');
-        }
+        const { plans, addons } = await getPricingPlans();
+        setPlans(plans);
+        setAddons(addons);
       } catch (err) {
-        console.error('Failed to fetch prices:', err);
-        setError('Failed to load pricing plans.');
+        setError("Failed to load pricing plans.");
+        console.error("Pricing load error:", err);
       } finally {
-        setLoadingPrices(false);
+        setLoading(false);
       }
-    };
-
-    fetchPrices();
+    }
+    fetchPricing();
   }, []);
 
-  const filteredPrices = prices.filter(price =>
-    monthly ? price.recurring.interval === 'month' : price.recurring.interval === 'year'
-  );
-
-  const formatPrice = (price: StripePrice) => {
-    const amount = price.unit_amount / 100;
-    return `${amount.toFixed(2)}`;
-  };
-
-  const handleSubscribe = async (priceId: string) => {
-    if (loadingAuth) return;
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
-    setSubscribing(true);
-    setError(null);
-
-    try {
-      const { createCheckoutSession } = await import('@/app/actions/create-checkout-session'); // Dynamic import
-      const { url, error: sessionError } = await createCheckoutSession(user.uid, priceId);
-
-      if (sessionError) {
-        setError(sessionError);
-      } else if (url) {
-        window.location.assign(url); // Redirect to Stripe Checkout
-      } else {
-        setError('Something went wrong creating checkout session.');
-      }
-    } catch (err) {
-      console.error('Checkout error:', err);
-      setError('Failed to initiate checkout.');
-    } finally {
-      setSubscribing(false);
-    }
-  };
-
-  const renderFeatures = (price: StripePrice) => {
-    // This is a placeholder. You should ideally fetch features
-    // based on price.metadata or a separate config.
-    switch (price.metadata.name.toLowerCase()) {
-      case 'basic':
-        return (
-          <ul className="text-gray-600 space-y-2">
-            <li>✓ Up to 100 transactions</li>
-            <li>✓ Basic financial analysis</li>
-          </ul>
-        );
-      case 'pro':
-        return (
-          <ul className="text-gray-600 space-y-2">
-            <li>✓ Unlimited transactions</li>
-            <li>✓ Advanced financial analysis</li>
-            <li>✓ Tax optimization suggestions</li>
-          </ul>
-        );
-      case 'enterprise':
-        return (
-          <ul className="text-gray-600 space-y-2">
-            <li>✓ All Pro features</li>
-            <li>✓ Dedicated support</li>
-            <li>✓ Custom integrations</li>
-          </ul>
-        );
-      default:
-        return null;
-    }
-  };
-
-
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-center mb-8">Pricing Plans</h1>
-
-      <div className="flex justify-center mb-8">
-        <button
-          className={`px-6 py-2 rounded-l-md ${monthly ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-          onClick={() => setMonthly(true)}
-        >
-          Monthly
-        </button>
-        <button
-          className={`px-6 py-2 rounded-r-md ${!monthly ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-          onClick={() => setMonthly(false)}
-        >
-          Annually
-        </button>
-      </div>
-
-      {loadingPrices ? (
-        <div className="text-center">Loading plans...</div>
-      ) : error ? (
-        <div className="text-center text-red-600">{error}</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {filteredPrices.map(price => (
-            <div key={price.id} className="border rounded-lg p-6 shadow-md flex flex-col">
-              <h2 className="text-xl font-semibold mb-4">{price.metadata.name}</h2>
-              <div className="text-3xl font-bold mb-4">${formatPrice(price)}{monthly ? '/mo' : '/yr'}</div>
-
-              <div className="flex-grow mb-6">
-                 {renderFeatures(price)}
-              </div>
-
-              <button
-                className="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700 transition disabled:opacity-50"
-                onClick={() => handleSubscribe(price.id)}
-                disabled={subscribing || loadingAuth || !user}
-              >
-                {subscribing ? 'Processing...' : user ? 'Subscribe' : 'Sign In to Subscribe'}
-              </button>
+    <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-1 bg-secondary">
+            <div className="max-w-6xl mx-auto py-16 px-4">
+            <div className="text-center">
+                <h1 className="text-4xl font-bold tracking-tight">Flexible plans for growing businesses</h1>
+                <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                    Start for free, then add automation and AI tools as you grow.
+                </p>
             </div>
-          ))}
-        </div>
-      )}
+
+            <div className="flex justify-center my-8">
+                <ToggleGroup type="single" value={interval} onValueChange={(val) => val && setInterval(val as "month" | "year")}>
+                <ToggleGroupItem value="month">Monthly</ToggleGroupItem>
+                <ToggleGroupItem value="year">Annually (Save 15%)</ToggleGroupItem>
+                </ToggleGroup>
+            </div>
+
+            {error ? (
+                <p className="text-center text-red-500">{error}</p>
+            ) : loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="border rounded-xl p-6 h-96 bg-background/50 animate-pulse"></div>
+                    <div className="border rounded-xl p-6 h-96 bg-background/50 animate-pulse"></div>
+                    <div className="border rounded-xl p-6 h-96 bg-background/50 animate-pulse"></div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                {plans.map((plan) => (
+                    <PricingCard key={plan.id} plan={plan} interval={interval} />
+                ))}
+                </div>
+            )}
+
+            {addons.length > 0 && !loading && (
+                <div className="mt-16">
+                <h2 className="text-3xl font-bold mb-6 text-center">Enhance Your Plan with Add-ons</h2>
+                <div className="max-w-3xl mx-auto grid grid-cols-1 gap-4">
+                    {addons.map((addon) => (
+                        <AddonToggle key={addon.id} addon={addon} interval={interval} />
+                    ))}
+                </div>
+                </div>
+            )}
+            </div>
+        </main>
+        <Footer />
     </div>
   );
 }
