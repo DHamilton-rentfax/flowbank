@@ -20,6 +20,10 @@ const getPlanDetails = (lookupKey: string) => {
     if (lookupKey.includes('starter_year')) return { name: 'Starter Plan', price: '$90', interval: 'per year' };
     if (lookupKey.includes('pro_month')) return { name: 'Pro Plan', price: '$29', interval: 'per month' };
     if (lookupKey.includes('pro_year')) return { name: 'Pro Plan', price: '$290', interval: 'per year' };
+    if (lookupKey.includes('addon_ai_optimization_month')) return { name: 'AI Optimization Add-on', price: '$14', interval: 'per month' };
+    if (lookupKey.includes('addon_ai_optimization_year')) return { name: 'AI Optimization Add-on', price: '$140', interval: 'per year' };
+    if (lookupKey.includes('addon_support_month')) return { name: 'Priority Support Add-on', price: '$19', interval: 'per month' };
+    if (lookupKey.includes('addon_support_year')) return { name: 'Priority Support Add-on', price: '$190', interval: 'per year' };
     return { name: 'Selected Plan', price: '---', interval: '' };
 };
 
@@ -47,8 +51,16 @@ export default function CheckoutPage() {
 
                 if (!idToken) throw new Error("Authentication required.");
 
-                const { createCheckoutSession } = await import('@/app/actions/create-checkout-session');
-                const { url, error } = await createCheckoutSession([{ lookup_key }]);
+                const res = await fetch('/api/stripe/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${idToken}`,
+                    },
+                    body: JSON.stringify({ lookupKey: lookup_key }),
+                });
+
+                const { url, error } = await res.json();
 
                 if (error) throw new Error(error);
                 if (url) {

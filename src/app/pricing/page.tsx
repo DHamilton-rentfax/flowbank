@@ -1,36 +1,64 @@
 'use client'
 
-import React, { useState } from 'react'
-import { BillingToggle } from '@/components/pricing/BillingToggle'
-import { PricingCard } from '@/components/pricing/pricing-card'
-import AddonToggle from '@/components/pricing/addon-toggle'
+import { useState } from 'react'
+import { Toggle } from '@/components/ui/toggle'
+import { PricingCard } from '@/components/pricing-card'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
+const PLANS = [
+  {
+    name: 'Free',
+    price: { monthly: 0, annual: 0 },
+    lookupKeys: { monthly: 'starter_month_usd', annual: 'starter_year_usd' }, // Using starter for test purposes, as free plans shouldn't have checkout.
+    features: ['Bank connection', 'Split income'],
+    disabled: true,
+    ctaLabel: 'Get Started'
+  },
+  {
+    name: 'Starter',
+    price: { monthly: 9, annual: 90 },
+    lookupKeys: { monthly: 'starter_month_usd', annual: 'starter_year_usd' },
+    features: ['Free features', 'Weekly insights', 'Basic AI Suggestions'],
+    ctaLabel: 'Choose Plan'
+  },
+  {
+    name: 'Pro',
+    price: { monthly: 29, annual: 290 },
+    lookupKeys: { monthly: 'pro_month_usd', annual: 'pro_year_usd' },
+    features: ['Starter features', 'Full AI Engine', 'Priority Support', 'Dashboard Analytics'],
+    ctaLabel: 'Choose Plan'
+  },
+  {
+    name: 'Enterprise',
+    price: { monthly: null, annual: null },
+    lookupKeys: { monthly: null, annual: null },
+    features: ['Custom rules', 'Team seats', 'Integrations', 'SLA'],
+    contact: true,
+    ctaLabel: 'Contact Sales'
+  },
+]
+
+const ADDONS = [
+  {
+    name: 'AI Optimization',
+    description: "Unlock personalized tax coaching, spending insights, subscription analysis, and savings opportunities—powered by your real transactions.",
+    price: { monthly: 14, annual: 140 },
+    lookupKeys: { monthly: 'addon_ai_optimization_month_usd', annual: 'addon_ai_optimization_year_usd' },
+  },
+  {
+    name: 'Priority Support',
+    description: "Get 24/7 response times and a dedicated Slack channel for your team.",
+    price: { monthly: 19, annual: 190 }, // Rounded from 191.52 for simplicity
+    lookupKeys: { monthly: 'addon_support_month_usd', annual: 'addon_support_year_usd' },
+  },
+]
 
 export default function PricingPage() {
-  const [billingCycle, setBillingCycle] = useState<'month' | 'year'>('month')
-
-  const isAnnual = billingCycle === 'year'
-
-  // This would ideally come from the get-pricing action, but we are using the user's provided structure.
-   const addons = [
-        {
-            id: 'ai_optimization',
-            name: 'AI Optimization',
-            lookup_key: isAnnual ? 'addon_ai_optimization_year_usd' : 'addon_ai_optimization_month_usd',
-            description: "Unlock personalized tax coaching, spending insights, subscription analysis, and savings opportunities—powered by your real transactions.",
-            amount: isAnnual ? 140 : 14,
-        },
-        {
-            id: 'priority_support',
-            name: 'Priority Support',
-            lookup_key: isAnnual ? 'addon_support_year_usd' : 'addon_support_month_usd',
-            description: 'Get 24/7 response times and a dedicated Slack channel for your team.',
-            amount: isAnnual ? 190 : 19,
-        },
-    ]
-
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
+  const isAnnual = billingCycle === 'annual';
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -44,39 +72,28 @@ export default function PricingPage() {
                 Start for free, then choose a plan that grows with you. All paid plans come with a 7-day free trial. Switch or cancel anytime.
             </p>
         </div>
-
-        <BillingToggle value={billingCycle} onChange={setBillingCycle} />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8 max-w-7xl mx-auto">
-            <PricingCard
-                name="Free"
-                price="$0"
-                description="Start for free and connect your first bank account."
-                lookupKey="price_free_monthly"
-                disabled
-            />
-            <PricingCard
-                name="Starter"
-                price={isAnnual ? '$90/year' : '$9/mo'}
-                description="Basic AI and simple insights."
-                lookupKey={isAnnual ? 'starter_year_usd' : 'starter_month_usd'}
-            />
-            <PricingCard
-                name="Pro"
-                price={isAnnual ? '$290/year' : '$29/mo'}
-                description="Full AI engine and advanced insights."
-                lookupKey={isAnnual ? 'pro_year_usd' : 'pro_month_usd'}
-            />
-            <PricingCard
-                name="Enterprise"
-                price="Custom"
-                description="Custom rules, team seats, integrations."
-                lookupKey=""
-                isEnterprise
-            />
+        
+        <div className="flex justify-center mb-8">
+            <Toggle
+            pressed={isAnnual}
+            onPressedChange={() => setBillingCycle(isAnnual ? 'monthly' : 'annual')}
+            className="rounded-full px-6 py-2 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+            {isAnnual ? 'Annual Billing (Save ~16%)' : 'Monthly Billing'}
+            </Toggle>
         </div>
 
-         <div className="mt-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            {PLANS.map((plan) => (
+            <PricingCard
+                key={plan.name}
+                plan={plan}
+                billingCycle={billingCycle}
+            />
+            ))}
+        </div>
+
+        <div className="mt-16">
           <h2 className="text-3xl font-bold text-center mb-2">
             Powerful Add-ons
           </h2>
@@ -84,11 +101,25 @@ export default function PricingPage() {
             Customize your Starter or Pro plan with powerful extras.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {addons.map((addon) => (
-              <AddonToggle key={addon.id} addon={addon} interval={billingCycle} />
-            ))}
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                {ADDONS.map((addon) => (
+                    <div key={addon.name} className="border rounded-lg p-6 bg-card text-card-foreground shadow-sm flex flex-col">
+                        <h3 className="font-semibold text-lg">{addon.name}</h3>
+                        <p className="text-muted-foreground text-sm flex-1">{addon.description}</p>
+                        <div className="flex justify-between items-end mt-4">
+                            <div>
+                                <span className="text-2xl font-bold">
+                                    ${isAnnual ? addon.price.annual : addon.price.monthly}
+                                </span>
+                                <span className="text-muted-foreground text-sm">/{isAnnual ? 'year' : 'month'}</span>
+                            </div>
+                            <Button asChild>
+                                <Link href={`/checkout/${isAnnual ? addon.lookupKeys.annual : addon.lookupKeys.monthly}`}>Add to Plan</Link>
+                            </Button>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
       </main>
       <Footer />
