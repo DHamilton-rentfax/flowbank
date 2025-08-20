@@ -24,6 +24,52 @@ export async function updateUserRole(targetUid: string, newRole: 'admin' | 'user
     const db = getAdminDb();
 
     try {
+        const currentUserClaims = (await auth.getUser(currentUserId)).customClaims;
+        if (currentUserClaims?.role !== 'admin') {
+            throw new Error("You do not have permission to change user roles.");
+        }
+
+        const targetUser = await auth.getUser(targetUid);
+
+        await auth.setCustomUserClaims(targetUid, { ...targetUser.customClaims, role: newRole });
+
+        await db.collection('users').doc(targetUid).set({ 
+            role: newRole 
+        }, { merge: true });
+
+        return { success: true, message: `Successfully updated ${targetUser.email || targetUid} to ${newRole}.` };
+    } catch (error) {
+        console.error("Error updating user role:", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
+"use server";
+
+import { headers } from "next/headers";
+import { getAdminDb, getAdminAuth } from "@/firebase/server";
+
+// Helper to get the current user's UID from the session
+const getUserId = async () => {
+    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
+    if (!idToken) {
+        throw new Error("User not authenticated");
+    }
+    try {
+        const decodedToken = await getAdminAuth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        console.error("Error verifying ID token:", error);
+        throw new Error("Invalid authentication token.");
+    }
+};
+
+export async function updateUserRole(targetUid: string, newRole: 'admin' | 'user') {
+    const currentUserId = await getUserId();
+    const auth = getAdminAuth();
+    const db = getAdminDb();
+
+    try {
         // 1. Verify that the current user is an admin
         const currentUserClaims = (await auth.getUser(currentUserId)).customClaims;
         if (currentUserClaims?.role !== 'admin') {

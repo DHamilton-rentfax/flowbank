@@ -1,51 +1,47 @@
 
-import "server-only";
-import { cert, getApp, getApps, initializeApp, App } from "firebase-admin/app";
+'use server'
+// Server-only Firebase Admin bootstrap
+// NEVER import this file from client components.
+
+import { getApps, initializeApp, cert, App } from "firebase-admin/app";
 import { getAuth, Auth } from "firebase-admin/auth";
 import { getFirestore, Firestore } from "firebase-admin/firestore";
 
-let _app: App | null = null;
-let _auth: Auth | null = null;
-let _db: Firestore | null = null;
+// Initialize Firebase Admin SDK if it hasn't been initialized already
+function getAdminApp(): App {
+  if (getApps().length) return getApps()[0];
 
-function makeApp(): App {
-    const apps = getApps();
-    if (apps.length > 0) {
-        return apps[0];
-    }
+  const b64 = process.env.FIREBASE_ADMIN_CERT_B64;
+  if (!b64) {
+    throw new Error(
+      "FIREBASE_ADMIN_CERT_B64 is missing. Provide a base64-encoded Firebase service account JSON."
+    );
+  }
 
-    const serviceAccountCert = {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }
+  const credentialsJson = Buffer.from(b64, "base64").toString("utf8");
+  const credentials = JSON.parse(credentialsJson);
 
-    if (!serviceAccountCert.privateKey) {
-        throw new Error("FIREBASE_PRIVATE_KEY is not set. Ensure your environment variables are configured correctly.");
-    }
-
-    return initializeApp({
-        credential: cert(serviceAccountCert),
-    });
+  return initializeApp({ credential: cert(credentials) });
 }
 
-export function getAdminApp(): App {
-  if (_app) return _app;
-  _app = makeApp();
-  return _app;
-}
+const app = getAdminApp();
 
 export function getAdminAuth(): Auth {
-  if (_auth) return _auth;
-  _auth = getAuth(getAdminApp());
-  return _auth;
+    return getAuth(app);
 }
 
 export function getAdminDb(): Firestore {
-  if (_db) return _db;
-  _db = getFirestore(getAdminApp());
-  return _db;
+    return getFirestore(app);
 }
 
-const adminDb = getAdminDb();
-export { adminDb };
+// Compat named exports
+export const adminAuth = getAuth(app);
+export const db = getFirestore(app);
+
+
+// Optional: tiny helper you can call in routes/actions to verify it's working
+export async function adminPing() {
+  // Writes/merges a heartbeat doc (requires rules to allow admin writes to _health)
+  await db.collection("_health").doc("admin").set({ ts: Date.now() }, { merge: true });
+  return { ok: true };
+}

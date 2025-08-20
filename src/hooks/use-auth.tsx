@@ -1,125 +1,163 @@
 
 "use client";
 
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
-import { onAuthStateChanged, signOut, type User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, getIdToken } from "firebase/auth";
-import { auth, db } from "@/firebase/client";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { useToast } from "./use-toast";
-import { useRouter } from "next/navigation";
-import type { UserAddress } from "@/lib/types";
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import type { User } from "firebase/auth";
+import { 
+    getAuth, 
+    GoogleAuthProvider, 
+    signInWithPopup, 
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut
+} from "firebase/auth";
+import { getClientAuth, db } from "@/firebase/client";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+
+// Helper to create a user document
+const createUserDocument = async (user: User, additionalData: any = {}) => {
+    if (!user) return;
+    const userRef = doc(db, "users", user.uid);
+    const snapshot = await getDoc(userRef);
+
+    if (!snapshot.exists()) {
+        const { email, displayName, photoURL } = user;
+        const createdAt = new Date();
+        try {
+            await setDoc(userRef, {
+                uid: user.uid,
+                email,
+                displayName,
+                photoURL,
+                createdAt,
+                role: 'user', // default role
+                ...additionalData,
+            });
+        } catch (error) {
+            console.error("Error creating user document", error);
+        }
+    }
+    return userRef;
+};
+
 
 interface AuthContextType {
   user: User | null;
-  idToken: string | null;
   loading: boolean;
-  logout: () => void;
+  loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, businessType: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// This function handles creating or clearing the server-side session cookie.
-const manageSession = async (idToken: string | null) => {
-    const url = '/api/auth/session';
-    const method = idToken ? 'POST' : 'DELETE';
-    const body = idToken ? JSON.stringify({ idToken }) : undefined;
-    
-    // Fire-and-forget the request.
-    fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: body,
-    }).catch(error => {
-        // Log errors but don't block the user.
-        console.error(`Failed to ${idToken ? 'create' : 'clear'} session:`, error);
-    });
-};
-
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthContextProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [idToken, setIdToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const auth = getClientAuth();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      setLoading(true); // Start loading state
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        const token = await user.getIdToken();
-        setIdToken(token);
-        // Do not await. Let this run in the background.
-        manageSession(token).catch(console.error);
+        await createUserDocument(user); // Ensure user doc exists
+        const idTokenResult = await user.getIdTokenResult();
+        const userWithRole = {
+            ...user,
+            role: idTokenResult.claims.role || 'user'
+        };
+        setUser(userWithRole as User);
       } else {
-        setIdToken(null);
-        // Do not await.
-        manageSession(null).catch(console.error);
+        setUser(null);
       }
-      // End loading state as soon as client state is known
       setLoading(false);
     });
+
     return () => unsubscribe();
-  }, []);
-  
-  const logout = async () => {
-    await signOut(auth);
-    // onAuthStateChanged will handle clearing the session and state
-    router.push("/login");
-  };
+  }, [auth]);
 
-  const loginWithEmail = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
-    // onAuthStateChanged will trigger and handle the redirect/session creation
-  }
+  const loginWithGoogle = useCallback(async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      await createUserDocument(result.user);
+    } catch (error) {
+      console.error("Google login error", error);
+      throw error;
+    }
+  }, [auth]);
 
-  const signUpWithEmail = async (email: string, password: string, businessType: string) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  const loginWithEmail = useCallback(async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error("Email login error", error);
+      throw error;
+    }
+  }, [auth]);
 
-    // Create a document in Firestore for the new user
-    await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.email, // Default display name to email
-        businessType: businessType,
-        createdAt: serverTimestamp(),
-        plan: { id: 'free', name: 'Free' } // Default to free plan
+  const signUpWithEmail = useCallback(async (email: string, password: string, businessType: string) => {
+    try {
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await createUserDocument(result.user, { businessType });
+    } catch (error) {
+        console.error("Email sign up error", error);
+        throw error;
+    }
+  }, [auth]);
+
+
+  const logout = useCallback(async () => {
+    try {
+        await signOut(auth);
+        const response = await fetch('/api/auth/session', { method: 'DELETE' });
+        if (!response.ok) {
+            throw new Error('Failed to clear session cookie');
+        }
+    } catch (error) {
+        console.error("Logout error", error);
+    }
+  }, [auth]);
+
+  // Session management logic
+  useEffect(() => {
+    let isSubscribed = true;
+    const handleAuthChange = async (user: User | null) => {
+        if (user) {
+            const idToken = await user.getIdToken();
+            // Post the token to the server to create a session cookie
+            await fetch('/api/auth/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken }),
+            });
+        } else {
+            // Clear the session cookie
+            await fetch('/api/auth/session', { method: 'DELETE' });
+        }
+    };
+    
+    const unsubscribe = auth.onIdTokenChanged(user => {
+        if (isSubscribed) {
+           handleAuthChange(user);
+        }
     });
 
-    // onAuthStateChanged will handle the session creation and redirect
-  };
+    return () => {
+        isSubscribed = false;
+        unsubscribe();
+    };
+  }, [auth]);
 
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    const userCredential = await signInWithPopup(auth, provider);
-    const user = userCredential.user;
-    
-    // Create a document in Firestore for the new user on first sign-in
-    await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName || user.email,
-        createdAt: serverTimestamp(),
-        plan: { id: 'free', name: 'Free' }
-    }, { merge: true }); // Use merge to avoid overwriting existing data if they've signed up before
-  }
-
-
-  return (
-    <AuthContext.Provider value={{ user, idToken, loading, logout, loginWithEmail, signUpWithEmail, loginWithGoogle }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = useMemo(() => ({ user, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, logout }), [user, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, logout]);
+  
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-};
+}

@@ -6,7 +6,7 @@ import { getAdminDb, getAdminAuth } from "@/firebase/server";
 
 // Helper to get the current user's UID from the session
 const getUserId = async () => {
-    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
+ const idToken = headers().get('Authorization')?.split('Bearer ')[1];
     if (!idToken) {
         throw new Error("User not authenticated");
     }
@@ -26,6 +26,34 @@ export async function createPortalSession() {
     const userDoc = await userDocRef.get();
     let customerId = userDoc.data()?.stripeCustomerId;
 
+    if (!customerId) {
+        // This case should ideally not happen for an active user trying to manage billing.
+        // But we handle it defensively.
+        const firebaseUser = await getAdminAuth().getUser(userId);
+        const customer = await stripe.customers.create({
+            email: firebaseUser.email,
+            metadata: { firebaseUID: userId }
+        });
+        customerId = customer.id;
+        await userDocRef.set({ stripeCustomerId: customerId }, { merge: true });
+    }
+    const portal = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
+    });
+    return { success: true, url: portal.url };
+}
+"use server";
+
+import { stripe } from "@/lib/stripe";
+import { db } from '@/firebase/server';
+
+export async function createPortalSession({ customerId, returnUrl }: { customerId: string; returnUrl: string; }) {
+  const session = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: returnUrl,
+  });
+  // Optional: audit
     if (!customerId) {
         // This case should ideally not happen for an active user trying to manage billing.
         // But we handle it defensively.

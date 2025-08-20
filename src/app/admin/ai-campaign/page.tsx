@@ -11,6 +11,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Send, Download } from 'lucide-react';
+import { getAiCampaignTargets } from '@/app/actions/get-ai-campaign-targets';
+import { sendAiTrialInvite } from '@/app/admin/actions';
+import { exportCampaignData } from '@/app/actions/export-campaign-data';
 
 interface TargetUser {
     email: string;
@@ -28,7 +31,6 @@ export default function AiCampaignPage() {
         const fetchTargets = async () => {
             setLoading(true);
             try {
-                const { getAiCampaignTargets } = await import('@/app/actions/get-ai-campaign-targets');
                 const { targets: fetchedTargets } = await getAiCampaignTargets();
                 setTargets(fetchedTargets);
             } catch (error) {
@@ -48,7 +50,6 @@ export default function AiCampaignPage() {
     const handleSendInvite = (email: string) => {
         startTransition(async () => {
             try {
-                const { sendAiTrialInvite } = await import('@/app/admin/actions');
                 const result = await sendAiTrialInvite(email);
                 if (result.success) {
                     toast({ title: "Invite Sent!", description: result.message });
@@ -69,7 +70,6 @@ export default function AiCampaignPage() {
     const handleExport = () => {
         startTransition(async () => {
             try {
-                const { exportCampaignData } = await import('@/app/actions/export-campaign-data');
                 const csvData = await exportCampaignData();
                 if (csvData) {
                     const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
