@@ -7,7 +7,7 @@ import { Footer } from "@/components/layout/footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import PricingCard, { type PricingPlan } from "@/components/pricing/pricing-card";
 import AddonToggle from "@/components/pricing/addon-toggle";
-import ToggleBillingCycle from "@/components/ToggleBillingCycle";
+import { BillingToggle } from "@/components/pricing/BillingToggle";
 
 export default function PricingPage() {
   const [interval, setInterval] = useState<'month' | 'year'>("month");
@@ -46,9 +46,7 @@ export default function PricingPage() {
           </p>
         </div>
 
-        <div className="flex justify-center gap-4 mb-8">
-            <ToggleBillingCycle billingCycle={interval} setBillingCycle={setInterval} />
-        </div>
+        <BillingToggle value={interval} onChange={setInterval} />
         
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
