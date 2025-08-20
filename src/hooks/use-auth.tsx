@@ -4,7 +4,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
 import type { User } from "firebase/auth";
 import { 
-    getAuth, 
     GoogleAuthProvider, 
     signInWithPopup, 
     createUserWithEmailAndPassword,
@@ -14,6 +13,7 @@ import {
 } from "firebase/auth";
 import { getClientAuth, db } from "@/firebase/client";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 // Helper to create a user document in Firestore
 const createUserDocument = async (user: User, additionalData: any = {}) => {
@@ -32,7 +32,7 @@ const createUserDocument = async (user: User, additionalData: any = {}) => {
                 createdAt: serverTimestamp(),
                 role: 'user', // default role
                 ...additionalData,
-            });
+            }, { merge: true });
         } catch (error) {
             console.error("Error creating user document", error);
         }
@@ -56,6 +56,7 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
   const [user, setUser] = useState<AuthContextType['user']>(null);
   const [loading, setLoading] = useState(true);
   const auth = getClientAuth();
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -111,12 +112,11 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
   const logout = useCallback(async () => {
     try {
         await signOut(auth);
-        setUser(null);
-        // Optional: Add API call to clear server-side session if needed
+        router.push('/');
     } catch (error) {
         console.error("Logout error", error);
     }
-  }, [auth]);
+  }, [auth, router]);
 
   const value = useMemo(() => ({ user, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, logout }), [user, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, logout]);
   

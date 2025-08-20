@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useApp } from "@/contexts/app-provider";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "../ui/button";
 
 export function Header() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { userPlan } = useApp();
 
   const planName = userPlan?.name || "Free";
@@ -22,10 +23,10 @@ export function Header() {
           {user ? (
             <>
               <Link href="/dashboard" className="text-sm hover:underline">Dashboard</Link>
-              <Link href="/dashboard/team" className="text-sm hover:underline">Team</Link>
               <Badge variant="outline" className="capitalize">
                 {planName}
               </Badge>
+              <Button variant="ghost" size="sm" onClick={logout}>Logout</Button>
             </>
           ) : (
             <Link href="/login" className="px-3 py-1 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90">

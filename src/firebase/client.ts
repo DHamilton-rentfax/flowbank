@@ -1,5 +1,6 @@
+
 // src/firebase/client.ts
-import { initializeApp, getApps, FirebaseApp } from "firebase/app";
+import { initializeApp, getApps, FirebaseApp, getApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 
@@ -12,7 +13,7 @@ type WebConfig = {
   appId?: string;
 };
 
-const cfg: WebConfig = {
+const firebaseConfig: WebConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -21,39 +22,34 @@ const cfg: WebConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// ---- TEMP fallback for Firebase Studio (remove later) ----
-// Object.assign(cfg, {
-//   apiKey: "<public-api-key>",
-//   authDomain: "<your-project>.firebaseapp.com",
-//   projectId: "<your-project-id>",
-//   storageBucket: "<your-project>.appspot.com",
-//   messagingSenderId: "<sender-id>",
-//   appId: "<web-app-id>",
-// });
-
-function hasConfig(c: WebConfig) {
+function hasConfig(c: WebConfig): c is Required<WebConfig> {
   return !!(c.apiKey && c.authDomain && c.projectId && c.appId);
 }
 
-let _app: FirebaseApp | null = null;
-export function getClientApp(): FirebaseApp {
-  if (_app) return _app;
-  if (!hasConfig(cfg)) {
-    throw new Error("Firebase web config missing (NEXT_PUBLIC_*).\n\nIf you are in Firebase Studio, you can temporarily uncomment and populate the `TEMP fallback` section in `src/firebase/client.ts` for testing purposes.\n\nIf you are running locally or deployed, ensure your environment variables are correctly set.");
-  }
-  _app = getApps()[0] ?? initializeApp(cfg as Required<WebConfig>);
-  return _app;
+let app: FirebaseApp;
+
+if (!hasConfig(firebaseConfig)) {
+  console.warn("Firebase web config missing (NEXT_PUBLIC_*).");
+  // In a real app, you might want to throw an error or render a fallback UI.
+  // For now, we'll proceed, but Firebase services will fail.
 }
 
+if (getApps().length) {
+    app = getApp();
+} else {
+    app = initializeApp(firebaseConfig);
+}
+
+
 export function getClientAuth(): Auth {
-  return getAuth(getClientApp());
+  return getAuth(app);
 }
 export function getClientDb(): Firestore {
-  return getFirestore(getClientApp());
+  return getFirestore(app);
 }
 
 // Compat named exports so existing code `import { auth }` keeps working
-export const auth: Auth = (() => getClientAuth())();
-export const db: Firestore = (() => getClientDb())();
+export const auth: Auth = getAuth(app);
+export const db: Firestore = getFirestore(app);
 
-export default getClientApp();
+export default app;

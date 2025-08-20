@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Footer } from "@/components/layout/footer";
+
 
 function DashboardSkeleton() {
     return (
@@ -50,6 +52,7 @@ export default function DashboardLayout({
         <main className="flex-1">
             <DashboardSkeleton />
         </main>
+        <Footer />
       </div>
     );
   }
@@ -57,7 +60,8 @@ export default function DashboardLayout({
   return (
     <>
       <Header />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 bg-secondary">{children}</main>
+      <Footer />
     </>
   );
 }
