@@ -1,5 +1,4 @@
 
-'use server'
 // Server-only Firebase Admin bootstrap
 // NEVER import this file from client components.
 
