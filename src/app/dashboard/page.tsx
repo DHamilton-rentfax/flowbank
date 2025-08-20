@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
@@ -209,17 +208,30 @@ export default function Dashboard() {
         <Stat title="Net (30d)" value={"$"+(analyticsSnapshot?.net?.toFixed?.(2)||"0.00")} />
       </section>
 
-      <section className="border rounded-2xl p-4">
-        <h3 className="font-bold mb-2">Income & Expenses</h3>
+      <section className="border rounded-2xl p-4 bg-background">
+        <h3 className="font-bold mb-2">Income & Expenses (Last 30 Days)</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={analyticsSnapshot?.series||[]}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="income" stroke="#82ca9d" />
-              <Line type="monotone" dataKey="expenses" stroke="#8884d8" />
+              <Tooltip
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-background border p-2 rounded-lg shadow-sm">
+                        <p className="font-bold">{label}</p>
+                        <p className="text-green-600">Income: ${payload[0].value?.toFixed(2)}</p>
+                        <p className="text-red-600">Expenses: ${payload[1].value?.toFixed(2)}</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Line type="monotone" dataKey="income" stroke="#16a34a" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="expenses" stroke="#dc2626" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
