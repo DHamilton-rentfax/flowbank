@@ -4,95 +4,60 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
-import { createCheckoutSession } from "@/app/actions/create-checkout-session";
 
 export interface PricingPlan {
   name: string;
-  price: string;
-  description: string;
-  features: string[];
   lookup_key: string;
-  cta?: string;
+  description: string | null;
+  features: string[];
+  amount: number;
   highlight?: boolean;
+  customLabel?: string;
 }
 
 interface Props {
   plan: PricingPlan;
-  billingPeriod: "month" | "year";
-  onSelect?: (lookupKey: string) => void;
+  interval: "month" | "year";
 }
 
-export function PricingCard({ plan, billingPeriod, onSelect }: Props) {
-  const [loading, setLoading] = useState(false);
+export default function PricingCard({ plan, interval }: Props) {
   const { user } = useAuth();
-  const router = useRouter();
-  const { toast } = useToast();
 
-  const handleCheckout = async () => {
-    if (!user) {
-      router.push(`/login?next=/pricing`);
-      return;
-    }
-    if (!plan.lookup_key) {
-      toast({
-        title: "Not purchasable",
-        description: "This plan cannot be purchased directly. Please contact sales.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      const { url, error } = await createCheckoutSession([
-        { lookup_key: plan.lookup_key },
-      ]);
-      if (error) throw new Error(error);
-      if (url) router.push(url);
-    } catch (e) {
-      const err = e as Error;
-      toast({
-        title: "Checkout Error",
-        description: err.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const priceText = plan.customLabel
+    ? plan.customLabel
+    : `$${plan.amount}`;
 
   return (
     <div
       className={cn(
-        "rounded-2xl border p-6 shadow-sm flex flex-col justify-between",
-        plan.highlight ? "border-primary shadow-md bg-muted/10" : "border-muted"
+        "rounded-2xl border p-6 shadow-sm flex flex-col justify-between bg-card",
+        plan.highlight ? "border-primary shadow-lg" : "border-muted"
       )}
     >
       <div>
-        <h3 className="text-xl font-semibold">{plan.name}</h3>
-        <p className="text-muted-foreground mb-4">{plan.description}</p>
-        <div className="text-3xl font-bold mb-2">{plan.price}</div>
+        <h3 className="text-xl font-semibold text-card-foreground">{plan.name}</h3>
+        <p className="text-muted-foreground mt-1 mb-4 h-10">{plan.description}</p>
+        <div className="text-3xl font-bold mb-2 text-card-foreground">{priceText}
+            {plan.interval && !plan.customLabel && <span className="text-sm font-normal text-muted-foreground">/{interval}</span>}
+        </div>
 
-        <ul className="mb-4 space-y-2 text-sm text-muted-foreground">
+        <ul className="mb-6 space-y-2 text-sm text-muted-foreground">
           {plan.features.map((f, i) => (
             <li key={i} className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-500" />
+              <Check className="h-4 w-4 text-accent" />
               {f}
             </li>
           ))}
         </ul>
       </div>
 
-      <Button
-        className="mt-4 w-full"
-        disabled={loading}
-        onClick={handleCheckout}
-      >
-        {loading ? "Processing..." : (plan.cta || "Get Started")}
-      </Button>
+        <Button asChild className="w-full" variant={plan.highlight ? 'default' : 'secondary'}>
+            <Link href={plan.lookup_key ? `/checkout/${plan.lookup_key}` : '/contact'}>
+                {user ? 'Choose Plan' : 'Sign up to Subscribe'}
+            </Link>
+        </Button>
     </div>
   );
 }
