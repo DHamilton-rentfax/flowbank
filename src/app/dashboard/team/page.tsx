@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useEffect, useTransition, useMemo } from 'react';
-import { getTeamInfo, inviteTeamMember, removeTeamMember, updateTeamMemberRole } from '@/app/teams/actions';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
@@ -29,6 +28,7 @@ export default function TeamPage() {
   const fetchTeamInfo = React.useCallback(async () => {
     setLoading(true);
     try {
+      const { getTeamInfo } = await import('@/app/teams/actions');
       const info = await getTeamInfo();
       setTeamInfo(info);
     } catch (error) {
@@ -52,6 +52,7 @@ export default function TeamPage() {
     }
 
     startTransition(async () => {
+      const { inviteTeamMember } = await import('@/app/teams/actions');
       const { success, error, message } = await inviteTeamMember(inviteEmail);
       if (success) {
         toast({ title: 'Success!', description: message });
@@ -65,6 +66,7 @@ export default function TeamPage() {
   
   const handleRemove = (memberId: string) => {
      startTransition(async () => {
+        const { removeTeamMember } = await import('@/app/teams/actions');
         const { success, error, message } = await removeTeamMember(memberId);
         if (success) {
             toast({ title: 'Member Removed', description: message });
@@ -77,6 +79,7 @@ export default function TeamPage() {
 
   const handleRoleChange = (memberId: string, newRole: string) => {
     startTransition(async () => {
+      const { updateTeamMemberRole } = await import('@/app/teams/actions');
       const { success, error, message } = await updateTeamMemberRole(memberId, newRole);
       if (success) {
         toast({ title: 'Role Updated!', description: message });
@@ -240,3 +243,5 @@ export default function TeamPage() {
     </div>
   );
 }
+
+    

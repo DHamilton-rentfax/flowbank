@@ -2,8 +2,6 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { getAllUsers } from '@/app/actions/get-all-users';
-import { updateUserRole } from '@/app/actions/update-user-role';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -19,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { grantHighestTierPlan } from '@/app/admin/actions';
 
 interface User {
     uid: string;
@@ -37,6 +34,7 @@ export default function AdminUsersPage() {
     const fetchUsers = React.useCallback(async () => {
         setLoading(true);
         try {
+            const { getAllUsers } = await import('@/app/actions/get-all-users');
             const { users: fetchedUsers } = await getAllUsers();
             setUsers(fetchedUsers as User[]);
         } catch (error) {
@@ -58,6 +56,7 @@ export default function AdminUsersPage() {
     const handleRoleChange = (uid: string, newRole: 'admin' | 'user') => {
         startTransition(async () => {
             try {
+                const { updateUserRole } = await import('@/app/actions/update-user-role');
                 const result = await updateUserRole(uid, newRole);
                 if (result.success) {
                     toast({ title: "Success!", description: result.message });
@@ -79,6 +78,7 @@ export default function AdminUsersPage() {
     const handleGrantPro = (email: string) => {
         startTransition(async () => {
             try {
+                const { grantHighestTierPlan } = await import('@/app/admin/actions');
                 const result = await grantHighestTierPlan(email);
                  if (result.success) {
                     toast({ title: "Success!", description: result.message });
@@ -174,3 +174,5 @@ export default function AdminUsersPage() {
         </div>
     );
 }
+
+    

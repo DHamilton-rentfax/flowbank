@@ -4,7 +4,6 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { createCheckoutSession } from "@/app/actions/create-checkout-session";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -203,6 +202,7 @@ export default function Pricing() {
     }
     setLoadingKey(lookup_key);
     try {
+        const { createCheckoutSession } = await import('@/app/actions/create-checkout-session');
         const { url, error } = await createCheckoutSession([{ lookup_key }]);
         if (url) {
             window.location.href = url;
@@ -354,3 +354,5 @@ export default function Pricing() {
     </div>
   );
 }
+
+    

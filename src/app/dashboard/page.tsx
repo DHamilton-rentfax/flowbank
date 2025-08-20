@@ -1,13 +1,10 @@
+
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { useApp } from "@/contexts/app-provider";
 import PlanGate from "@/components/PlanGate";
-import { getAISuggestion } from "@/app/actions/get-ai-suggestion";
-import { getAnalyticsSnapshot } from "@/app/actions/get-analytics-snapshot";
-import { createPortalSession } from "@/app/actions/create-portal-session";
-import { getAIFinancialAnalysis } from "@/app/actions/get-ai-financial-analysis";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -40,6 +37,7 @@ function AIFinancialAdvisor() {
 
     startTransition(async () => {
       try {
+        const { getAIFinancialAnalysis } = await import('@/app/actions/get-ai-financial-analysis');
         await getAIFinancialAnalysis({
           businessType: "Software Freelancer", // This could be dynamic
           transactions: transactions.slice(0, 100).map(t => ({ name: t.name, amount: t.amount, date: t.date }))
@@ -113,7 +111,7 @@ function AIFinancialAdvisor() {
                           <Lightbulb className="h-5 w-5 text-amber-500" />
                           Savings Suggestions ({aiFinancialAnalysis.savingsSuggestions.length})
                         </div>
-                      </Trigger>
+                      </AccordionTrigger>
                       <AccordionContent>
                           <ul className="space-y-2 pt-2">
                             {aiFinancialAnalysis.savingsSuggestions.slice(0, !hasAIFeature && planName === 'free' ? 2 : undefined).map((item, index) => (
@@ -151,6 +149,7 @@ export default function Dashboard() {
   useEffect(()=>{ 
     async function fetchData() {
         if (user && !loadingData) {
+          const { getAnalyticsSnapshot } = await import('@/app/actions/get-analytics-snapshot');
           const snap = await getAnalyticsSnapshot(null);
           setAnalyticsSnapshot(snap);
         }
@@ -161,6 +160,7 @@ export default function Dashboard() {
 
   async function getAiAllocation() {
     try {
+        const { getAISuggestion } = await import('@/app/actions/get-ai-suggestion');
         const { plan } = await getAISuggestion("Software business"); // Using a default for now
         if (plan) {
             setAiSuggestion(plan);
@@ -175,6 +175,7 @@ export default function Dashboard() {
   async function openPortal() {
     setIsPortalLoading(true);
     try {
+        const { createPortalSession } = await import('@/app/actions/create-portal-session');
         const { url, error } = await createPortalSession();
         if (url) {
             window.location.href = url;
