@@ -15,6 +15,7 @@ export interface PricingPlan {
   amount: number;
   highlight?: boolean;
   customLabel?: string;
+  interval?: 'month' | 'year';
 }
 
 interface Props {
@@ -61,4 +62,3 @@ export default function PricingCard({ plan, interval }: Props) {
     </div>
   );
 }
-

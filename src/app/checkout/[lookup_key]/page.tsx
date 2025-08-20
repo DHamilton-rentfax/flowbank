@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { getAuth } from 'firebase/auth';
 
 // In a real app, you might fetch this from an API or have it in a shared config
 const getPlanDetails = (lookupKey: string) => {
@@ -41,6 +42,11 @@ export default function CheckoutPage() {
 
         startTransition(async () => {
             try {
+                const auth = getAuth();
+                const idToken = await auth.currentUser?.getIdToken();
+
+                if (!idToken) throw new Error("Authentication required.");
+
                 const { createCheckoutSession } = await import('@/app/actions/create-checkout-session');
                 const { url, error } = await createCheckoutSession([{ lookup_key }]);
 

@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import React from "react";
+import { getAuth } from 'firebase/auth';
 
 interface Addon {
     id: string;
@@ -35,9 +36,23 @@ export default function AddonToggle({ addon, interval }: AddonToggleProps) {
 
         setLoading(true);
         try {
-            const { createCheckoutSession } = await import('@/app/actions/create-checkout-session');
-            const { url, error } = await createCheckoutSession([{ lookup_key: addon.lookup_key }]);
+            const auth = getAuth();
+            const idToken = await auth.currentUser?.getIdToken();
 
+            if (!idToken) throw new Error("Authentication required.");
+
+            const { createCheckoutSession } = await import('@/app/actions/create-checkout-session');
+            const res = await fetch('/api/checkout/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({ items: [{ lookup_key: addon.lookup_key }] }),
+            });
+
+            const { url, error } = await res.json();
+            
             if (error) throw new Error(error);
             if (url) router.push(url);
 
