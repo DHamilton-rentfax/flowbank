@@ -9,20 +9,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 
-interface Price {
-    interval: 'month' | 'year';
-    lookup_key: string;
-    amount: number;
-    customLabel?: string;
-}
-
 interface Plan {
     id: string;
+    lookup_key: string | null;
     name: string;
-    description: string;
+    description: string | null;
+    amount: number;
     features: string[];
-    prices: Price[];
     highlight?: boolean;
+    customLabel?: string;
 }
 
 interface PricingCardProps {
@@ -36,14 +31,12 @@ export default function PricingCard({ plan, interval }: PricingCardProps) {
     const router = useRouter();
     const [loading, setLoading] = React.useState(false);
     
-    const price = plan.prices.find(p => p.interval === interval) || plan.prices[0];
-
     const handleSubscribe = async () => {
         if (!user) {
             router.push(`/login?next=/pricing`);
             return;
         }
-        if (!price.lookup_key) {
+        if (!plan.lookup_key) {
             router.push('/contact');
             return;
         }
@@ -51,7 +44,7 @@ export default function PricingCard({ plan, interval }: PricingCardProps) {
         setLoading(true);
         try {
             const { createCheckoutSession } = await import('@/app/actions/create-checkout-session');
-            const { url, error } = await createCheckoutSession([{ lookup_key: price.lookup_key }]);
+            const { url, error } = await createCheckoutSession([{ lookup_key: plan.lookup_key }]);
 
             if (error) {
                 throw new Error(error);
@@ -78,16 +71,16 @@ export default function PricingCard({ plan, interval }: PricingCardProps) {
         )}>
             <div className="flex-grow">
                 <h3 className="text-xl font-bold">{plan.name}</h3>
-                <p className="text-muted-foreground mt-1 text-sm">{plan.description}</p>
+                <p className="text-muted-foreground mt-1 text-sm h-10">{plan.description}</p>
                 <div className="mt-6">
-                    <span className="text-4xl font-bold">${price.amount / 100}</span>
+                    <span className="text-4xl font-bold">${plan.amount}</span>
                     <span className="text-muted-foreground">/{interval === 'month' ? 'mo' : 'yr'}</span>
                 </div>
                 <ul className="mt-6 space-y-3">
                     {plan.features.map((feature, i) => (
                         <li key={i} className="flex items-start gap-3">
                             <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-                            <span className="text-muted-foreground">{feature}</span>
+                            <span className="text-muted-foreground">{feature.trim()}</span>
                         </li>
                     ))}
                 </ul>
@@ -98,7 +91,7 @@ export default function PricingCard({ plan, interval }: PricingCardProps) {
                 variant={plan.highlight ? 'default' : 'outline'}
                 disabled={loading}
             >
-                {loading ? 'Processing...' : (price.customLabel || 'Get Started')}
+                {loading ? 'Processing...' : (plan.customLabel || 'Get Started')}
             </Button>
         </div>
     );

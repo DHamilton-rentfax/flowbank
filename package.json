@@ -39,6 +39,7 @@
     "@radix-ui/react-switch": "latest",
     "@radix-ui/react-tabs": "latest",
     "@radix-ui/react-toast": "latest",
+    "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
     "ai": "latest",
     "class-variance-authority": "latest",
@@ -92,5 +93,3 @@
   "engines": { "node": "20.x" },
   "packageManager": "npm@10.7.0"
 }
-
-    

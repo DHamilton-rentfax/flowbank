@@ -3,12 +3,11 @@
 
 import { useEffect, useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { getPricingPlans } from "@/lib/pricing";
-import { cn } from "@/lib/utils";
 import PricingCard from "@/components/pricing/pricing-card";
 import AddonToggle from "@/components/pricing/addon-toggle";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PricingPage() {
   const [interval, setInterval] = useState<"month" | "year">("month");
@@ -19,19 +18,27 @@ export default function PricingPage() {
 
   useEffect(() => {
     async function fetchPricing() {
+      setLoading(true);
+      setError(null);
       try {
-        const { plans, addons } = await getPricingPlans();
+        const res = await fetch(`/api/pricing?interval=${interval}`);
+        if (!res.ok) {
+          const body = await res.json();
+          throw new Error(body.error || 'Failed to fetch pricing data.');
+        }
+        const { plans, addons } = await res.json();
         setPlans(plans);
         setAddons(addons);
       } catch (err) {
-        setError("Failed to load pricing plans.");
+        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+        setError(errorMessage);
         console.error("Pricing load error:", err);
       } finally {
         setLoading(false);
       }
     }
     fetchPricing();
-  }, []);
+  }, [interval]);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -48,17 +55,17 @@ export default function PricingPage() {
             <div className="flex justify-center my-8">
                 <ToggleGroup type="single" value={interval} onValueChange={(val) => val && setInterval(val as "month" | "year")}>
                 <ToggleGroupItem value="month">Monthly</ToggleGroupItem>
-                <ToggleGroupItem value="year">Annually (Save 15%)</ToggleGroupItem>
+                <ToggleGroupItem value="year">Annually (Save ~15%)</ToggleGroupItem>
                 </ToggleGroup>
             </div>
 
             {error ? (
-                <p className="text-center text-red-500">{error}</p>
+                <p className="text-center text-destructive">{error}</p>
             ) : loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="border rounded-xl p-6 h-96 bg-background/50 animate-pulse"></div>
-                    <div className="border rounded-xl p-6 h-96 bg-background/50 animate-pulse"></div>
-                    <div className="border rounded-xl p-6 h-96 bg-background/50 animate-pulse"></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                    <Skeleton className="h-96 rounded-xl" />
+                    <Skeleton className="h-96 rounded-xl" />
+                    <Skeleton className="h-96 rounded-xl" />
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
@@ -68,14 +75,14 @@ export default function PricingPage() {
                 </div>
             )}
 
-            {addons.length > 0 && !loading && (
+            {addons.length > 0 && !loading && !error && (
                 <div className="mt-16">
-                <h2 className="text-3xl font-bold mb-6 text-center">Enhance Your Plan with Add-ons</h2>
-                <div className="max-w-3xl mx-auto grid grid-cols-1 gap-4">
-                    {addons.map((addon) => (
-                        <AddonToggle key={addon.id} addon={addon} interval={interval} />
-                    ))}
-                </div>
+                    <h2 className="text-3xl font-bold mb-6 text-center">Enhance Your Plan with Add-ons</h2>
+                    <div className="max-w-3xl mx-auto grid grid-cols-1 gap-4">
+                        {addons.map((addon) => (
+                            <AddonToggle key={addon.id} addon={addon} interval={interval} />
+                        ))}
+                    </div>
                 </div>
             )}
             </div>
