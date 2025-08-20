@@ -1,15 +1,15 @@
 
 "use client";
 
-import { CheckCircle2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import React from "react";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import React from "react";
+import { useToast } from "@/hooks/use-toast";
 
-interface Plan {
+type Plan = {
     id: string;
     lookup_key: string | null;
     name: string;
@@ -20,24 +20,28 @@ interface Plan {
     customLabel?: string;
 }
 
-interface PricingCardProps {
+type PricingCardProps = {
     plan: Plan;
     interval: 'month' | 'year';
 }
 
 export default function PricingCard({ plan, interval }: PricingCardProps) {
-    const { toast } = useToast();
     const { user } = useAuth();
     const router = useRouter();
+    const { toast } = useToast();
     const [loading, setLoading] = React.useState(false);
-    
+
     const handleSubscribe = async () => {
         if (!user) {
             router.push(`/login?next=/pricing`);
             return;
         }
         if (!plan.lookup_key) {
-            router.push('/contact');
+            if (plan.name === 'Enterprise') {
+                router.push('/contact');
+            } else {
+                 toast({ title: "Not Available", description: "This plan cannot be purchased directly.", variant: "destructive" });
+            }
             return;
         }
 
@@ -65,34 +69,30 @@ export default function PricingCard({ plan, interval }: PricingCardProps) {
     };
 
     return (
-        <div className={cn(
-            "border rounded-xl p-6 flex flex-col h-full bg-background",
-            plan.highlight && "border-primary ring-2 ring-primary"
-        )}>
-            <div className="flex-grow">
-                <h3 className="text-xl font-bold">{plan.name}</h3>
-                <p className="text-muted-foreground mt-1 text-sm h-10">{plan.description}</p>
-                <div className="mt-6">
-                    <span className="text-4xl font-bold">${plan.amount}</span>
-                    <span className="text-muted-foreground">/{interval === 'month' ? 'mo' : 'yr'}</span>
+        <Card className={`flex flex-col justify-between shadow-xl p-6 ${plan.highlight ? 'border-2 border-primary' : ''}`}>
+            <CardHeader>
+                <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+                <p className="text-muted-foreground">{plan.description}</p>
+                <div className="text-3xl font-bold mt-4">
+                    {plan.customLabel ? plan.customLabel : `$${plan.amount}`}
+                    {plan.amount > 0 && !plan.customLabel && (
+                        <span className="text-base font-normal text-muted-foreground">
+                            /{interval === "month" ? "mo" : "yr"}
+                        </span>
+                    )}
                 </div>
-                <ul className="mt-6 space-y-3">
-                    {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                            <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-                            <span className="text-muted-foreground">{feature.trim()}</span>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-            <Button 
-                onClick={handleSubscribe} 
-                className="w-full mt-8" 
-                variant={plan.highlight ? 'default' : 'outline'}
-                disabled={loading}
-            >
-                {loading ? 'Processing...' : (plan.customLabel || 'Get Started')}
+            </CardHeader>
+            <CardContent className="space-y-3 mt-4 flex-grow">
+                {plan.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-600" />
+                        {feature}
+                    </div>
+                ))}
+            </CardContent>
+             <Button className="w-full mt-6" size="lg" onClick={handleSubscribe} disabled={loading} variant={plan.highlight ? 'default' : 'outline'}>
+                {loading ? "Processing..." : plan.name === 'Enterprise' ? 'Contact Sales' : 'Get Started'}
             </Button>
-        </div>
+        </Card>
     );
 }
