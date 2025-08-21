@@ -1,46 +1,25 @@
 
 "use server";
 
-import { stripe } from "@/lib/stripe";
-import { headers } from "next/headers";
-import { getAdminDb, getAdminAuth } from "@/firebase/server";
-
-// Helper to get the current user's UID from the session
-const getUserId = async () => {
-    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
-    if (!idToken) {
-        throw new Error("User not authenticated");
-    }
-    try {
-        const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error("Error verifying ID token:", error);
-        throw new Error("Invalid authentication token.");
-    }
-};
+import { getUserById } from '@/lib/firebase-admin'
+import { stripe } from '@/lib/stripe'
+import { auth } from '@/lib/auth-server'
+import { redirect } from 'next/navigation'
 
 export async function createPortalSession() {
-    try {
-        const userId = await getUserId();
-        const db = getAdminDb();
-        const userDocRef = db.collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-        let customerId = userDoc.data()?.stripeCustomerId;
+  const session = await auth();
+  const uid = session?.user?.uid;
 
-        if (!customerId) {
-            // This case should ideally not happen for an active user trying to manage billing.
-            // But we handle it defensively.
-            const firebaseUser = await getAdminAuth().getUser(userId);
-            const customer = await stripe.customers.create({
-                email: firebaseUser.email,
-                metadata: { firebaseUID: userId }
-            });
-            customerId = customer.id;
-            await userDocRef.set({ stripeCustomerId: customerId }, { merge: true });
-        }
-        
-        const portal = await stripe.billingPortal.sessions.create({
+  if (!uid) {
+    redirect('/login');
+  }
+
+  const user = await getUserById(uid);
+  if (!user?.stripeCustomerId) {
+    throw new Error('No Stripe customer ID found for this user.');
+  }
+
+  const portalSession = await stripe.billingPortal.sessions.create({
             customer: customerId,
             return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
         });
@@ -49,7 +28,6 @@ export async function createPortalSession() {
 
     } catch (error) {
         console.error("Error creating portal session:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         return { success: false, error: errorMessage };
     }
 }

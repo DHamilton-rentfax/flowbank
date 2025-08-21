@@ -1,21 +1,14 @@
 'use server';
 
 import { db } from '@/firebase/server';
+import { getUserSession } from '@/lib/auth'
 
 export async function getAnalyticsSnapshot() {
-  // Example implementation; adjust to your schema
-  const snapshot = {
-    activeUsers: 0,
-    newUsersThisWeek: 0,
-    paidUsers: 0,
-    freeUsers: 0,
-    pendingInvites: 0,
-    acceptedInvites: 0,
-    webhookStatus: 'healthy',
-  };
+  const user = await getUserSession()
+  if (!user) return null
 
-  // you can aggregate collections here...
-  // e.g., count users, subscriptions, invites, webhooks health doc, etc.
+  const docRef = db.collection('analytics').doc(user.uid)
+  const snapshot = await docRef.get()
 
-  return snapshot;
+  return snapshot.exists ? snapshot.data() : null
 }

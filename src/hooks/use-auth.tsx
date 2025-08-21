@@ -1,134 +1,107 @@
+'use client';
 
-"use client";
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { auth, googleProvider } from '@/firebase/client';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+} from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+ 
+type UserLike = import('firebase/auth').User | null;
 
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
-import type { User } from "firebase/auth";
-import { 
-    GoogleAuthProvider, 
-    signInWithPopup, 
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged
-} from "firebase/auth";
-import { getClientAuth, db } from "@/firebase/client";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { useRouter } from "next/navigation";
-
-// Helper to create a user document in Firestore
-const createUserDocument = async (user: User, additionalData: any = {}) => {
-    if (!user) return;
-    const userRef = doc(db, "users", user.uid);
-    const snapshot = await getDoc(userRef);
-
-    if (!snapshot.exists()) {
-        const { email, displayName, photoURL } = user;
-        try {
-            await setDoc(userRef, {
-                uid: user.uid,
-                email,
-                displayName: displayName || email?.split('@')[0],
-                photoURL,
-                createdAt: serverTimestamp(),
-                role: 'user', // default role
-                ...additionalData,
-            }, { merge: true });
-        } catch (error) {
-            console.error("Error creating user document", error);
-        }
-    }
+type AuthContextValue = {
+  user: UserLike | undefined; // undefined while loading, null when signed out
+  loading: boolean;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
 };
 
+const AuthContext = createContext<AuthContextValue | null>(null);
 
-interface AuthContextType {
-  user: (User & { role?: string }) | null;
-  loading: boolean;
-  loginWithGoogle: () => Promise<void>;
-  loginWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string, businessType: string) => Promise<void>;
-  logout: () => Promise<void>;
+async function createSession() {
+  const current = auth.currentUser;
+  if (!current) return;
+  const idToken = await current.getIdToken(/* forceRefresh */ true);
+  const res = await fetch('/api/sessionLogin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error('sessionLogin failed:', res.status, err?.error);
+    throw new Error(`sessionLogin failed: ${err?.error || res.statusText}`);
+  }
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthContextProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthContextType['user']>(null);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<UserLike | undefined>(undefined);
   const [loading, setLoading] = useState(true);
-  const auth = getClientAuth();
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        // Ensure user doc is created on first Google login
-        if (!userDoc.exists()) {
-            await createUserDocument(user);
-        }
-        const userData = userDoc.data();
-        
-        setUser({
-            ...user,
-            role: userData?.role || 'user'
-        });
-      } else {
-        setUser(null);
-      }
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
       setLoading(false);
+      // Do not redirect here; let pages decide. Only ensure session cookie exists after sign-in.
+      if (u) {
+        try {
+          await createSession();
+        } catch (e) {
+          console.error(e);
+        }
+      }
     });
-
-    return () => unsubscribe();
-  }, [auth]);
-
-  const loginWithGoogle = useCallback(async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      await createUserDocument(result.user);
-    } catch (error) {
-      console.error("Google login error", error);
-      throw error;
-    }
-  }, [auth]);
+    return () => unsub();
+  }, []);
 
   const loginWithEmail = useCallback(async (email: string, password: string) => {
+    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-      console.error("Email login error", error);
-      throw error;
+      await createSession(); // set cookie for SSR/protected APIs
+      // Route where you want after login:
+      router.push('/dashboard'); // or plan-based router you already implemented
+    } finally {
+      setLoading(false);
     }
-  }, [auth]);
+  }, [router]);
 
-  const signUpWithEmail = useCallback(async (email: string, password: string, businessType: string) => {
+  const loginWithGoogle = useCallback(async () => {
+    setLoading(true);
     try {
-        const result = await createUserWithEmailAndPassword(auth, email, password);
-        await createUserDocument(result.user, { businessType });
-    } catch (error) {
-        console.error("Email sign up error", error);
-        throw error;
+      await signInWithPopup(auth, googleProvider);
+      await createSession();
+      router.push('/dashboard');
+    } finally {
+      setLoading(false);
     }
-  }, [auth]);
-
+  }, [router]);
 
   const logout = useCallback(async () => {
+    setLoading(true);
     try {
-        await signOut(auth);
-        router.push('/');
-    } catch (error) {
-        console.error("Logout error", error);
+      await fetch('/api/sessionLogout', { method: 'POST' });
+      await signOut(auth);
+      router.push('/login');
+    } finally {
+      setLoading(false);
     }
-  }, [auth, router]);
+  }, [router]);
 
-  const value = useMemo(() => ({ user, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, logout }), [user, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, logout]);
-  
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, loading, loginWithEmail, loginWithGoogle, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');
+  return ctx;
 }

@@ -2,6 +2,87 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Utility: check for admin via custom claims
+ function isAdmin() {
+ return request.auth != null && request.auth.token.admin == true;
+ }
+
+ // Utility: signed-in user id
+ function uid() {
+ return request.auth != null ? request.auth.uid : null;
+ }
+
+    // Utility: validate slug (lowercase letters, numbers, dashes)
+ function validSlug(slug) {
+ return slug is string
+             && slug.size() >= 3
+ && slug.size() <= 120
+             && slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$');
+ }
+
+    // Utility: status in allowed set
+ function validStatus(status) {
+ return ['draft','published','archived','deleted'].hasOnly([status]);
+ }
+
+    // Anyone can read published posts; drafts locked down
+    match /blogs/{slug} {
+      allow get, list: if resource != null
+ && resource.data.status == 'published';
+
+      // Create
+      allow create: if request.auth != null
+ && (
+ isAdmin() ||
+ (request.resource.data.authorId == uid())
+ )
+ && validSlug(request.resource.data.slug)
+ && validStatus(request.resource.data.status)
+ && request.resource.data.slug == slug
+ && request.resource.data.title is string
+ && request.resource.data.title.size() > 0
+ && request.resource.data.createdAt is timestamp
+ && request.resource.data.updatedAt is timestamp;
+
+      // Read (including drafts) for owner or admin
+      allow get: if isAdmin()
+ || (resource.data.authorId == uid())
+ || (resource.data.status == 'published');
+
+      // Update
+      allow update: if request.auth != null
+ && (
+ isAdmin() ||
+ (resource.data.authorId == uid())
+ )
+                    // keep slug stable once created
+ && request.resource.data.slug == resource.data.slug
+ && validStatus(request.resource.data.status)
+ && request.resource.data.updatedAt is timestamp;
+
+      // Delete (soft delete preferred; but allow hard delete to admins)
+      allow delete: if isAdmin();
+    }
+
+    // Optional: comments under a blog (only if you use them)
+    match /blogs/{slug}/comments/{commentId} {
+      allow read: if true; // public comments
+      allow create: if request.auth != null
+ && request.resource.data.authorId == uid()
+ && request.resource.data.text is string
+ && request.resource.data.text.size() > 0
+ && request.resource.data.createdAt is timestamp;
+      allow update, delete: if request.auth != null
+ && (isAdmin() || resource.data.authorId == uid());
+    }
+
+    // Users collection (basic profile)
+ match /users/{userId} {
+ allow read: if isAdmin() || (uid() == userId);
+ allow create, update: if uid() == userId;
+ allow delete: if isAdmin();
+ }
+
     // Helpers
     function isSignedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }

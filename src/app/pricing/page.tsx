@@ -1,5 +1,5 @@
 'use client'
-
+import SafeImage from '@/components/ui/SafeImage'
 import { useState } from 'react'
 import { Toggle } from '@/components/ui/toggle'
 import { PricingCard } from '@/components/pricing-card'
