@@ -1,5 +1,9 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth } from '@/firebase/server';
+
+export const runtime = 'nodejs';           // ✅ ensure Node runtime
+export const dynamic = 'force-dynamic';
 
 const FIVE_DAYS = 60 * 60 * 24 * 5 * 1000;
 
@@ -22,7 +26,7 @@ export async function POST(req: NextRequest) {
       name: '__session',              // Firebase Hosting-friendly cookie name
       value: sessionCookie,
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
       maxAge: expiresIn / 1000,
