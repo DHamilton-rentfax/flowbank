@@ -33,7 +33,7 @@ function buildCsp() {
     "https://r.stripe.com",
     "https://www.recaptcha.net",
     "https://www.gstatic.com/recaptcha/",
-    "https://*.firebaseio.com", // Allow realtime database
+    "*.firebaseio.com", // Allow realtime database
     "wss://*.firebaseio.com", // Allow realtime database websockets
   ].join(' ');
   
