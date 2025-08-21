@@ -1,5 +1,9 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth } from '@/firebase/server';
+
+export const runtime = 'nodejs';           // ✅ ensure Node runtime
+export const dynamic = 'force-dynamic';
 
 const FIVE_DAYS = 60 * 60 * 24 * 5 * 1000;
 

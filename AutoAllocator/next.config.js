@@ -45,7 +45,7 @@ function buildCsp() {
     "https://checkout.stripe.com",
     "https://www.recaptcha.net",
     "https://www.gstatic.com/recaptcha/",
-    "https://*.firebaseio.com",
+    "*.firebaseio.com",
   ].join(' ');
 
   const csp = `
