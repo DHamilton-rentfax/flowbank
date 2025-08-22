@@ -120,6 +120,8 @@ export default function Signup() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 disabled={loading}
+ name="email"
+ autocomplete="email"
                             />
                         </div>
                          <div className="grid gap-2">
@@ -132,6 +134,8 @@ export default function Signup() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
+ name="password"
+ autocomplete="current-password"
                                     disabled={loading}
                                 />
                                  <button

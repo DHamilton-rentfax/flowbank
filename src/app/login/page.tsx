@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -131,6 +130,8 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
+ name="email"
+ autocomplete="email"
                   placeholder="m@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -144,6 +145,8 @@ export default function LoginPage() {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
+ name="password"
+ autocomplete="current-password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
