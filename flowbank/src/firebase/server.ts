@@ -11,15 +11,17 @@ function getAdminApp(): App {
   const apps = getApps();
   if (apps.length) return apps[0];
 
-  // Prefer env (helps local dev), else fall back to ADC (works on App Hosting)
   const b64 = process.env.FIREBASE_ADMIN_CERT_B64;
-  if (b64) {
-    const json = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
-    return initializeApp({ credential: cert(json) });
+  if (!b64) {
+    throw new Error(
+      "FIREBASE_ADMIN_CERT_B64 is missing. Provide a base64-encoded Firebase service account JSON."
+    );
   }
 
-  // ✅ No key needed in App Hosting:
-  return initializeApp();
+  const credentialsJson = Buffer.from(b64, "base64").toString("utf8");
+  const credentials = JSON.parse(credentialsJson);
+
+  return initializeApp({ credential: cert(credentials) });
 }
 
 const app = getAdminApp();

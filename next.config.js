@@ -12,7 +12,8 @@ function buildCsp() {
     "https://www.googleapis.com",
     "https://accounts.google.com",                  // GSI flows
     "https://www.recaptcha.net",
-    "https://js.stripe.com",
+ "'unsafe-inline'",
+ 'https://js.stripe.com',
     "https://www.googletagmanager.com",
     "https://www.google-analytics.com",
   ].join(' ');
@@ -32,8 +33,8 @@ function buildCsp() {
     "https://m.stripe.network",
     "https://r.stripe.com",
     "https://www.recaptcha.net",
-    "https://www.gstatic.com/recaptcha/",
-    "*.firebaseio.com", // Allow realtime database
+ 'https://www.gstatic.com/recaptcha/',
+ '*.firebaseio.com', // Allow realtime database
     "wss://*.firebaseio.com", // Allow realtime database websockets
   ].join(' ');
   
@@ -44,7 +45,7 @@ function buildCsp() {
     "https://hooks.stripe.com",
     "https://checkout.stripe.com",
     "https://www.recaptcha.net",
-    "https://www.gstatic.com/recaptcha/",
+ 'https://www.gstatic.com/recaptcha/',
     "*.firebaseio.com",
   ].join(' ');
 
@@ -98,7 +99,7 @@ const nextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "geolocation=(self), microphone=()"
+            value: "accelerometer=(), camera=(), microphone=(), geolocation=(), usb=(), serial=(), hid=(), payment=(), autoplay=(self)"
           }
         ]
       },
