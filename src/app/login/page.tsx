@@ -1,183 +1,146 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Footer } from "@/components/layout/footer";
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from "firebase/auth";
+
+// If you don't use path alias "@/...", keep the relative path:
+import { auth, googleProvider } from "../../firebase/client"; // from src/app/login -> ../../firebase/client
+// or, if you set tsconfig paths: import { auth, googleProvider } from "@/firebase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading, loginWithEmail, loginWithGoogle } = useAuth();
-
-  const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const next = searchParams.get('next');
-
-  const handleGoogle = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      await loginWithGoogle();
-      toast({ title: "Signed In with Google!"});
-      router.push(next || "/dashboard");
-    } catch (err: any) {
-      setError(err?.message ?? "Google login failed");
-      console.error("Google login error:", err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // If already signed in, go straight to dashboard once auth resolves
- useEffect(() => {
-    if (loading) return; // wait until auth resolves
-    if (user) {
-      router.replace(next || "/dashboard");
-    }
-  }, [user, loading, router, next]);
-
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitting(true);
-    setError(null);
+    setLoading(true);
     try {
-      await loginWithEmail(email.trim(), password);
-      toast({
-        title: "Signed In!",
+      const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const idToken = await cred.user.getIdToken(true);
+
+      const res = await fetch("/api/sessionLogin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+        body: JSON.stringify({ idToken }),
       });
-      router.push(next || "/dashboard");
-    } catch (err: any) {
-      setError(err?.message ?? "Login failed");
-      console.error("Email login error:", err);
-      toast({
-        title: "Login Failed",
-        description: err?.message ?? "An error occurred during login.",
-        variant: "destructive",
-      });
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Failed to create session");
+      }
+
+      router.replace("/dashboard");
+    } catch (err) { // <-- no type annotation here
+      const message = err instanceof Error ? err.message : "Login failed";
+      alert(message);
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
- if (loading) {
-    return <div>Loading...</div>; // Or a spinner component
-  }
+  const onGoogle = async () => {
+    setLoading(true);
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      const idToken = await cred.user.getIdToken(true);
 
-  // Don't render the form if the user is already logged in and we're about to redirect
-  // Avoid flicker while we don’t yet know if the user is logged in
-  if (loading) {
-    return (
-      <div className="min-h-[70vh] grid place-items-center">
-        <div className="animate-spin h-8 w-8 rounded-full border-2 border-black border-t-transparent" />
-      </div>
-    );
-  }
+      const res = await fetch("/api/sessionLogin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+        body: JSON.stringify({ idToken }),
+      });
 
-  // If user exists, the redirect effect will fire; render nothing here
-  if (user) return null;
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Failed to create session");
+      }
+
+      router.replace("/dashboard");
+    } catch (err) { // <-- no type annotation here either
+      const message = err instanceof Error ? err.message : "Google sign-in failed";
+      alert(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className="flex-grow grid place-items-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl">Sign in to FlowBank</CardTitle>
-            <CardDescription>Choose your preferred sign in method</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <Button
-              onClick={handleGoogle}
-              disabled={submitting}
-              className="w-full"
-              variant="outline"
+    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-6 py-16">
+      <h1 className="text-2xl font-semibold">Welcome back</h1>
+      <p className="mt-2 text-sm text-gray-600">Sign in to continue to your dashboard.</p>
+
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <div>
+          <label htmlFor="email" className="text-sm font-medium text-gray-700">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required={true}
+            autoComplete="email"
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/20"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <label htmlFor="password" className="text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="text-xs text-gray-600 hover:underline"
             >
-              <svg className="mr-2 h-4 w-4" aria-hidden="true" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.78 4.02-1.43 1.34-3.33 2.5-6.07 2.5-4.78 0-8.8-.3-10.04-2.5C1.48 19.2 2.2 15.16 2.2 12s-.72-7.2-1.76-9.24c1.24-2.2 5.26-2.5 10.04-2.5 2.74 0 4.64 1.16 6.07 2.5 1.14 1.04 1.76 2.38 1.76 4.02-.64 0-1.04.16-1.76.48Z"
-                />
-              </svg>
-              Continue with Google
-            </Button>
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+          <input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            required={true}
+            autoComplete="current-password"
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/20"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-900 disabled:opacity-60"
+        >
+          {loading ? "Signing in…" : "Sign in"}
+        </button>
 
-            <form onSubmit={handleEmailLogin} className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
- name="email"
- autocomplete="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={submitting}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
- name="password"
- autocomplete="current-password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={submitting}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-3 flex items-center text-muted-foreground"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              <Button type="submit" disabled={submitting} className="w-full">
-                {submitting ? "Signing In..." : "Sign In with Email"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardContent className="px-6 pb-6 text-center text-sm text-muted-foreground">
-            Don’t have an account?{" "}
-            <Link href="/signup" className="underline hover:text-primary/80">
-              Sign up
-            </Link>
-          </CardContent>
-        </Card>
-      </main>
-      <Footer />
+        <button
+          type="button"
+          onClick={onGoogle}
+          disabled={loading}
+          className="w-full rounded-xl border px-4 py-2.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-60"
+        >
+          {loading ? "Please wait…" : "Continue with Google"}
+        </button>
+      </form>
+
+      <p className="mt-4 text-center text-sm text-gray-600">
+        Don’t have an account?{" "}
+        <Link href="/signup" className="font-medium underline">
+          Create one
+        </Link>
+      </p>
     </div>
   );
 }

@@ -1,9 +1,8 @@
-tsx
 'use client';
 
 import React from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { authClient } from '@/firebase/client';
+import { auth } from '@/firebase/client';
 import { useRouter } from 'next/navigation';
 
 export default function AdminGuard({ children }: { children: React.ReactNode }) {
@@ -12,7 +11,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
 
   React.useEffect(() => {
     const unsub = onAuthStateChanged(authClient, async (user) => {
-      if (!user) {
+      if (!user) { // Use auth instead of authClient here
         router.replace('/login?next=/admin');
         return;
       }

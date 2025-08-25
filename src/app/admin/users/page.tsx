@@ -1,40 +1,27 @@
-'use client';
+// Server component – lists Firebase users as team members.
+import { adminAuth } from "../../../firebase/server"; // relative to /src/app/admin/users/page.tsx
+import { TeamMemberList, type TeamMember } from "../../../components/TeamMemberList";
+import React from "react";
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
-import dynamic from "next/dynamic";
+function toTeamMember(u: any): TeamMember {
+  const role =
+    (u?.customClaims?.role as TeamMember["role"]) ?? ("member" as const);
+  return {
+    id: String(u.uid),
+    name: u.displayName || (u.email ? String(u.email).split("@")[0] : "User"),
+    email: u.email ?? "",
+    role,
+  };
+}
 
-const InviteTeamMember = dynamic(() => import("@/components/team/InviteTeamMember"));
-const TeamMemberList = dynamic(() => import("@/components/team/TeamMemberList"));
-
-type TeamMember = {
-  uid: string;
-  email: string;
-  role: string; // Use string as role can be 'admin' or 'member'
-};
-
-export default function AdminUsersPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
- if (!loading && user?.role !== 'admin') {
-    router.push('/dashboard');
- }
-  
-  if (loading || user?.role !== 'admin') return <div className="p-4">Loading...</div>; // Show loading or redirect
-
+export default async function AdminUsersPage() {
+  const { users } = await adminAuth.listUsers(1000);
+  const members = users.map(toTeamMember);
 
   return (
-    <div className="p-6">      <h1 className="text-2xl font-bold mb-4">Team Management</h1>
-      {isAdmin ? (
-        <>
-          <InviteTeamMember />
-          <TeamMemberList />
-        </>
-      ) : (
-        <p>You do not have permission to view this page.</p>
-      )}
+    <div className="p-6 space-y-4">
+      <h1 className="text-2xl font-semibold">Team Members</h1>
+      <TeamMemberList members={members} />
     </div>
   );
 }

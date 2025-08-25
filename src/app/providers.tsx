@@ -1,11 +1,9 @@
-'use client';
-import { AuthProvider } from '@/hooks/use-auth';
-import { AppProvider } from '@/contexts/app-provider';
+"use client";
 
-export default function Providers({ children }: { children: React.ReactNode }) {
- return (
- <AuthProvider>
- <AppProvider>{children}</AppProvider>
- </AuthProvider>
- );
+import { ReactNode } from "react";
+import { AuthProvider } from "../hooks/use-auth";
+
+export default function Providers({ children }: { children: ReactNode }) {
+  // add any client providers here later (Theme, Query, etc.)
+  return <AuthProvider>{children}</AuthProvider>;
 }

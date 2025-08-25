@@ -14,6 +14,15 @@ export function TeamMemberList() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
+  type Role = "admin" | "user";
+  type AnyRole = "admin" | "user" | "member";
+
+  function normalizeRole(r: AnyRole): Role {
+    return r === "member" ? "user" : r;
+  }
+
+  // Removed the handleRoleToggle function and replaced with onToggleRole logic below
+
   useEffect(() => {
     const fetchMembers = async () => {
       try {
@@ -30,24 +39,22 @@ export function TeamMemberList() {
     fetchMembers();
   }, []);
 
-  const handleRoleToggle = async (memberUid: string, currentRole: string) => {
-    try {
-      const newRole = currentRole === 'admin' ? 'member' : 'admin';
-      const { updateUserRole } = await import("@/app/actions/update-user-role");
-      const result = await updateUserRole(memberUid, newRole);
+  async function onToggleRole(memberUid: string, currentRole: AnyRole) {
+    const role = normalizeRole(currentRole);
+    const newRole: Role = role === "admin" ? "user" : "admin";
 
-      if (result?.success) {
-        toast.success(`Role updated to ${newRole}`);
-        // Update local state
-        setMembers(members.map(m => m.uid === memberUid ? { ...m, role: newRole } : m));
-      } else {
-        toast.error(result?.error || "Failed to update role.");
-      }
-    } catch (err) {
-      console.error("Failed to update user role:", err);
+    const { updateUserRole } = await import("@/app/actions/update-user-role");
+    const result = await updateUserRole(memberUid, newRole);
+
+    if (result?.success) {
+      toast.success(`Role updated to ${newRole}`);
+      // Update local state
+      setMembers(members.map(m => m.uid === memberUid ? { ...m, role: newRole as AnyRole } : m));
+    } else {
+      toast.error(result?.error || "Failed to update role");
       toast.error("Failed to update role.");
     }
-  };
+  }
 
   if (loading) return <p>Loading team members...</p>;
 
@@ -72,7 +79,7 @@ export function TeamMemberList() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => handleRoleToggle(member.uid, member.role)}
+                    onClick={() => onToggleRole(member.uid, member.role as AnyRole)}
                   >
                     Make {member.role === 'admin' ? 'Member' : 'Admin'}
                   </Button>

@@ -1,112 +1,26 @@
-"use client";
+import { ReactNode } from "react";
+import type { Metadata } from "next";
+import "../globals.css";
+import Providers from "../providers";
+import HeaderDashboard from "../components/HeaderDashboard";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
-import { hasFeatureAccess, Plan } from "@/lib/planFeatures";
-import { cn } from "@/lib/utils"; // Assuming you have a cn utility for class names
+// If you store Stripe customer id in Firestore, you can fetch it in a server action.
+// For simplicity here, we'll pass null and you can thread the real id later.
+export const metadata: Metadata = {
+  title: "FlowBank — Dashboard",
+};
 
-export default function Sidebar() {
-  const pathname = usePathname();
-  const { user, loading, plan } = useAuth();
-
-  const userPlan = plan || "free"; // Default to free if plan is not set
-
-  const navItems = [
-    { href: "/dashboard/free", label: "Free Features", feature: "view-dashboard" },
-    { href: "/dashboard/starter", label: "Starter Features", feature: "basic-ai" }, // Assuming basic-ai is a feature introduced in Starter
-    { href: "/dashboard/pro", label: "Pro Features", feature: "full-ai" }, // Assuming full-ai is a feature introduced in Pro
-    { href: "/dashboard/enterprise", label: "Enterprise Features", feature: "team-seats" }, // Assuming team-seats is a feature introduced in Enterprise
-    { href: "/dashboard/analytics", label: "Analytics", feature: "analytics" },
-    { href: "/dashboard/team", label: "Team Management", feature: "team-seats" },
-    { href: "/dashboard/integrations", label: "Integrations", feature: "integrations" },
-    { href: "/dashboard/support", label: "Support", feature: "priority-support" }, // Assuming a support page for priority users
-  ];
-
-  if (loading || !user) return null; // Don't render sidebar if not authenticated or loading
+export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  const stripeCustomerId = null; // TODO: thread from server action or RSC when ready
 
   return (
-    <div className="w-64 bg-gray-100 dark:bg-gray-900 p-6 space-y-6">
-      <div className="text-2xl font-bold">FlowBank</div>
-      <nav className="space-y-2">
-        {navItems.map((item) => (
-          hasFeatureAccess(userPlan as Plan, item.feature) && (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "block py-2 px-4 rounded-md",
-                pathname === item.href
-                  ? "bg-blue-500 text-white"
-                  : "text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
-              )}
-            >
-              {item.label}
-            </Link>
-          )
-        ))}
-      </nav>
-    </div>
-  );
-}
-
-
-"use client";
-
-import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Header } from "@/components/layout/header";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Footer } from "@/components/layout/footer";
-
-
-function DashboardSkeleton() {
-    return (
-      <div className="p-8">
-        <Skeleton className="h-8 w-48 mb-8" />
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-        </div>
-        <Skeleton className="h-64" />
-      </div>
-    )
-}
-
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login?next=/dashboard");
-    }
-  }, [user, loading, router]);
-  
-  if (loading || !user) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-1">
-            <DashboardSkeleton />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <Header />
-      <main className="flex-1 bg-secondary">{children}</main>
-      <Footer />
-    </>
+    <html lang="en">
+      <body>
+        <Providers>
+          <HeaderDashboard stripeCustomerId={stripeCustomerId} />
+          <main className="min-h-screen bg-gray-50">{children}</main>
+        </Providers>
+      </body>
+    </html>
   );
 }

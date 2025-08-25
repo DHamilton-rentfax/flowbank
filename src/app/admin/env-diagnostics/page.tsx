@@ -1,71 +1,97 @@
-// Server Component
-import { db } from '@/firebase/server';
+"use client";
 
-export const dynamic = 'force-dynamic';
+/**
+ * src/app/admin/env-diagnostics/page.tsx
+ *
+ * A lightweight diagnostics UI:
+ * - Reads env summary via dynamic import of server action
+ * - Calls /api/health/admin for live health snapshot
+ */
 
-function isSet(v?: string) {
-  return v ? '✅ set' : '❌ missing';
-}
+import { useEffect, useState } from "react";
 
-export default async function Page() {
-  // Light Firestore check
-  let firestoreOk = false;
-  try {
-    await db.collection('_health').doc('ping').set({ ts: Date.now() }, { merge: true });
-    firestoreOk = true;
-  } catch {
-    firestoreOk = false;
-  }
+type EnvSummary = {
+  FIREBASE_ADMIN_CERT_B64: boolean;
+  STRIPE_SECRET_KEY: boolean;
+  STRIPE_WEBHOOK_SECRET: boolean;
+  PLAID_CLIENT_ID: boolean;
+  PLAID_SECRET: boolean;
+  PLAID_ENV: string;
+  NEXT_PUBLIC_SITE_URL: string | null;
+  SENDGRID_API_KEY: boolean;
+};
 
-  const checks = [
-    { key: 'STRIPE_SECRET_KEY', status: isSet(process.env.STRIPE_SECRET_KEY) },
-    { key: 'STRIPE_WEBHOOK_SECRET', status: isSet(process.env.STRIPE_WEBHOOK_SECRET) },
-    { key: 'SENDGRID_API_KEY', status: isSet(process.env.SENDGRID_API_KEY) },
-    { key: 'FIREBASE_ADMIN_CERT_B64', status: isSet(process.env.FIREBASE_ADMIN_CERT_B64) },
-    { key: 'APP_URL', status: isSet(process.env.APP_URL) },
+type Health = {
+  ok: boolean;
+  env: { STRIPE: boolean; PLAID: boolean };
+  lastStripeEvent: any;
+  lastPlaidWebhook: any;
+  time: string;
+};
 
-    { key: 'NEXT_PUBLIC_FIREBASE_API_KEY', status: isSet(process.env.NEXT_PUBLIC_FIREBASE_API_KEY) },
-    { key: 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', status: isSet(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN) },
-    { key: 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', status: isSet(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) },
-    { key: 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', status: isSet(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) },
-    { key: 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', status: isSet(process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) },
-    { key: 'NEXT_PUBLIC_FIREBASE_APP_ID', status: isSet(process.env.NEXT_PUBLIC_FIREBASE_APP_ID) },
-  ];
+export default function EnvDiagnosticsPage() {
+  const [env, setEnv] = useState<EnvSummary | null>(null);
+  const [health, setHealth] = useState<Health | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // dynamic import to keep server-only bits out of client bundle
+        const admin = await import("@/app/admin/actions");
+        const summary = await admin.getEnvSummary();
+        setEnv(summary as any);
+      } catch (e) {
+        console.error(e);
+      }
+
+      try {
+        const res = await fetch("/api/health/admin", { cache: "no-store" });
+        const json = await res.json();
+        setHealth(json);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4">Environment Diagnostics</h1>
+      <h1 className="text-2xl font-semibold mb-4">Environment & Health Diagnostics</h1>
 
-      <div className="border rounded">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left p-2">Variable</th>
-              <th className="text-left p-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {checks.map(row => (
-              <tr key={row.key} className="border-t">
-                <td className="p-2 font-mono">{row.key}</td>
-                <td className="p-2">{row.status}</td>
-              </tr>
-            ))}
-            <tr className="border-t">
-              <td className="p-2 font-mono">FIRESTORE_WRITE</td>
-              <td className="p-2">{firestoreOk ? '✅ ok' : '❌ failed'}</td>
-            </tr>
-            <tr className="border-t">
-              <td className="p-2 font-mono">NODE_VERSION</td>
-              <td className="p-2">{process.version}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      {loading && <div>Loading…</div>}
 
-      <p className="text-xs text-gray-500 mt-3">
-        This page never shows secret values—only whether they are set.
-      </p>
+      {env && (
+        <div className="mb-6 border rounded-xl p-4">
+          <h2 className="font-medium mb-2">Environment Summary</h2>
+          <ul className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <li>FIREBASE_ADMIN_CERT_B64: {String(env.FIREBASE_ADMIN_CERT_B64)}</li>
+            <li>STRIPE_SECRET_KEY: {String(env.STRIPE_SECRET_KEY)}</li>
+            <li>STRIPE_WEBHOOK_SECRET: {String(env.STRIPE_WEBHOOK_SECRET)}</li>
+            <li>PLAID_CLIENT_ID: {String(env.PLAID_CLIENT_ID)}</li>
+            <li>PLAID_SECRET: {String(env.PLAID_SECRET)}</li>
+            <li>PLAID_ENV: {env.PLAID_ENV}</li>
+            <li>NEXT_PUBLIC_SITE_URL: {env.NEXT_PUBLIC_SITE_URL || "n/a"}</li>
+            <li>SENDGRID_API_KEY: {String(env.SENDGRID_API_KEY)}</li>
+          </ul>
+        </div>
+      )}
+
+      {health && (
+        <div className="border rounded-xl p-4">
+          <h2 className="font-medium mb-2">Admin Health</h2>
+          <div className="text-sm space-y-1">
+            <div>Firestore OK: {String(health.ok)}</div>
+            <div>Stripe env configured: {String(health.env?.STRIPE)}</div>
+            <div>Plaid env configured: {String(health.env?.PLAID)}</div>
+            <div>Last Stripe event: {String(health.lastStripeEvent || "n/a")}</div>
+            <div>Last Plaid webhook: {String(health.lastPlaidWebhook || "n/a")}</div>
+            <div>Time: {health.time}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

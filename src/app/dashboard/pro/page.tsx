@@ -1,3 +1,27 @@
+import dynamic from "next/dynamic";
+const BillingPortalButton = dynamic(() => import("../../components/BillingPortalButton").catch(() => Promise.resolve(() => null)), { ssr: false });
+
+export default function ProDash() {
+ return (
+ <div className="space-y-4">
+ <h1 className="text-2xl font-semibold">Pro Plan</h1>
+ <p>Full AI engine + priority support + analytics.</p>
+ <div className="grid md:grid-cols-2 gap-4">
+ <div className="rounded-lg border p-4 bg-white">
+ <h2 className="font-medium mb-2">AI Financial Advisor</h2>
+ <p>Run analysis on recent transactions and view suggestions.</p>
+ <a href="/reporting" className="text-blue-600 underline">Open Analytics</a>
+ </div>
+ <div className="rounded-lg border p-4 bg-white">
+ <h2 className="font-medium mb-2">Splits</h2>
+ <p>Create & manage up to 5 external accounts.</p>
+ <a href="/splits" className="text-blue-600 underline">Manage Splits</a>
+ </div>
+ </div>
+ <BillingPortalButton />
+ </div>
+ );
+}
 "use client";
 
 import { useEffect } from "react";
@@ -25,22 +49,6 @@ export default function ProDashboard() {
         <li>Priority email support</li>
         <li>Dashboard analytics & reporting</li>
         <li>Feature updates and beta access</li>
-      </ul>
-    </div>
-  );
-}
-tsx
-"use client";
-
-export default function ProDashboard() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">FlowBank Pro</h1>
-      <ul className="list-disc ml-5 space-y-1">
-        <li>Full AI financial advisor</li>
-        <li>Smart tax savings & budgeting</li>
-        <li>Priority support</li>
-        <li>Real-time dashboard analytics</li>
       </ul>
     </div>
   );

@@ -17,6 +17,16 @@ const nextConfig = {
   images: {
     domains: ['placehold.co', 'images.unsplash.com'],
   },
+  experimental: {
+    serverComponentsExternalPackages: [
+      "handlebars",
+      "dotprompt",
+      "@genkit-ai/core",
+      "genkit",
+      "@opentelemetry/instrumentation",
+      "@opentelemetry/sdk-node",
+    ],
+  },
 };
 
 module.exports = nextConfig;

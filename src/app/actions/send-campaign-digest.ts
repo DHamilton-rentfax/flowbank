@@ -1,112 +1,165 @@
 "use server";
 
-import { headers } from "next/headers";
-import { getAdminDb, getAdminAuth } from "@/firebase/server";
-import type { UserData } from "@/lib/types";
-import { Resend } from 'resend';
-import { getDocs, collection, addDoc } from "firebase/firestore";
+/**
+ * src/app/actions/send-campaign-digest.ts
+ *
+ * Builds a digest of recent campaign activity and emails it to recipients.
+ * If SENDGRID_API_KEY is missing, we fall back to logging the digest in Firestore.
+ *
+ * Collections expected (adjust as needed):
+ * - campaigns          : { id, name, createdAt, status, ... }
+ * - campaign_sends     : { campaignId, status, sentAt, opened, clicked, ... }
+ */
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
 
-// Helper to get the current user's UID from the session
-const getUserId = async () => {
-    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
-    if (!idToken) {
-        throw new Error("User not authenticated");
-    }
-    try {
-        const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error("Error verifying ID token:", error);
-        throw new Error("Invalid authentication token.");
-    }
+// -------- Minimal Firebase Admin helper ----------
+function adminApp() {
+  if (getApps().length === 0) {
+    const json = process.env.FIREBASE_ADMIN_CERT_B64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+      : "{}";
+    initializeApp({ credential: cert(JSON.parse(json)) });
+  }
+  return getApps()[0];
+}
+function db() {
+  return getFirestore(adminApp());
+}
+// ------------------------------------------------
+
+type DigestOpts = {
+  hours?: number;                // default 24
+  toEmails?: string[];           // recipients
+  subject?: string;              // email subject
+  fromEmail?: string;            // sender
 };
 
-export async function sendCampaignDigest() {
-    const userId = await getUserId();
-    const auth = getAdminAuth();
-     const db = getAdminDb();
-    const runAt = new Date().toISOString();
-    let actorEmail = "auto-schedule";
+async function buildDigest(hours = 24) {
+  const now = Timestamp.now();
+  const since = Timestamp.fromMillis(now.toMillis() - hours * 60 * 60 * 1000);
 
-    try {
-        // Verify admin privileges if triggered manually
-        const currentUserClaims = (await auth.getUser(userId))?.customClaims;
-        if (currentUserClaims?.role !== 'admin') {
-            throw new Error("You do not have permission to access this action.");
-        }
-        actorEmail = currentUserClaims.email || actorEmail;
-        
-        // Fetch data
-        const campaignsSnap = await getDocs(collection(db, "campaigns"));
-        const usersSnap = await getDocs(collection(db, "users"));
-        const usersByEmail = usersSnap.docs.reduce((acc, doc) => {
-            const data = doc.data();
-            if (data.email) { acc[data.email] = data; }
-            return acc;
-        }, {} as { [email: string]: UserData });
+  const campaignsSnap = await db()
+    .collection("campaigns")
+    .where("createdAt", ">", since)
+    .get()
+    .catch(() => null);
 
-        const campaignData = campaignsSnap.docs.map(d => {
-            const campaign = d.data();
-            const user = usersByEmail[campaign.email];
-            return {
-                Email: campaign.email,
-                Offer: campaign.offer,
-                SentAt: campaign.sentAt,
-                Type: campaign.type,
-                Activated: user?.features?.aiTaxCoach ? "Yes" : "No",
-                ActivatedAt: user?.aiTrialActivatedAt || "",
-                Plan: user?.plan?.id || 'N/A'
-            };
-        });
+  const campaigns = campaignsSnap?.docs.map((d) => ({ id: d.id, ...d.data() })) || [];
 
-        const totalInvites = campaignData.length;
-        const totalActivations = campaignData.filter(c => c.Activated === "Yes").length;
+  // roll up basic send stats per campaign
+  const stats: Record<string, { sent: number; opened: number; clicked: number }> = {};
 
-        // Send email
-        await resend.emails.send({
-            from: "FlowBank Digest <digest@flowbank.ai>",
-            to: "support@flowbank.ai", // Send to admin
-            subject: `Daily Campaign Digest - ${new Date().toLocaleDateString()}`,
-            html: `
-                <div style="font-family: sans-serif; padding: 20px">
-                    <h2>Daily AI Campaign Digest 📈</h2>
-                    <p>Here's your summary for today:</p>
-                    <ul>
-                        <li><strong>Total Invites Sent:</strong> ${totalInvites}</li>
-                        <li><strong>Total Activations:</strong> ${totalActivations}</li>
-                    </ul>
-                    <p>This is a text-only summary. PDF attachment has been removed to avoid server-side library issues.</p>
-                    <br/>
-                    <p>– The FlowBank System</p>
-                </div>
-            `,
-        });
+  for (const c of campaigns) {
+    const sendsSnap = await db()
+      .collection("campaign_sends")
+      .where("campaignId", "==", c.id)
+      .where("sentAt", ">", since)
+      .get()
+      .catch(() => null);
 
-        await addDoc(collection(db, "cron_runs"), {
-            job: "campaign_digest",
-            runAt,
-            triggeredBy: actorEmail,
-            success: true
-        });
+    let sent = 0;
+    let opened = 0;
+    let clicked = 0;
 
-        return { success: true, message: "Digest sent successfully." };
-    } catch (error) {
-        console.error("Failed to send digest email:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        
-         const currentUserClaims = (await auth.getUser(userId))?.customClaims;
-        actorEmail = currentUserClaims?.email || actorEmail;
-
-        await addDoc(collection(db, "cron_runs"), {
-            job: "campaign_digest",
-            runAt,
-            triggeredBy: actorEmail,
-            success: false,
-            error: errorMessage,
-        });
-
-        return { success: false, error: errorMessage };
+    if (sendsSnap && !sendsSnap.empty) {
+      sendsSnap.forEach((d) => {
+        const sd = d.data();
+        if (sd.status === "SENT") sent += 1;
+        if (sd.opened === true) opened += 1;
+        if (sd.clicked === true) clicked += 1;
+      });
     }
+    stats[c.id] = { sent, opened, clicked };
+  }
+
+  return { from: since.toDate().toISOString(), to: now.toDate().toISOString(), campaigns, stats };
+}
+
+async function sendWithSendGrid(to: string[], subject: string, html: string, fromEmail?: string) {
+  const key = process.env.SENDGRID_API_KEY;
+  if (!key) return false;
+
+  // Lazy import to avoid bundling at build if not configured
+  const sgMail = await import("@sendgrid/mail").catch(() => null);
+  if (!sgMail) return false;
+
+  sgMail.default.setApiKey(key);
+  const msg = {
+    to,
+    from: fromEmail || "no-reply@flowbank.ai",
+    subject,
+    html,
+  };
+
+  try {
+    await sgMail.default.sendMultiple(msg as any);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function renderDigestHTML(digest: any) {
+  const rows =
+    digest.campaigns.length === 0
+      ? `<tr><td colspan="4">No campaigns in range.</td></tr>`
+      : digest.campaigns
+          .map((c: any) => {
+            const s = digest.stats[c.id] || { sent: 0, opened: 0, clicked: 0 };
+            return `<tr>
+              <td>${c.name || c.id}</td>
+              <td>${s.sent}</td>
+              <td>${s.opened}</td>
+              <td>${s.clicked}</td>
+            </tr>`;
+          })
+          .join("");
+
+  return `
+  <h2>Campaign Digest</h2>
+  <p>Window: <strong>${digest.from}</strong> to <strong>${digest.to}</strong></p>
+  <table border="1" cellpadding="6" cellspacing="0">
+    <thead>
+      <tr><th>Campaign</th><th>Sent</th><th>Opened</th><th>Clicked</th></tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+export async function sendCampaignDigest(opts: DigestOpts = {}) {
+  const hours = typeof opts.hours === "number" ? opts.hours : 24;
+  const toEmails = opts.toEmails?.length ? opts.toEmails : [];
+  const subject = opts.subject || `Campaign Digest (last ${hours}h)`;
+  const fromEmail = opts.fromEmail;
+
+  const digest = await buildDigest(hours);
+  const html = renderDigestHTML(digest);
+
+  let sent = false;
+  if (toEmails.length > 0) {
+    sent = await sendWithSendGrid(toEmails, subject, html, fromEmail);
+  }
+
+  if (!sent) {
+    // Fallback: store the digest in Firestore so you can view it in the admin
+    await db().collection("campaign_digests").add({
+      createdAt: new Date(),
+      hours,
+      digest,
+      subject,
+      note: "SendGrid not configured; saved digest instead of emailing.",
+    });
+  }
+
+  // Write an audit record either way
+  await db().collection("audit_logs").add({
+    type: "CAMPAIGN_DIGEST",
+    recipients: toEmails,
+    sent,
+    createdAt: new Date(),
+  });
+
+  return { ok: true, sent, recipients: toEmails, hours };
 }

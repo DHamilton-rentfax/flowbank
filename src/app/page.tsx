@@ -1,71 +1,236 @@
-"use client";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
-import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { CheckCircle2, ShieldCheck, Zap, Banknote, BarChart3, Wallet, ArrowRight } from "lucide-react";
 
-export default function LandingPage() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header />
-      <main className="flex-1">
-        <section className="w-full py-20 md:py-32 flex items-center justify-center text-center bg-secondary">
-          <div className="container px-4 md:px-6">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-foreground">
+    <div className="relative">
+      {/* subtle gradient backdrop */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-40 left-1/2 h-[35rem] w-[80rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-indigo-200 via-sky-200 to-teal-100 blur-3xl opacity-60" />
+      </div>
+
+      {/* HERO */}
+      <section className="px-6 sm:px-8">
+        <div className="mx-auto max-w-7xl pt-20 pb-16 sm:pt-28 sm:pb-24">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium text-gray-600 bg-white/70 shadow-sm ring-1 ring-black/5">
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              Bank-grade security with Plaid
+            </span>
+
+            <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl">
               Automate Your Business Finances
             </h1>
-            <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-8">
-              FlowBank intelligently splits your income into accounts for
-              taxes, savings, and expenses, so you don&apos;t have to.
+            <p className="mx-auto mt-5 max-w-2xl text-lg leading-7 text-gray-600">
+              FlowBank splits incoming revenue into taxes, savings, and operating expenses
+              automatically—so you can focus on running the business, not the spreadsheets.
             </p>
-            <Button asChild size="lg">
-              <Link href="/onboarding">Get Started for Free</Link>
-            </Button>
-          </div>
-        </section>
 
-        <section className="py-12 md:py-24 bg-background">
-          <div className="container px-4 md:px-6">
-            <h2 className="text-3xl font-bold text-center mb-12">
-              How It Works
-            </h2>
-            <div className="grid md:grid-cols-3 gap-8 text-center">
-              <div className="flex flex-col items-center">
-                <div className="rounded-full bg-primary text-primary-foreground p-4 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8"><path d="M12 22v-5"/><path d="M9 17H7A5 5 0 0 1 7 7h1a3 3 0 0 0 3-3V2"/><path d="M15 17h2a5 5 0 0 0 0-10h-1a3 3 0 0 1-3-3V2"/></svg>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">1. Connect Your Bank</h3>
-                <p className="text-muted-foreground">
-                  Securely link your bank account using Plaid. We detect incoming
-                  revenue automatically.
-                </p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="rounded-full bg-primary text-primary-foreground p-4 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M12 14h0"/><path d="M12 18h0"/><path d="M12 10h0"/></svg>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">2. Set Your Rules</h3>
-                <p className="text-muted-foreground">
-                  Define percentages for categories like Taxes (25%),
-                  Profit (10%), and Operating Costs (65%).
-                </p>
-              </div>
-              <div className="flex flex-col items-center">
-                 <div className="rounded-full bg-primary text-primary-foreground p-4 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8"><path d="m12 15 4 4"/><path d="M15.5 8.5c.3-1.8.8-3.4 1.5-4.8"/><path d="M5.1 6.3C4.1 7.6 3.4 9.2 3.1 11c-.1.6-.1 1.2-.1 1.8 0 1.6.4 3.2 1.2 4.5"/><path d="M13 20c.5-.2 1-.4 1.5-.7.9-.5 1.7-1.1 2.4-1.8.4-.4.7-.8.9-1.2"/><path d="m18 10-4-4"/><path d="M12.2 4.2c.4-.2.9-.4 1.3-.6 2.3-1.1 4.9-1.2 7.2-.3"/><path d="M5.5 19.5c-1.8-.3-3.4-.8-4.8-1.5-1.3-.7-2.4-1.6-3.1-2.7"/><path d="M3.1 3.1c1.1-1.1 2.5-1.9 4-2.4C8.7 0 10.3 0 12 0c.6 0 1.2.1 1.8.1"/></svg>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">3. Relax</h3>
-                <p className="text-muted-foreground">
-                  As funds arrive, they are automatically allocated to virtual
-                  accounts based on your rules.
-                </p>
+            <div className="mt-8 flex items-center justify-center gap-3">
+              <Link
+                href="/signup"
+                className="group inline-flex items-center rounded-xl bg-black px-5 py-3 text-white transition hover:opacity-90"
+              >
+                Get started free
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <Link
+                href="/pricing"
+                className="inline-flex items-center rounded-xl border px-5 py-3 text-gray-900 bg-white hover:bg-gray-50"
+              >
+                View pricing
+              </Link>
+            </div>
+
+            {/* Trust logos */}
+            <div className="mt-12 text-center">
+              <p className="text-xs uppercase tracking-wider text-gray-500">Trusted by solo founders & finance teams</p>
+              <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-4 opacity-70 sm:grid-cols-4">
+                {["Nimbus", "Aurora", "Northstar", "Parallel"].map((n) => (
+                  <div key={n} className="text-sm font-semibold text-gray-500">{n}</div>
+                ))}
               </div>
             </div>
           </div>
-        </section>
-      </main>
-      <Footer />
+        </div>
+      </section>
+
+      {/* VALUE STRIP */}
+      <section className="border-y bg-white/60">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-10 sm:grid-cols-3 sm:px-8">
+          <Benefit
+            icon={<Banknote className="h-5 w-5" />}
+            title="Connect your bank"
+            desc="Securely link accounts with Plaid. We detect income automatically."
+          />
+          <Benefit
+            icon={<Zap className="h-5 w-5" />}
+            title="Set your rules"
+            desc="Choose percentages for Taxes, Profit, and Operating Costs."
+          />
+          <Benefit
+            icon={<BarChart3 className="h-5 w-5" />}
+            title="Money allocates itself"
+            desc="Every deposit is auto-routed into the right buckets in real time."
+          />
+        </div>
+      </section>
+
+      {/* PRODUCT HIGHLIGHTS */}
+      <section className="px-6 sm:px-8">
+        <div className="mx-auto max-w-7xl py-20 sm:py-24">
+          <div className="grid items-center gap-10 md:grid-cols-2">
+            <div>
+              <h2 className="text-3xl font-bold sm:text-4xl">Rules that match the way you run money</h2>
+              <p className="mt-4 text-gray-600">
+                Create categories for Taxes, Profit, and Operating Costs. Set targets once—FlowBank keeps you on track with
+                automatic allocations and guardrails.
+              </p>
+              <ul className="mt-6 space-y-3">
+                {[
+                  "Auto-allocate every incoming payment instantly",
+                  "Safety rails to prevent overspending",
+                  "Real-time balances for each virtual account",
+                ].map((t) => (
+                  <li key={t} className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-600" />
+                    <span className="text-gray-700">{t}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6">
+                <Link href="/dashboard" className="inline-flex items-center rounded-xl border px-4 py-2 hover:bg-gray-50">
+                  See it in action
+                </Link>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="rounded-2xl border bg-white p-4 shadow-lg ring-1 ring-black/5">
+                <div className="rounded-xl bg-gray-50 p-6">
+                  {/* screenshot placeholder; swap with an Image of your product */}
+                  <div className="aspect-[16/10] w-full rounded-lg bg-gradient-to-br from-gray-200 to-gray-100" />
+                </div>
+              </div>
+              <div className="absolute -bottom-4 -right-4 hidden rounded-xl border bg-white px-4 py-3 text-sm shadow-md ring-1 ring-black/5 md:block">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-indigo-600" />
+                  <span className="font-medium">Profit bucket topped up</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* METRICS */}
+      <section className="bg-gray-50">
+        <div className="mx-auto max-w-7xl px-6 py-16 sm:px-8 sm:py-20">
+          <div className="grid grid-cols-2 gap-6 text-center sm:grid-cols-4">
+            <Metric kpi="$120k+" label="Funds auto-allocated" />
+            <Metric kpi="12h/mo" label="Time saved on cash ops" />
+            <Metric kpi="99.99%" label="Allocation accuracy" />
+            <Metric kpi="2 min" label="Average setup time" />
+          </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="px-6 sm:px-8">
+        <div className="mx-auto max-w-7xl py-20 sm:py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold sm:text-4xl">Teams keep cash under control</h2>
+            <p className="mt-3 text-gray-600">
+              From solo founders to finance teams, FlowBank gives instant clarity on where money goes.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            <Testimonial
+              quote="We stopped guessing. Taxes and profit are always funded, and ops can’t overspend."
+              author="Maya — COO, Parallel"
+            />
+            <Testimonial
+              quote="Set it once and forget it. It’s the envelope system for modern businesses."
+              author="Ethan — Founder, Northstar"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="border-t bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-16 sm:px-8 sm:py-20">
+          <h2 className="text-2xl font-bold sm:text-3xl">Frequently asked</h2>
+          <dl className="mt-8 grid gap-6 md:grid-cols-2">
+            <QA q="How does FlowBank connect to my bank?" a="We use Plaid to securely connect your accounts. You can remove access at any time." />
+            <QA q="Can I change my percentages later?" a="Yes. Update rules anytime; new deposits follow the latest settings." />
+            <QA q="Do you move real money?" a="We create virtual buckets and help you mirror them in your bank. Full automation is available with supported partners." />
+            <QA q="Is there a free plan?" a="Yes. Get started free and upgrade when you need advanced automations and team access." />
+          </dl>
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="px-6 sm:px-8">
+        <div className="mx-auto max-w-7xl py-16 sm:py-20 text-center">
+          <h2 className="text-3xl font-bold sm:text-4xl">Start in minutes</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-gray-600">
+            Connect your bank, set your percentages, and let FlowBank handle the rest.
+          </p>
+          <div className="mt-8">
+            <Link
+              href="/signup"
+              className="inline-flex items-center rounded-xl bg-black px-6 py-3 text-white transition hover:opacity-90"
+            >
+              Create your account
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* --- small presentational pieces --- */
+
+function Benefit({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl border bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white">
+          {icon}
+        </span>
+        <h3 className="font-semibold">{title}</h3>
+      </div>
+      <p className="mt-2 text-sm text-gray-600">{desc}</p>
+    </div>
+  );
+}
+
+function Metric({ kpi, label }: { kpi: string; label: string }) {
+  return (
+    <div className="rounded-2xl border bg-white px-6 py-8 shadow-sm">
+      <div className="text-3xl font-bold">{kpi}</div>
+      <div className="mt-2 text-sm text-gray-600">{label}</div>
+    </div>
+  );
+}
+
+function Testimonial({ quote, author }: { quote: string; author: string }) {
+  return (
+    <figure className="rounded-2xl border bg-white p-6 shadow-sm">
+      <blockquote className="text-gray-800">“{quote}”</blockquote>
+      <figcaption className="mt-4 text-sm text-gray-600">— {author}</figcaption>
+    </figure>
+  );
+}
+
+function QA({ q, a }: { q: string; a: string }) {
+  return (
+    <div className="rounded-2xl border bg-white p-5 shadow-sm">
+      <dt className="font-semibold">{q}</dt>
+      <dd className="mt-2 text-sm text-gray-600">{a}</dd>
     </div>
   );
 }

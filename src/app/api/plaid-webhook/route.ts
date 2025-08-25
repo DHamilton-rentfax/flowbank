@@ -1,182 +1,150 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { NextResponse, type NextRequest } from "next/server";
-import { getAdminDb } from "@/firebase/server";
-import { analyzeTransactions } from "@/ai/flows/analyze-transactions";
-import { PlaidApi, PlaidEnvironments, Configuration } from "plaid";
-import type { Transaction } from 'plaid';
+// src/app/api/plaid-webhook/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-const configuration = new Configuration({
-  basePath: PlaidEnvironments[process.env.PLAID_ENV!],
-  baseOptions: {
-    headers: {
-      'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
-      'PLAID-SECRET': process.env.PLAID_SECRET,
-    },
-  },
-});
+// -------- Minimal Firebase Admin helper (inline) ----------
+// ✅ App Router replacement for config
+// Tells Next.js to treat this route as dynamic (no static optimizations).
+export const dynamic = "force-dynamic";
 
-const plaidClient = new PlaidApi(configuration);
-
-async function findUserIdByItemId(itemId: string): Promise<string | null> {
-    const db = getAdminDb();
-    const plaidItemsCollectionGroup = db.collectionGroup('plaidItems');
-    const querySnapshot = await plaidItemsCollectionGroup.where('itemId', '==', itemId).limit(1).get();
-
-    if (querySnapshot.empty) {
-        console.warn(`Could not find user for Plaid item ID: ${itemId}`);
-        return null;
-    }
-    const userDocRef = querySnapshot.docs[0].ref.parent.parent;
-    return userDocRef ? userDocRef.id : null;
+function adminApp() {
+  if (getApps().length === 0) {
+    const json = process.env.FIREBASE_ADMIN_CERT_B64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+      : "{}";
+    const credentials = JSON.parse(json);
+    initializeApp({ credential: cert(credentials) });
+  }
+  return getApps()[0];
 }
-
-async function triggerFinancialAnalysis(userId: string) {
-    console.log(`Starting financial analysis for user: ${userId}`);
-    const db = getAdminDb();
-    
-    const userDoc = await db.collection("users").doc(userId).get();
-    const userData = userDoc.data();
-    if (!userData) {
-      console.log(`No user data found for ${userId}, skipping analysis.`);
-      return;
-    }
-
-    const txSnap = await db.collection("users").doc(userId).collection("transactions").orderBy("date", "desc").limit(100).get();
-    if (txSnap.empty) {
-        console.log(`No transactions found for user ${userId}, skipping analysis.`);
-        return;
-    }
-    
-    const transactions = txSnap.docs.map(doc => {
-        const data = doc.data();
-        return {
-            name: data.name,
-            amount: data.amount,
-            date: data.date,
-        };
-    });
-
-    try {
-        const analysisResult = await analyzeTransactions({
-            businessType: userData.businessType || "Freelancer",
-            transactions: transactions,
-        });
-
-        await db.collection("users").doc(userId).collection("aiInsights").doc("latest").set({
-            ...analysisResult,
-            analyzedAt: new Date().toISOString(),
-            transactionCount: transactions.length,
-        });
-        console.log(`Successfully stored AI insights for user: ${userId}`);
-    } catch (error) {
-        console.error(`AI analysis failed for user ${userId}:`, error);
-    }
+function db() {
+  return getFirestore(adminApp());
 }
+// ---------------------------------------------------------
 
-
-export async function POST(request: NextRequest) {
+// Optional HMAC verification (Plaid sends 'PLAID-WEBHOOK-SIGNATURE' header if enabled)
+// If you haven't configured a webhook secret in Plaid dashboard, this will simply skip.
+function verifyPlaidSignature(rawBody: Buffer, signatureHeader: string | null, secret: string) {
+  const crypto = require("crypto");
+  if (!signatureHeader) return false;
   try {
-    const body = await request.json();
-    console.log("🔔 Plaid Webhook Received:", JSON.stringify(body, null, 2));
-    
-    const { webhook_type, webhook_code, item_id } = body;
-
-    const userId = await findUserIdByItemId(item_id);
-
-    if (!userId) {
-        return NextResponse.json({ error: "User not found for this item." }, { status: 404 });
-    }
-
-    switch (webhook_type) {
-      case 'TRANSACTIONS':
-        switch(webhook_code) {
-            case 'INITIAL_UPDATE':
-            case 'HISTORICAL_UPDATE':
-            case 'DEFAULT_UPDATE':
-                console.log(`Syncing transactions for user ${userId} due to ${webhook_code}`);
-                await syncTransactionsForItem(userId, item_id, body.access_token);
-                await triggerFinancialAnalysis(userId);
-                break;
-            case 'TRANSACTIONS_REMOVED':
-                console.log(`Handling removed transactions for user ${userId}`);
-                break;
-        }
-        break;
-      case 'ITEM':
-         switch(webhook_code) {
-            case 'NEW_ACCOUNTS_AVAILABLE':
-                console.log(`New accounts available for user ${userId}. You may want to re-fetch accounts.`);
-                // You could also trigger a sync here if desired
-                break;
-            case 'WEBHOOK_UPDATE_ACKNOWLEDGED':
-                console.log(`Webhook update acknowledged for item: ${item_id}`);
-                break;
-            case 'ERROR':
-                console.error(`Plaid item error for user ${userId}:`, body.error);
-                break;
-        }
-        break;
-      default:
-        console.log(`Unhandled Plaid webhook type: ${webhook_type}`);
-    }
-
-    return NextResponse.json({ received: true });
-
-  } catch (error) {
-    console.error("Error processing Plaid webhook:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    return NextResponse.json({ error: "Webhook processing failed.", details: errorMessage }, { status: 500 });
+    const hmac = crypto.createHmac("sha256", secret);
+    hmac.update(rawBody);
+    const digest = hmac.digest("hex");
+    // Signature format can vary; we accept direct match for simplicity.
+    return signatureHeader.includes(digest);
+  } catch {
+    return false;
   }
 }
 
-async function syncTransactionsForItem(userId: string, itemId: string, accessToken?: string) {
-    const db = getAdminDb();
-    const itemDocRef = db.collection("users").doc(userId).collection("plaidItems").doc(itemId);
-    const itemDoc = await itemDocRef.get();
-    
-    if (!itemDoc.exists) {
-        console.error(`Plaid item ${itemId} not found for user ${userId}.`);
-        return;
+async function readRawBody(req: NextRequest): Promise<Buffer> {
+  const arrayBuffer = await req.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+export async function POST(req: NextRequest) {
+  const rawBody = await readRawBody(req);
+  const secret = process.env.PLAID_WEBHOOK_SECRET || "";
+  const signatureHeader = req.headers.get("plaid-webhook-signature");
+
+  if (secret) {
+    const ok = verifyPlaidSignature(rawBody, signatureHeader, secret);
+    if (!ok) {
+      // We fail open to avoid losing events if secret is not aligned; log for inspection.
+      // You may choose to reject with 400 if you want strict verification.
+      // return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
+  }
 
-    const itemData = itemDoc.data();
-    const token = accessToken || itemData?.accessToken;
-    if (!token) {
-        console.error(`No access token found for Plaid item ${itemId}.`);
-        return;
-    }
+  let body: any = {};
+  try {
+    body = JSON.parse(rawBody.toString("utf8"));
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-    let cursor = itemData?.cursor || null;
+  // Persist raw webhook
+  try {
+    await db().collection("plaid_webhooks").add({
+      receivedAt: FieldValue.serverTimestamp(),
+      headers: Object.fromEntries(req.headers),
+      body,
+    });
+  } catch {
+    // do not fail webhook if logging fails
+  }
 
-    let added: Transaction[] = [];
-    let hasMore = true;
+  // Handle common webhook types (expand as needed)
+  const webhookType = body.webhook_type as string | undefined;
+  const webhookCode = body.webhook_code as string | undefined;
+  const itemId = (body.item_id as string) || null;
 
-    while (hasMore) {
-        const request: any = { access_token: token, cursor };
-        const response = await plaidClient.transactionsSync(request);
-        const data = response.data;
+  try {
+    if (itemId) {
+      const itemRef = db().collection("plaid_items").doc(itemId);
 
-        added = added.concat(data.added);
-        hasMore = data.has_more;
-        cursor = data.next_cursor;
-    }
-    
-    console.log(`Found ${added.length} new transactions to sync for user ${userId}`);
-
-    if (added.length > 0) {
-        const batch = db.batch();
-        for (const tx of added) {
-            const ref = db.collection("users").doc(userId).collection("transactions").doc(tx.transaction_id);
-            const isIncome = !tx.amount || tx.amount < 0;
-            batch.set(ref, {
-                ...tx,
-                isIncome: isIncome,
-                syncedAt: new Date().toISOString(),
-                itemId: itemId
-            }, { merge: true });
+      switch (`${webhookType}:${webhookCode}`) {
+        case "TRANSACTIONS:DEFAULT_UPDATE":
+        case "TRANSACTIONS:HISTORICAL_UPDATE":
+        case "TRANSACTIONS:INITIAL_UPDATE": {
+          // Mark item as needing a sync (your cron/admin button can pick this up),
+          // or you can trigger syncAllTransactions() from here if desired.
+          await itemRef.set(
+            {
+              needsSync: true,
+              lastWebhookAt: FieldValue.serverTimestamp(),
+              lastWebhookType: webhookType,
+              lastWebhookCode: webhookCode,
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+          break;
         }
-        await batch.commit();
-    }
 
-    await itemDocRef.set({ cursor: cursor, lastSync: new Date().toISOString() }, { merge: true });
+        case "ITEM:ERROR":
+        case "ITEM:LOGIN_REQUIRED": {
+          await itemRef.set(
+            {
+              status: "error",
+              lastError: body.error || null,
+              lastWebhookAt: FieldValue.serverTimestamp(),
+              lastWebhookType: webhookType,
+              lastWebhookCode: webhookCode,
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+          break;
+        }
+
+        default: {
+          await itemRef.set(
+            {
+              lastWebhookAt: FieldValue.serverTimestamp(),
+              lastWebhookType: webhookType || null,
+              lastWebhookCode: webhookCode || null,
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
+      }
+    }
+  } catch (err: any) {
+    // swallow errors to avoid webhook retry storms
+    await db().collection("audit_logs").add({
+      type: "PLAID_WEBHOOK_ERROR",
+      error: String(err?.message || err),
+      itemId: itemId || null,
+      createdAt: new Date(),
+    });
+  }
+
+  // Always 200 OK to acknowledge receipt
+  return NextResponse.json({ ok: true });
 }

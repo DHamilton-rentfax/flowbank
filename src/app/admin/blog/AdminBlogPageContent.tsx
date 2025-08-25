@@ -1,8 +1,6 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import 'react-quill/dist/quill.snow.css'; // import styles
 import dynamic from 'next/dynamic';
 import { db } from '@/firebase/client';
 import { collection, addDoc, doc, setDoc, getDoc } from 'firebase/firestore';

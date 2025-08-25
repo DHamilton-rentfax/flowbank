@@ -1,11 +1,33 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminDb } from '@/firebase/server';
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
+
+// ---------------- minimal Firebase Admin helper ----------------
+function adminApp() {
+  if (getApps().length === 0) {
+    const credentialsJson = process.env.FIREBASE_ADMIN_CERT_B64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+      : "{}";
+
+    const credentials = JSON.parse(credentialsJson);
+    initializeApp({ credential: cert(credentials) });
+  }
+  return getApps()[0];
+}
+
+function db(): Firestore {
+  return getFirestore(adminApp());
+}
+// ---------------- end minimal helper ---------------------------
 
 export async function GET(req: NextRequest) {
   try {
-    const db = getAdminDb();
-    const snap = await db.collection('letters').orderBy('createdAt', 'desc').limit(1).get();
+    const firestore = db();
+    const snap = await firestore
+      .collection('letters')
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
     
     if (snap.empty) {
       return NextResponse.json({ letter: null });

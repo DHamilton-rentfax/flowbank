@@ -1,55 +1,61 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAdminDb } from '@/firebase/server';
+import { NextRequest, NextResponse } from "next/server";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-export const dynamic = 'force-dynamic'; // Ensure this runs server-side
+export const runtime = "nodejs";
+
+function adminApp() {
+  if (getApps().length === 0) {
+    const json = process.env.FIREBASE_ADMIN_CERT_B64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+      : "{}";
+    initializeApp({ credential: cert(JSON.parse(json)) });
+  }
+  return getApps()[0];
+}
+function db() {
+  return getFirestore(adminApp());
+}
 
 export async function POST(req: NextRequest) {
-  try {
-    const { token, userId } = await req.json();
-
-    if (!token || !userId) {
-      return NextResponse.json({ error: 'Missing token or userId' }, { status: 400 });
-    }
-
-    const db = getAdminDb();
-    const inviteRef = db.collection('teamInvites').doc(token);
-    const inviteDoc = await inviteRef.get();
-
-    if (!inviteDoc.exists) {
-      return NextResponse.json({ error: 'Invalid or expired invite token' }, { status: 404 });
-    }
-
-    const inviteData = inviteDoc.data();
-
-    // Optional: Check if the invite is for the correct user email if desired
-    // if (inviteData?.email !== userEmail) {
-    //   return NextResponse.json({ error: 'Invite not for this user' }, { status: 403 });
-    // }
-
-    // Add user to the team
-    const teamRef = db.collection('teams').doc(inviteData?.teamId);
-    const userRef = db.collection('users').doc(userId);
-
-    const batch = db.batch();
-
-    batch.update(userRef, {
-      teamId: inviteData?.teamId,
-      role: inviteData?.role || 'member', // Default role if not specified in invite
-    });
-
-    batch.update(teamRef, {
-      members: db.FieldValue.arrayUnion({ uid: userId, role: inviteData?.role || 'member' }),
-    });
-
-    // Delete the invite document after successful acceptance
-    batch.delete(inviteRef);
-
-    await batch.commit();
-
-    return NextResponse.json({ message: 'Invite accepted successfully' }, { status: 200 });
-
-  } catch (error) {
-    console.error('Error accepting invite:', error);
-    return NextResponse.json({ error: 'Failed to accept invite' }, { status: 500 });
+  const body = await req.json().catch(() => null);
+  if (!body?.token || !body?.uid) {
+    return NextResponse.json({ error: "token and uid required" }, { status: 400 });
   }
+
+  const snap = await db()
+    .collection("team_invitations")
+    .where("token", "==", body.token)
+    .limit(1)
+    .get();
+
+  if (snap.empty) {
+    return NextResponse.json({ error: "Invite not found" }, { status: 404 });
+  }
+
+  const doc = snap.docs[0];
+  if (doc.data().status !== "PENDING") {
+    return NextResponse.json({ error: "Invite not pending" }, { status: 400 });
+  }
+
+  await doc.ref.set(
+    {
+      status: "ACCEPTED",
+      acceptedBy: body.uid,
+      acceptedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  await db().collection("audit_logs").add({
+    type: "TEAM_INVITE_ACCEPTED",
+    inviteId: doc.id,
+    teamId: doc.data().teamId,
+    invitedEmail: doc.data().email,
+    acceptedBy: body.uid,
+    createdAt: new Date(),
+  });
+
+  return NextResponse.json({ ok: true, inviteId: doc.id });
 }

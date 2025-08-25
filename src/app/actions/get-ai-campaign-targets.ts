@@ -1,43 +1,94 @@
 "use server";
 
-import { headers } from "next/headers";
-import { getAdminDb, getAdminAuth } from "@/firebase/server";
-import type { UserData } from "@/lib/types";
+/**
+ * src/app/actions/get-ai-campaign-targets.ts
+ *
+ * Builds basic audience segments from a contacts collection:
+ * - active (recent engagement)
+ * - dormant (no engagements recently)
+ * - highValue (spend > threshold)
+ * - trialUsers / paidUsers (from billing_status mapping)
+ */
 
-// Helper to get the current user's UID from the session
-const getUserId = async () => {
-    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
-    if (!idToken) {
-        throw new Error("User not authenticated");
-    }
-    try {
-        const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error("Error verifying ID token:", error);
-        throw new Error("Invalid authentication token.");
-    }
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
+
+// -------- Minimal Firebase Admin helper ----------
+function adminApp() {
+  if (getApps().length === 0) {
+    const json = process.env.FIREBASE_ADMIN_CERT_B64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+      : "{}";
+    initializeApp({ credential: cert(JSON.parse(json)) });
+  }
+  return getApps()[0];
+}
+function db() {
+  return getFirestore(adminApp());
+}
+// ------------------------------------------------
+
+type SegmentInput = {
+  activeWindowDays?: number; // default 30
+  dormantWindowDays?: number; // default 90
+  highValueThreshold?: number; // default 500
 };
 
-export async function getAiCampaignTargets() {
-    const userId = await getUserId();
-    const auth = getAdminAuth();
-    const db = getAdminDb();
+export async function getAICampaignTargets(input: SegmentInput = {}) {
+  const activeWindowDays = input.activeWindowDays ?? 30;
+  const dormantWindowDays = input.dormantWindowDays ?? 90;
+  const highValueThreshold = input.highValueThreshold ?? 500;
 
-    // Verify admin privileges
-    const currentUserClaims = (await auth.getUser(userId)).customClaims;
-    if (currentUserClaims?.role !== 'admin') {
-        throw new Error("You do not have permission to access admin actions.");
+  const now = Timestamp.now().toMillis();
+  const activeCutoff = Timestamp.fromMillis(now - activeWindowDays * 86400000);
+  const dormantCutoff = Timestamp.fromMillis(now - dormantWindowDays * 86400000);
+
+  // Pull contacts (or users) — adapt to your schema
+  const contactsSnap = await db().collection("contacts").get().catch(() => null);
+  const contacts = contactsSnap?.docs.map((d) => ({ id: d.id, ...d.data() })) || [];
+
+  // Map billing status by uid if available
+  const billingSnap = await db().collection("billing_status").get().catch(() => null);
+  const billingByUid = new Map<string, any>();
+  if (billingSnap) billingSnap.forEach((d) => billingByUid.set(d.id, d.data()));
+
+  const active: any[] = [];
+  const dormant: any[] = [];
+  const highValue: any[] = [];
+  const trialUsers: any[] = [];
+  const paidUsers: any[] = [];
+
+  contacts.forEach((c) => {
+    const lastActive = c.lastActiveAt || c.lastSeenAt || c.lastEngagementAt || null;
+    const spend = Number(c.lifetimeValue || c.totalSpend || 0);
+    const uid = c.uid || c.userId || null;
+    const bill = uid ? billingByUid.get(uid) : null;
+
+    // Active / Dormant
+    if (lastActive?.toMillis ? lastActive.toMillis() > activeCutoff.toMillis() : false) {
+      active.push(c);
+    } else if (lastActive?.toMillis ? lastActive.toMillis() < dormantCutoff.toMillis() : true) {
+      dormant.push(c);
     }
 
-    const usersSnap = await db.collection('users').get();
-    const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserData & { id: string }));
+    // High Value
+    if (spend >= highValueThreshold) highValue.push(c);
 
-    // Filter for users on a paid plan (e.g., 'pro') who haven't used the AI feature
-    const targets = users.filter(user => 
-        (user.plan?.id === 'pro' || user.plan?.id === 'starter') &&
-        !user.features?.aiTaxCoach
-    ).map(user => ({ email: user.email, plan: user.plan?.id, aiUsed: false }));
+    // Billing segment
+    const status = (bill?.subscriptionStatus || "").toString();
+    if (status === "trialing") trialUsers.push(c);
+    else if (status === "active" || status === "past_due" || status === "unpaid") paidUsers.push(c);
+  });
 
-    return { targets };
+  return {
+    counts: {
+      total: contacts.length,
+      active: active.length,
+      dormant: dormant.length,
+      highValue: highValue.length,
+      trialUsers: trialUsers.length,
+      paidUsers: paidUsers.length,
+    },
+    segments: { active, dormant, highValue, trialUsers, paidUsers },
+  };
 }

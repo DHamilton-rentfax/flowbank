@@ -1,16 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { getAuth } from 'firebase-admin/auth'
-import { getAdminDb } from '@/firebase/server'
 import { headers } from 'next/headers'
+
+import type { App } from "firebase-admin/app";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore, FieldValue, type Firestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
+
+// ---------------- minimal Firebase Admin helper ----------------
+let _app: App | null = null;
+
+function adminApp(): App {
+  if (_app) return _app;
+
+  const b64 = process.env.FIREBASE_ADMIN_CERT_B64;
+  if (!b64) {
+    throw new Error(
+      "FIREBASE_ADMIN_CERT_B64 is missing. Set it in Firebase/App Hosting env or .env.local"
+    );
+  }
+
+  const json = Buffer.from(b64, "base64").toString("utf-8");
+  const credentials = JSON.parse(json);
+
+  _app = getApps()[0] ?? initializeApp({ credential: cert(credentials) });
+  return _app;
+}
+
+function db(): Firestore { return getFirestore(adminApp()); }
+function serverAuth() { return getAuth(adminApp()); }
+// ---------------- end minimal helper ---------------------------
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 })
-
 // Helper to get or create a Stripe customer ID for a Firebase user
 async function getOrCreateStripeCustomerId(userId: string, email: string | undefined) {
-    const db = getAdminDb();
+    const firestore = db();
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
 
@@ -38,7 +64,7 @@ export async function POST(req: NextRequest) {
         return new NextResponse("User not authenticated.", { status: 401 });
     }
 
-    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const decodedToken = await serverAuth().verifyIdToken(idToken);
     const userId = decodedToken.uid;
     const userEmail = decodedToken.email;
 

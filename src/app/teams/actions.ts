@@ -1,265 +1,110 @@
-'use server';
+"use server";
 
-import { getAdminAuth, getAdminDb } from '@/firebase/server';
-import { headers } from 'next/headers';
-import { firestore } from 'firebase-admin';
+/**
+ * src/app/teams/actions.ts
+ *
+ * Basic team actions:
+ * - getTeamInfo(teamId)
+ * - addMember(teamId, uid, role)
+ * - removeMember(teamId, uid)
+ * - updateMemberRole(teamId, uid, role)
+ */
 
-// Helper to get the current user's UID from the session
-const getUserId = async () => {
-  const idToken = headers().get('Authorization')?.split('Bearer ')[1];
-  if (!idToken) {
-    throw new Error('User not authenticated');
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
+
+// -------- Minimal Firebase Admin helper ----------
+function adminApp() {
+  if (getApps().length === 0) {
+    const json = process.env.FIREBASE_ADMIN_CERT_B64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+      : "{}";
+    initializeApp({ credential: cert(JSON.parse(json)) });
   }
-  try {
-    const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-    return decodedToken.uid;
-  } catch (error) {
-    console.error('Error verifying ID token:', error);
-    throw new Error('Invalid authentication token.');
-  }
-};
+  return getApps()[0];
+}
+function serverAuth() { return getAuth(adminApp()); }
+function db() { return getFirestore(adminApp()); }
+// ------------------------------------------------
 
-// In a real app, the teamId would be associated with the user.
-// For this prototype, we'll use a hardcoded team ID for simplicity.
-const MOCK_TEAM_ID = 'defaultTeam';
+export async function getTeamInfo(teamId: string) {
+  const team = await db().collection("teams").doc(teamId).get().catch(() => null);
+  const teamData = team?.exists ? team.data() : null;
 
-async function getOrCreateTeam(userId: string) {
-    const db = getAdminDb();
-    const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
-    const teamSnap = await teamRef.get();
+  const membersSnap = await db().collection("team_members").where("teamId", "==", teamId).get().catch(() => null);
+  const members = membersSnap?.docs.map((d) => ({ id: d.id, ...d.data() })) || [];
 
-    if (!teamSnap.exists) {
-        const user = await getAdminAuth().getUser(userId);
-        await teamRef.set({
-            name: `${user.displayName || user.email}'s Team`,
-            owner: userId,
-            createdAt: firestore.FieldValue.serverTimestamp(),
-        });
-        await teamRef.collection('members').doc(userId).set({
-            email: user.email,
-            role: 'owner',
-            status: 'active',
-            joinedAt: firestore.FieldValue.serverTimestamp(),
-        });
-    }
-    return teamRef;
+  const invitesSnap = await db().collection("team_invitations").where("teamId", "==", teamId).get().catch(() => null);
+  const invites = invitesSnap?.docs.map((d) => ({ id: d.id, ...d.data() })) || [];
+
+  return { team: teamData, members, invites };
 }
 
-
-export async function inviteTeamMember(email: string) {
-  const userId = await getUserId();
-  const db = getAdminDb();
-  
-  const teamRef = await getOrCreateTeam(userId);
-  const teamSnap = await teamRef.get();
-  const teamData = teamSnap.data();
-
-  // In a real app, you'd check for 'admin' or 'owner' role from the member list
-  if (teamData?.owner !== userId) {
-    return { success: false, error: 'Only the team owner can invite members.' };
-  }
-  
-  const userSnap = await db.collection('users').doc(userId).get();
-  const userData = userSnap.data();
-  // Base seats on Pro plan is 5, otherwise 1. This could be made more dynamic.
-  const proPlanBaseSeats = (userData?.plan?.id === 'pro' || userData?.plan?.id === 'enterprise') ? 5 : 1;
-  const extraSeats = userData?.addons?.extra_seats || 0;
-  const maxSeats = proPlanBaseSeats + extraSeats;
-
-  const membersSnap = await teamRef.collection('members').get();
-  const invitesSnap = await teamRef.collection('invites').where('status', '==', 'invited').get();
-
-  if (membersSnap.size + invitesSnap.size >= maxSeats) {
-    return { success: false, error: 'Seat limit reached. Please upgrade or add more seats.' };
+export async function addMember(requesterUid: string, teamId: string, uid: string, role: string = "member") {
+  const requester = await serverAuth().getUser(requesterUid).catch(() => null);
+  const claims = requester?.customClaims || {};
+  if (!(claims.admin === true || claims.role === "admin" || claims.role === "super_admin")) {
+    throw new Error("Permission denied: admin only.");
   }
 
-  const existingMemberQuery = await teamRef.collection('members').where('email', '==', email).get();
-  if (!existingMemberQuery.empty) {
-    return { success: false, error: 'This user is already a member.' };
-  }
-  const existingInviteQuery = await teamRef.collection('invites').where('email', '==', email).where('status', '==', 'invited').get();
-   if (!existingInviteQuery.empty) {
-    return { success: false, error: 'This user already has a pending invitation.' };
-  }
+  const ref = db().collection("team_members").doc(`${teamId}_${uid}`);
+  await ref.set(
+    { teamId, uid, role, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() },
+    { merge: true }
+  );
 
-  // Using email as ID for simplicity to prevent duplicate invites.
-  const inviteId = Buffer.from(email).toString('base64');
-  const inviteData = {
-    email,
-    role: 'member',
-    status: 'invited',
-    invitedAt: firestore.FieldValue.serverTimestamp(),
-    invitedBy: userId,
-  };
-  await teamRef.collection('invites').doc(inviteId).set(inviteData);
-  
-  await db.collection('teamAuditLogs').add({
-      type: 'MEMBER_INVITED',
-      timestamp: firestore.FieldValue.serverTimestamp(),
-      actorId: userId,
-      teamId: teamRef.id,
-      details: { invitedEmail: email }
+  await db().collection("audit_logs").add({
+    type: "MEMBER_JOINED",
+    teamId,
+    uid,
+    role,
+    createdAt: new Date(),
   });
 
-  return { success: true, message: `Invitation sent to ${email}.` };
+  return { ok: true };
 }
 
-export async function acceptTeamInvitation(token: string) {
-    const userId = await getUserId();
-    const db = getAdminDb();
-    
-    // In a real app, the token would be a secure, unique ID. Here we use the base64 email.
-    const inviteId = token; 
-    const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
-    const inviteRef = teamRef.collection('invites').doc(inviteId);
-    const inviteSnap = await inviteRef.get();
+export async function removeMember(requesterUid: string, teamId: string, uid: string) {
+  const requester = await serverAuth().getUser(requesterUid).catch(() => null);
+  const claims = requester?.customClaims || {};
+  if (!(claims.admin === true || claims.role === "admin" || claims.role === "super_admin")) {
+    throw new Error("Permission denied: admin only.");
+  }
 
-    if (!inviteSnap.exists) {
-        return { success: false, error: 'Invitation not found or expired.' };
-    }
+  const ref = db().collection("team_members").doc(`${teamId}_${uid}`);
+  await ref.delete().catch(() => null);
 
-    const inviteData = inviteSnap.data();
-    const user = await getAdminAuth().getUser(userId);
+  await db().collection("audit_logs").add({
+    type: "MEMBER_REMOVED",
+    teamId,
+    uid,
+    createdAt: new Date(),
+  });
 
-    if (user.email !== inviteData?.email) {
-        return { success: false, error: 'This invitation is for a different email address.' };
-    }
-    
-    const memberRef = teamRef.collection('members').doc(userId);
-
-    await db.runTransaction(async (transaction) => {
-        transaction.set(memberRef, {
-            email: user.email,
-            role: inviteData?.role || 'member',
-            status: 'active',
-            joinedAt: firestore.FieldValue.serverTimestamp(),
-        });
-        transaction.delete(inviteRef);
-        
-        const auditLogRef = db.collection('teamAuditLogs').doc();
-        transaction.create(auditLogRef, {
-            type: 'MEMBER_JOINED',
-            timestamp: firestore.FieldValue.serverTimestamp(),
-            actorId: userId,
-            teamId: teamRef.id,
-            details: { joinedEmail: user.email, joinedId: userId }
-        });
-    });
-
-    await db.collection('users').doc(userId).set({ teamId: MOCK_TEAM_ID }, { merge: true });
-
-    return { success: true, message: `Successfully joined the team.` };
+  return { ok: true };
 }
 
-export async function getTeamInfo() {
-    const userId = await getUserId();
-    const db = getAdminDb();
+export async function updateMemberRole(requesterUid: string, teamId: string, uid: string, role: string) {
+  const requester = await serverAuth().getUser(requesterUid).catch(() => null);
+  const claims = requester?.customClaims || {};
+  if (!(claims.admin === true || claims.role === "admin" || claims.role === "super_admin")) {
+    throw new Error("Permission denied: admin only.");
+  }
 
-    const teamRef = await getOrCreateTeam(userId);
-    const teamSnap = await teamRef.get();
-    const teamData = teamSnap.data();
+  const ref = db().collection("team_members").doc(`${teamId}_${uid}`);
+  await ref.set(
+    { role, updatedAt: FieldValue.serverTimestamp() },
+    { merge: true }
+  );
 
-    const membersSnap = await teamRef.collection('members').orderBy('email').get();
-    const members = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  await db().collection("audit_logs").add({
+    type: "MEMBER_ROLE_UPDATED",
+    teamId,
+    uid,
+    role,
+    createdAt: new Date(),
+  });
 
-    const invitesSnap = await teamRef.collection('invites').get();
-    const invites = invitesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    const userSnap = await db.collection('users').doc(userId).get();
-    const userData = userSnap.data();
-
-    const proPlanBaseSeats = (userData?.plan?.id === 'pro' || userData?.plan?.id === 'enterprise') ? 5 : 1;
-    const extraSeats = userData?.addons?.extra_seats || 0;
-    const maxSeats = proPlanBaseSeats + extraSeats;
-    
-    return {
-        id: teamRef.id,
-        ...teamData,
-        members,
-        invites,
-        seats: {
-            used: members.length,
-            total: maxSeats,
-        }
-    };
+  return { ok: true };
 }
-
-export async function removeTeamMember(memberId: string) {
-    const userId = await getUserId();
-    const db = getAdminDb();
-
-    const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
-    const teamSnap = await teamRef.get();
-
-    // In a real app, you'd check roles. For now, only the owner can remove.
-    if (teamSnap.data()?.owner !== userId) {
-        return { success: false, error: 'Only the team owner can remove members.' };
-    }
-    if (memberId === userId) {
-        return { success: false, error: 'The team owner cannot be removed.' };
-    }
-    
-    const memberRef = teamRef.collection('members').doc(memberId);
-    const memberDoc = await memberRef.get();
-    if (!memberDoc.exists) {
-         return { success: false, error: 'Member not found.' };
-    }
-    const memberEmail = memberDoc.data()?.email;
-    
-    await memberRef.delete();
-    
-    await db.collection('teamAuditLogs').add({
-        type: 'MEMBER_REMOVED',
-        timestamp: firestore.FieldValue.serverTimestamp(),
-        actorId: userId,
-        teamId: teamRef.id,
-        details: { removedEmail: memberEmail, removedId: memberId }
-    });
-
-    return { success: true, message: 'Member removed successfully.' };
-}
-
-export async function updateTeamMemberRole(memberId: string, newRole: string) {
-    const actorId = await getUserId();
-    const db = getAdminDb();
-    const teamRef = db.collection('teams').doc(MOCK_TEAM_ID);
-
-    const teamSnap = await teamRef.get();
-    const teamOwnerId = teamSnap.data()?.owner;
-
-    // A real app would check for 'admin' role here too.
-    if (teamOwnerId !== actorId) {
-        return { success: false, error: 'Only the team owner can change roles.' };
-    }
-
-    if (memberId === actorId) {
-        return { success: false, error: 'The team owner cannot change their own role.' };
-    }
-
-    const memberRef = teamRef.collection('members').doc(memberId);
-    const memberDoc = await memberRef.get();
-    if (!memberDoc.exists) {
-        return { success: false, error: 'Member not found.' };
-    }
-
-    const oldRole = memberDoc.data()?.role;
-    const memberEmail = memberDoc.data()?.email;
-    await memberRef.update({ role: newRole });
-
-    await db.collection('teamAuditLogs').add({
-        type: 'MEMBER_ROLE_UPDATED',
-        timestamp: firestore.FieldValue.serverTimestamp(),
-        actorId: actorId,
-        teamId: teamRef.id,
-        details: {
-            memberEmail,
-            memberId,
-            oldRole,
-            newRole,
-        }
-    });
-
-    return { success: true, message: `Updated ${memberEmail}'s role to ${newRole}.` };
-}
-
-    

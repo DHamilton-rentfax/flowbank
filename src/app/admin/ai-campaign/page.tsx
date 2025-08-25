@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useTransition } from 'react';
@@ -13,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Send, Download } from 'lucide-react';
 import { getAiCampaignTargets } from '@/app/actions/get-ai-campaign-targets';
 import { sendAiTrialInvite } from '@/app/admin/actions';
-import { exportCampaignData } from '@/app/actions/export-campaign-data';
+// import { exportCampaignData } from '@/app/actions/export-campaign-data';
 
 interface TargetUser {
     email: string;

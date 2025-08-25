@@ -1,5 +1,3 @@
-tsx
-'use client'
 
 import { useTransition } from 'react'
 import { createPortalSession } from '@/app/actions/create-portal-session'

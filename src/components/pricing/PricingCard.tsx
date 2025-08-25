@@ -1,66 +1,51 @@
-"use client";
-
-import React from 'react'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 type Props = {
-  name: string
-  price: string
-  description: string
-  lookupKey: string
-  disabled?: boolean
-  isEnterprise?: boolean
-}
+  title: string;
+  price: string;
+  features: string[];
+  cta: string;
+  onClick?: () => void;
+  badge?: string;
+  footnote?: string;
+  highlight?: boolean;
+};
 
 export function PricingCard({
-  name,
-  price,
-  description,
-  lookupKey,
-  disabled,
-  isEnterprise
+  title, price, features, cta, onClick, badge, footnote, highlight,
 }: Props) {
-  const [loading, setLoading] = React.useState(false);
-  const handleCheckout = async () => {
-    if (!lookupKey || disabled) return
-    setLoading(true);
-    const res = await fetch('/api/stripe/create-checkout-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ lookupKey }),
-    })
-
-    const data = await res.json()
-    if (data.url) {
-      window.location.href = data.url
-    } else {
-        console.error("Failed to create checkout session");
-        setLoading(false);
-    }
-  }
-
   return (
-    <div className="border rounded-lg p-6 text-center bg-white shadow-sm flex flex-col justify-between">
-      <div>
-        <h3 className="text-xl font-bold">{name}</h3>
-        <p className="text-muted-foreground mt-1">{description}</p>
-        <p className="text-2xl font-bold mt-4">{price}</p>
-      </div>
+    <Card className={`flex h-full flex-col ${highlight ? "ring-2 ring-black" : ""}`}>
+      <CardHeader className="space-y-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base text-muted-foreground">{title}</CardTitle>
+          {badge && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{badge}</span>
+          )}
+        </div>
+        <div className="text-4xl font-bold">{price}</div>
+      </CardHeader>
 
-      <div className="mt-6">
-        {isEnterprise ? (
-          <Button asChild className="w-full" variant="outline">
-            <Link href="/contact">Contact Sales</Link>
-          </Button>
-        ) : (
-          <Button onClick={handleCheckout} className="w-full" disabled={disabled || loading}>
-            {loading ? "Processing..." : "Get Started"}
-          </Button>
+      {/* Let this section grow; pushes footer to the bottom */}
+      <CardContent className="flex flex-1 flex-col gap-2">
+        <ul className="space-y-1 text-sm">
+          {features.map((f) => (
+            <li key={f} className="flex gap-2">
+              <span>•</span><span>{f}</span>
+            </li>
+          ))}
+        </ul>
+        {/* Spacer to push button down regardless of feature count */}
+        <div className="mt-auto" />
+      </CardContent>
+
+      <CardFooter className="mt-auto flex flex-col gap-2">
+        <Button onClick={onClick} className="h-11 w-full">{cta}</Button>
+        {footnote && (
+          <p className="text-center text-xs text-muted-foreground">{footnote}</p>
         )}
-      </div>
-    </div>
-  )
+      </CardFooter>
+    </Card>
+  );
 }

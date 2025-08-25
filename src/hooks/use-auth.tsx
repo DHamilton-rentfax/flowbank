@@ -33,14 +33,14 @@ async function createSession() {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    console.error('sessionLogin failed:', res.status, err?.error);
+ console.error('sessionLogin failed:', res.status, err?.error);
     throw new Error(`sessionLogin failed: ${err?.error || res.statusText}`);
   }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserLike | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Initial loading state
   const router = useRouter();
 
   useEffect(() => {
@@ -54,11 +54,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
           console.error(e);
         }
+ } else {
+ setLoading(false); // Set loading to false when user is null (signed out)
       }
     });
     return () => unsub();
   }, []);
-
   const loginWithEmail = useCallback(async (email: string, password: string) => {
     setLoading(true);
     try {
@@ -69,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router]); // Depend on router
 
   const loginWithGoogle = useCallback(async () => {
     setLoading(true);
@@ -78,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await createSession();
       router.push('/dashboard');
     } finally {
-      setLoading(false);
+      setLoading(false); // Set loading to false after sign-in attempt
     }
   }, [router]);
 
@@ -87,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await fetch('/api/sessionLogout', { method: 'POST' });
       await signOut(auth);
-      router.push('/login');
+      router.push('/login'); // Route after logout
     } finally {
       setLoading(false);
     }

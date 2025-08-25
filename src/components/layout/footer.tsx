@@ -2,17 +2,16 @@
 import Link from "next/link";
 
 export function Footer() {
-    return (
-        <footer className="bg-neutral-50 border-t">
-            <div className="container mx-auto max-w-6xl py-8 px-4 text-center text-sm text-neutral-600">
-                <p>&copy; {new Date().getFullYear()} FlowBank. All rights reserved.</p>
-                <nav className="flex justify-center gap-4 mt-2">
-                    <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
-                    <Link href="/terms" className="hover:underline">Terms of Service</Link>
-                    <Link href="/admin" className="hover:underline">Admin</Link>
-                    <Link href="/admin/audit-log" className="hover:underline">Audit Log</Link>
-                </nav>
-            </div>
-        </footer>
-    )
+ return (
+ <footer className="border-t bg-white">
+ <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
+ <p className="text-sm text-gray-600">© {new Date().getFullYear()} FlowBank. All rights reserved.</p>
+ <nav className="flex items-center gap-4 text-sm text-gray-600">
+ <Link href="/privacy" className="hover:text-gray-900">Privacy</Link>
+ <Link href="/terms" className="hover:text-gray-900">Terms</Link>
+ <Link href="/contact" className="hover:text-gray-900">Contact</Link>
+ </nav>
+ </div>
+ </footer>
+ );
 }

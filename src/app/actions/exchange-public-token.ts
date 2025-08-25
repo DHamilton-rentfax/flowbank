@@ -1,50 +1,116 @@
 "use server";
 
-import { plaidClient } from "@/lib/plaid";
-import { headers } from "next/headers";
-import { getAdminDb, getAdminAuth } from "@/firebase/server";
-import { syncAllTransactions } from "./sync-all-transactions";
+/**
+ * Exchanges Plaid public_token for access_token,
+ * stores into Firestore under plaid_items, and snapshots accounts.
+ * Env required:
+ *  - PLAID_CLIENT_ID
+ *  - PLAID_SECRET
+ *  - PLAID_ENV
+ *  - FIREBASE_ADMIN_CERT_B64
+ */
 
-// Helper to get the current user's UID from the session
-const getUserId = async () => {
-    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
-    if (!idToken) {
-        throw new Error("User not authenticated");
-    }
-    try {
-        const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error("Error verifying ID token:", error);
-        throw new Error("Invalid authentication token.");
-    }
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
+
+// -------- Minimal Firebase Admin helper (inline) ----------
+function adminApp() {
+  if (getApps().length === 0) {
+    const json = process.env.FIREBASE_ADMIN_CERT_B64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+      : "{}";
+    const credentials = JSON.parse(json);
+    initializeApp({ credential: cert(credentials) });
+  }
+  return getApps()[0];
+}
+function serverAuth() {
+  return getAuth(adminApp());
+}
+function db() {
+  return getFirestore(adminApp());
+}
+
+type PlaidEnv = "development" | "sandbox" | "production";
+function basePath(env: PlaidEnv) {
+  return env === "production"
+    ? "https://production.plaid.com"
+    : env === "development"
+    ? "https://development.plaid.com"
+    : "https://sandbox.plaid.com";
+}
+
+type ExchangeInput = {
+  uid: string;
+  publicToken: string;
 };
 
-export async function exchangePublicToken(publicToken: string) {
-    const userId = await getUserId();
-    if (!userId) throw new Error("User not authenticated");
+async function getPlaid() {
+  const plaid = await import("plaid");
+  const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
+  const PLAID_SECRET = process.env.PLAID_SECRET;
+  const PLAID_ENV = (process.env.PLAID_ENV as PlaidEnv) || "sandbox";
+  if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
+    throw new Error("PLAID_CLIENT_ID or PLAID_SECRET is missing");
+  }
+  const configuration = new plaid.Configuration({
+    basePath: basePath(PLAID_ENV),
+    baseOptions: {
+      headers: {
+        "PLAID-CLIENT-ID": PLAID_CLIENT_ID,
+        "PLAID-SECRET": PLAID_SECRET,
+      },
+    },
+  });
+  return new plaid.PlaidApi(configuration);
+}
 
-    try {
-      const response = await plaidClient.itemPublicTokenExchange({ public_token: publicToken });
-      const { access_token, item_id } = response.data;
+export async function exchangePublicToken(input: ExchangeInput) {
+  if (!input?.uid) throw new Error("uid is required");
+  if (!input?.publicToken) throw new Error("publicToken is required");
 
-      // Immediately trigger a historical pull. Webhook will handle future updates.
-      const initialSync = await plaidClient.transactionsSync({ access_token, count: 100 });
+  const user = await serverAuth().getUser(input.uid).catch(() => null);
+  if (!user) throw new Error("Invalid user");
 
-      await getAdminDb().collection("users").doc(userId).collection("plaidItems").doc(item_id).set({
-        accessToken: access_token,
-        itemId: item_id,
-        linkedAt: new Date().toISOString(),
-        cursor: initialSync.data.next_cursor
-      }, { merge: true });
+  const plaidClient = await getPlaid();
 
-       // Now, trigger the first transaction sync manually
-      await syncAllTransactions();
-  
-      return { success: true, message: "Bank account linked successfully!" };
+  // 1) Exchange for access token
+  const exchange = await plaidClient.itemPublicTokenExchange({
+    public_token: input.publicToken,
+  });
 
-    } catch (error) {
-      console.error("Error exchanging public token:", error);
-      return { success: false, error: "Failed to link bank account." };
-    }
+  const accessToken = exchange.data.access_token as string;
+  const itemId = exchange.data.item_id as string;
+
+  // 2) Fetch accounts to snapshot metadata
+  const accountsResp = await plaidClient.accountsGet({ access_token: accessToken });
+  const accounts = accountsResp.data.accounts || [];
+
+  // 3) Write to Firestore
+  const docRef = db().collection("plaid_items").doc(itemId);
+  await docRef.set(
+    {
+      userId: input.uid,
+      accessToken,
+      institution: accountsResp.data.item?.institution_id
+        ? { id: accountsResp.data.item?.institution_id }
+        : null,
+      accounts,
+      transactionsCursor: null,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  await db().collection("audit_logs").add({
+    type: "PLAID_ITEM_LINKED",
+    uid: input.uid,
+    itemId,
+    accountsCount: accounts.length,
+    createdAt: new Date(),
+  });
+
+  return { itemId, accountsCount: accounts.length };
 }

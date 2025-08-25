@@ -1,9 +1,37 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth } from '@/firebase/server';
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 import { stripe } from '@/lib/stripe';
 import { getOrCreateCustomer } from '@/lib/billing';
 import { getActivePriceIdByLookupKey } from '@/lib/stripe-lookup';
+
+// ---------------- minimal Firebase Admin helper ----------------
+function adminApp() {
+ if (getApps().length === 0) {
+ const credentialsJson = process.env.FIREBASE_ADMIN_CERT_B64
+ ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+ : "{}";
+
+ const credentials = JSON.parse(credentialsJson);
+ initializeApp({ credential: cert(credentials) });
+ }
+ return getApps()[0];
+}
+
+function serverAuth() {
+ return getAuth(adminApp());
+}
+
+function db() {
+ return getFirestore(adminApp());
+}
+
+async function getUserById(uid: string) {
+ return serverAuth().getUser(uid);
+}
+// ---------------- end minimal helper ---------------------------
 
 function getBearer(req: NextRequest) {
   const h = req.headers.get('authorization') || '';

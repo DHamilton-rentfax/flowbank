@@ -1,98 +1,110 @@
-'use server';
+"use server";
 
-import { getAdminAuth, getAdminDb } from "@/firebase/server";
-import { headers } from 'next/headers';
-import { Resend } from 'resend';
-import { plans } from "@/lib/plans";
-import type { UserPlan } from "@/lib/types";
+/**
+ * src/app/admin/actions.ts
+ *
+ * Admin utilities:
+ * - getEnvSummary: show presence of critical env vars (no secrets)
+ * - getFirestoreStats: quick collection counts
+ * - setUserRole: set custom claims
+ * - toggleFeatureFlag: write feature flags to config/feature_flags
+ */
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-const getUserId = async () => {
-    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
-    if (!idToken) {
-        throw new Error("User not authenticated");
-    }
-    try {
-        const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error("Error verifying ID token:", error);
-        throw new Error("Invalid authentication token.");
-    }
-};
+// -------- Minimal Firebase Admin helper ----------
+function adminApp() {
+  if (getApps().length === 0) {
+    const json = process.env.FIREBASE_ADMIN_CERT_B64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+      : "{}";
+    initializeApp({ credential: cert(JSON.parse(json)) });
+  }
+  return getApps()[0];
+}
+function serverAuth() { return getAuth(adminApp()); }
+function db() { return getFirestore(adminApp()); }
+// ------------------------------------------------
 
-export async function grantHighestTierPlan(email: string) {
-    const auth = getAdminAuth();
-    const db = getAdminDb();
-
-    try {
-        const user = await auth.getUserByEmail(email);
-        const proPlan = plans.find(p => p.id === 'pro');
-        if (!proPlan) throw new Error("Pro plan not found in configuration.");
-
-        const userPlan: UserPlan = {
-            id: proPlan.id,
-            name: proPlan.name,
-        };
-
-        // Set in Firestore
-        await db.collection("users").doc(user.uid).set({ plan: userPlan }, { merge: true });
-
-        // Set custom claims
-        await auth.setCustomUserClaims(user.uid, { plan: proPlan.id, role: 'user' });
-
-        return { success: true, message: `Successfully upgraded ${email} to the ${proPlan.name} plan.` };
-    } catch (error) {
-        console.error("Error granting plan:", error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        return { success: false, error: errorMessage };
-    }
+function assertAdminClaims(claims: any) {
+  const role = claims?.role;
+  if (!(claims?.admin === true || role === "admin" || role === "super_admin")) {
+    throw new Error("Permission denied: admin only.");
+  }
 }
 
+export async function getEnvSummary() {
+  return {
+    FIREBASE_ADMIN_CERT_B64: !!process.env.FIREBASE_ADMIN_CERT_B64,
+    STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: !!process.env.STRIPE_WEBHOOK_SECRET,
+    PLAID_CLIENT_ID: !!process.env.PLAID_CLIENT_ID,
+    PLAID_SECRET: !!process.env.PLAID_SECRET,
+    PLAID_ENV: process.env.PLAID_ENV || "sandbox",
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || null,
+    SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+  };
+}
 
-export async function sendAiTrialInvite(email: string) {
-    const userId = await getUserId();
-    const auth = getAdminAuth();
-    const db = getAdminDb();
+export async function getFirestoreStats() {
+  const collections = [
+    "users",
+    "billing_status",
+    "stripe_events",
+    "plaid_items",
+    "plaid_webhooks",
+    "audit_logs",
+    "team_invitations",
+    "campaigns",
+    "campaign_sends",
+  ];
 
-    // Verify admin privileges
-    const currentUserClaims = (await auth.getUser(userId)).customClaims;
-    if (currentUserClaims?.role !== 'admin') {
-      throw new Error("You do not have permission to access admin actions.");
-    }
+  const stats: Record<string, number> = {};
+  for (const name of collections) {
+    const snap = await db().collection(name).limit(1_000).get().catch(() => null);
+    stats[name] = snap ? snap.size : 0; // (lightweight count; not total)
+  }
+  return { collections: stats };
+}
 
-    try {
-        await resend.emails.send({
-          from: "FlowBank <support@flowbank.ai>",
-          to: email,
-          subject: "🎁 Enjoy 7 Days of AI Financial Coaching on Us",
-          html: `
-            <div style="font-family: sans-serif; padding: 20px">
-              <h2>Hello from FlowBank 👋</h2>
-              <p>We noticed you're on a paid plan but haven't explored our AI Financial Advisor yet.</p>
-              <p><strong>We'd love to give you a 7-day free trial of our AI-powered coaching and insights — starting now.</strong></p>
-              <p>No credit card required, just click below to activate it:</p>
-              <p><a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard" style="background:#4A90E2;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block">Activate Free Trial</a></p>
-              <p>If you have any questions, just reply to this email. Cheers!</p>
-              <br />
-              <p>– The FlowBank Team</p>
-            </div>
-          `
-        });
-    
-        await db.collection("campaigns").doc(email).set({
-          offer: "7-day AI trial",
-          email,
-          sentAt: new Date().toISOString(),
-          type: "ai_trial_invite"
-        }, { merge: true });
-    
-        return { success: true, message: `Trial invite sent to ${email}.` };
+export async function setUserRole(requesterUid: string, targetUid: string, role: string, extraClaims?: Record<string, any>) {
+  const reqUser = await serverAuth().getUser(requesterUid).catch(() => null);
+  assertAdminClaims(reqUser?.customClaims || {});
 
-      } catch (error) {
-        console.error("Failed to send AI trial email:", error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        return { success: false, message: errorMessage };
-    }
+  const claims = { ...(extraClaims || {}), role };
+  await serverAuth().setCustomUserClaims(targetUid, claims);
+
+  await db().collection("audit_logs").add({
+    type: "ADMIN_SET_ROLE",
+    requesterUid,
+    targetUid,
+    role,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true };
+}
+
+export async function toggleFeatureFlag(requesterUid: string, key: string, enabled: boolean) {
+  const reqUser = await serverAuth().getUser(requesterUid).catch(() => null);
+  assertAdminClaims(reqUser?.customClaims || {});
+
+  await db().collection("config").doc("feature_flags").set(
+    {
+      [key]: { enabled, updatedAt: FieldValue.serverTimestamp(), updatedBy: requesterUid },
+    },
+    { merge: true }
+  );
+
+  await db().collection("audit_logs").add({
+    type: "FEATURE_FLAG_TOGGLED",
+    key,
+    enabled,
+    requesterUid,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true };
 }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -10,22 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-
-async function submitContactForm(formData: { name: string; email: string; company: string; message: string; }) {
-    "use server";
-    // In a real application, you would handle the form submission here,
-    // e.g., send an email, save to a database, or call a CRM API.
-    console.log("New contact form submission:", formData);
-
-    // For this prototype, we'll just simulate a successful submission.
-    if (!formData.email.includes('@')) {
-        return { success: false, error: "Invalid email address." };
-    }
-    
-    return { success: true };
-}
-
-
+import { submitContactForm } from '@/app/actions/contactForm';
 export default function ContactPage() {
     const { toast } = useToast();
     const [form, setForm] = useState({ name: "", email: "", company: "", message: "" });

@@ -1,5 +1,4 @@
-
-'use server'
+"use server";
 
 import Stripe from 'stripe'
 

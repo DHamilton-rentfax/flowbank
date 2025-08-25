@@ -1,4 +1,3 @@
-
 "use server";
 
 import { suggestAllocationPlan } from "@/ai/flows/suggest-allocation-plan";

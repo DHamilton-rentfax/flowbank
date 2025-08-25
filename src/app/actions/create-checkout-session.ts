@@ -1,74 +1,130 @@
-
 "use server";
 
-import { stripe } from "@/lib/stripe";
-import { headers } from "next/headers";
-import { getAdminDb, getAdminAuth } from "@/firebase/server";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 
-// Helper to get the current user's UID from the session
-const getUserId = async () => {
-    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
-    if (!idToken) {
-        throw new Error("User not authenticated");
-    }
-    try {
-        const decodedToken = await getAdminAuth().verifyIdToken(idToken);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error("Error verifying ID token:", error);
-        throw new Error("Invalid authentication token.");
-    }
+// -------- Minimal Firebase Admin helper (inline) ----------
+function adminApp() {
+  if (getApps().length === 0) {
+    const json = process.env.FIREBASE_ADMIN_CERT_B64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
+      : "{}";
+    const credentials = JSON.parse(json);
+    initializeApp({ credential: cert(credentials) });
+  }
+  return getApps()[0];
+}
+function serverAuth() {
+  return getAuth(adminApp());
+}
+function db() {
+  return getFirestore(adminApp());
+}
+// ---------------------------------------------------------
+
+type CreateCheckoutInput = {
+  uid?: string;
+  customerEmail?: string;
+  priceLookupKey?: string;
+  lineItems?: Array<{ price: string; quantity?: number }>;
+  mode?: "subscription" | "payment";
+  successUrl?: string;
+  cancelUrl?: string;
+  metadata?: Record<string, string>;
 };
 
-export async function createCheckoutSession(items: { lookup_key: string, quantity?: number }[]) {
-    try {
-        const userId = await getUserId();
-        const db = getAdminDb();
-        const userDocRef = db.collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-        let customerId = userDoc.data()?.stripeCustomerId;
+async function getStripe() {
+  const Stripe = (await import("stripe")).default;
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY is missing");
+  return new Stripe(key, { apiVersion: "2024-06-20" });
+}
 
-        // Create a new Stripe customer if one doesn't exist
-        if (!customerId) {
-            const firebaseUser = await getAdminAuth().getUser(userId);
-            const customer = await stripe.customers.create({
-                email: firebaseUser.email,
-                metadata: { firebaseUID: userId }
-            });
-            customerId = customer.id;
-            await userDocRef.set({ stripeCustomerId: customerId }, { merge: true });
-        }
+async function getOrCreateCustomer(stripe: any, input: CreateCheckoutInput): Promise<string | undefined> {
+  const { uid, customerEmail } = input;
+  if (!uid && !customerEmail) return undefined;
 
-        if (!Array.isArray(items) || items.length === 0) {
-            throw new Error('Provide items as [{ lookup_key, quantity? }]');
-        }
-
-        const lineItems = await Promise.all(items.map(async (item) => {
-            if (!item.lookup_key) throw new Error('Each item needs a lookup_key');
-            const prices = await stripe.prices.list({ lookup_keys: [item.lookup_key], active: true });
-            const price = prices.data[0];
-            if (!price) throw new Error(`Price not found for ${item.lookup_key}`);
-            const lineItem: any = { price: price.id };
-            if (item.quantity && price.recurring?.usage_type !== 'metered') {
-                 lineItem.quantity = item.quantity;
-            }
-            return lineItem;
-        }));
-        
-        const session = await stripe.checkout.sessions.create({
-            mode: "subscription",
-            customer: customerId,
-            line_items: lineItems,
-            automatic_tax: { enabled: true },
-            customer_update: { address: 'auto' },
-            success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard?checkout=success`,
-            cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing?checkout=cancel`,
-        });
-
-        return { success: true, url: session.url };
-    } catch (error) {
-        console.error("Error creating checkout session:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, error: errorMessage };
+  if (uid) {
+    const ref = db().collection("stripe_customers").doc(uid);
+    const doc = await ref.get();
+    if (doc.exists && doc.data()?.customerId) {
+      return doc.data()?.customerId as string;
     }
+
+    const email = customerEmail || (await serverAuth().getUser(uid)).email || undefined;
+    const customer = await stripe.customers.create({ email });
+    await ref.set(
+      {
+        customerId: customer.id,
+        email: email || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      { merge: true }
+    );
+    return customer.id;
+  }
+
+  if (customerEmail) {
+    const search = await stripe.customers.search({
+      query: `email:"${customerEmail}"`,
+      limit: 1,
+    });
+    if (search.data.length) return search.data[0].id;
+    const customer = await stripe.customers.create({ email: customerEmail });
+    return customer.id;
+  }
+
+  return undefined;
+}
+
+export async function createCheckoutSession(input: CreateCheckoutInput) {
+  const stripe = await getStripe();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  const successUrl = input.successUrl || `${siteUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = input.cancelUrl || `${siteUrl}/billing/cancel`;
+
+  const customerId = await getOrCreateCustomer(stripe, input);
+
+  let lineItems: Array<{ price: string; quantity?: number }>;
+  if (input.lineItems?.length) {
+    lineItems = input.lineItems;
+  } else if (input.priceLookupKey) {
+    const prices = await stripe.prices.list({
+      lookup_keys: [input.priceLookupKey],
+      expand: ["data.product"],
+      active: true,
+      limit: 1,
+    });
+    if (!prices.data.length) {
+      throw new Error(`No active Stripe Price found for lookup key: ${input.priceLookupKey}`);
+    }
+    lineItems = [{ price: prices.data[0].id, quantity: 1 }];
+  } else {
+    throw new Error("Provide either priceLookupKey or lineItems.");
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    mode: input.mode || "subscription",
+    customer: customerId,
+    line_items: lineItems,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: input.metadata,
+    allow_promotion_codes: true,
+    automatic_tax: { enabled: true },
+  });
+
+  if (input.uid) {
+    await db().collection("audit_logs").add({
+      type: "CHECKOUT_SESSION_CREATED",
+      uid: input.uid,
+      sessionId: session.id,
+      createdAt: new Date(),
+    });
+  }
+
+  return { url: session.url, id: session.id };
 }

@@ -1,192 +1,112 @@
-
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, EyeOff } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import Image from "next/image";
+import { useAuth } from "../../hooks/use-auth";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 
-
-export default function Signup() {
-  const { signUpWithEmail, loginWithGoogle, user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const next = searchParams.get('next');
-
+export default function SignupPage() {
+  // Handle both spellings without changing your context types
+  const auth = useAuth() as any;
+  const signup =
+    auth?.signUpWithEmail ?? auth?.signupWithEmail; // pick whichever exists
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [businessType, setBusinessType] = useState("");
-  const [agree, setAgree] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [show, setShow] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && user) {
-        router.replace(next || '/onboarding');
-    }
-  }, [user, authLoading, router, next]);
-
-  const handleEmailSignup = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!businessType) {
-        toast({ title: "Missing Field", description: "Please select a business type.", variant: "destructive" });
-        return;
-    }
-    if (!agree) {
-      toast({ title: "Agreement Required", description: "You must agree to the Terms of Service and Privacy Policy.", variant: "destructive" });
+    if (typeof signup !== "function") {
+      alert("Signup function is not available.");
       return;
     }
-
-    setLoading(true);
+    setBusy(true);
     try {
-        await signUpWithEmail(email, password, businessType);
-        toast({ title: "Account created!", description: "Welcome to FlowBank. Let's get you set up." });
-        // The useEffect will handle the redirect
-    } catch(e) {
-        const error = e as Error;
-        toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
+      await signup(email, password);
+      // optional: route to dashboard or sign-in after account creation
+      window.location.href = "/signin";
+    } catch (e: any) {
+      setErr(e?.message || "Sign up failed");
     } finally {
-        setLoading(false);
+      setBusy(false);
     }
-  }
+  };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-        await loginWithGoogle();
-        toast({ title: "Signed In with Google!", description: "Welcome."});
-        // The useEffect will handle the redirect
-    } catch(e) {
-        const error = e as Error;
-        toast({ title: "Google Login Failed", description: error.message, variant: "destructive" });
-    } finally {
-        setLoading(false);
-    }
-  }
+ return (
+    <main className="flex min-h-[80vh] items-center justify-center px-4">
+      <div className="w-full max-w-md">
+ {/* Top nav/back */}
+        <div className="mb-6">
+ <Link href="/signin" className="text-sm text-muted-foreground hover:text-foreground">
+ ← Back to sign in
+ </Link>
+        </div>
 
-  return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      <main className="flex-1 flex items-center justify-center bg-secondary p-4">
-        <Card className="w-full max-w-md shadow-xl rounded-xl">
-            <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Create your Account</CardTitle>
-                <CardDescription>Join FlowBank to automate your finances.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="grid gap-4">
-                    <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-center gap-2"
-                        onClick={handleGoogleLogin}
-                        disabled={loading}
-                    >
-                        <Image src="/icons/google.svg" alt="Google" width={20} height={20} />
-                        Continue with Google
-                    </Button>
-                    
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">
-                            Or continue with
-                            </span>
-                        </div>
-                    </div>
+ {/* Card */}
+ <div className="rounded-2xl border bg-white p-6 shadow-sm dark:bg-zinc-900">
+      <h1 className="mb-4 text-2xl font-semibold">Create your account</h1>
+ <p className="mb-6 text-sm text-muted-foreground">
+          Start your FlowBank journey in seconds.
+ </p>
 
-                    <form onSubmit={handleEmailSignup} className="grid gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="you@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                disabled={loading}
- name="email"
- autocomplete="email"
-                            />
-                        </div>
-                         <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                             <div className="relative">
-                                <Input
-                                    id="password"
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
- name="password"
- autocomplete="current-password"
-                                    disabled={loading}
-                                />
-                                 <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-3 flex items-center text-muted-foreground"
-                                    aria-label={showPassword ? "Hide password" : "Show password"}
-                                 >
-                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </button>
-                            </div>
-                        </div>
-                         <div className="grid gap-2">
-                            <Label htmlFor="businessType">I am a...</Label>
-                            <Select value={businessType} onValueChange={setBusinessType} required disabled={loading}>
-                                <SelectTrigger id="businessType">
-                                    <SelectValue placeholder="Select your business type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="freelancer">Freelancer</SelectItem>
-                                    <SelectItem value="solo-entrepreneur">Solo Entrepreneur</SelectItem>
-                                    <SelectItem value="llc-corp">Corporation / LLC</SelectItem>
-                                    <SelectItem value="non-profit">Non-profit</SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+ <form onSubmit={onSubmit} className="space-y-3" autoComplete="on">
+ <div className="space-y-1.5">
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
+          required
+        />
+ </div>
 
-                        <div className="flex items-center space-x-2">
-                            <Checkbox id="terms" checked={agree} onCheckedChange={(checked) => setAgree(Boolean(checked))} />
-                            <label
-                                htmlFor="terms"
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                                I agree to the <Link href="/terms" className="underline">Terms</Link> and <Link href="/privacy" className="underline">Privacy Policy</Link>.
-                            </label>
-                        </div>
+ <div className="space-y-1.5">
+ <div className="relative">
+        <Input
+          type={show ? "text" : "password"}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Create a strong password"
+          autoComplete="new-password"
+          required
+          className="pr-20"
+        />
+ <button
+ type="button"
+ onClick={() => setShow((s) => !s)}
+ className="absolute inset-y-0 right-2 my-1 rounded px-2 text-sm text-muted-foreground hover:text-foreground"
+                >
+ {show ? "Hide" : "Show"}
+ </button>
+ </div>
+ <p className="text-[11px] text-muted-foreground">
+ Use at least 8 characters with a mix of letters and numbers.
+ </p>
+ </div>
 
-                        <Button type="submit" disabled={loading} className="w-full">
-                            {loading ? "Creating Account..." : "Create Account with Email"}
-                        </Button>
-                    </form>
-                </div>
-                
-                 <div className="mt-4 text-center text-sm text-muted-foreground">
-                    Already have an account? <Link href="/login" className="text-primary underline hover:text-primary/80">Sign in</Link>
-                </div>
-            </CardContent>
-        </Card>
-      </main>
-      <Footer />
-    </div>
+        {err && (
+ <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+ {err}
+ </div>
+        )}
+        <Button type="submit" disabled={busy}>
+          {busy ? "Creating..." : "Sign up"}
+        </Button>
+ </form>
+
+ <p className="mt-4 text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+ <Link href="/signin" className="font-medium hover:underline">
+ Sign in
+ </Link>
+ </p>
+ </div>
+      </div>
+    </main>
   );
 }

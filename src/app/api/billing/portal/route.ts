@@ -1,8 +1,8 @@
-ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from 'firebase-admin';
-import { stripeAdmin } from '@/lib/stripe';
 import { admin } from '@/lib/firebase'; // Assuming you have a firebase admin instance
+import { stripe } from '@/lib/stripe';
+import { db } from '@/lib/firebase';
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const uid = decodedToken.uid;
 
     // Get customer ID from Firestore or wherever you store it
-    const userDoc = await admin.firestore().collection('users').doc(uid).get();
+    const userDoc = await db.collection('users').doc(uid).get();
     const customerId = userDoc.data()?.stripeCustomerId;
 
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Stripe customer ID not found' }, { status: 400 });
     }
 
-    const session = await stripeAdmin.billingPortal.sessions.create({
+    const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${req.nextUrl.origin}/dashboard`,
     });
