@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import BillingPortalButton from "./BillingPortalButton";
+import { Button } from "@/components/ui/button";
 
 export default function HeaderDashboard({
   stripeCustomerId,
@@ -13,21 +14,21 @@ export default function HeaderDashboard({
 
   const NavLinks = () => (
     <>
-      <Link href="/dashboard" className="text-sm text-gray-700 hover:text-black">Overview</Link>
-      <Link href="/reporting" className="text-sm text-gray-700 hover:text-black">Reporting</Link>
-      <Link href="/splits" className="text-sm text-gray-700 hover:text-black">Splits</Link>
-      <Link href="/teams" className="text-sm text-gray-700 hover:text-black">Teams</Link>
-      <Link href="/settings" className="text-sm text-gray-700 hover:text-black">Settings</Link>
+      <Link href="/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Overview</Link>
+      <Link href="/reporting" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Reporting</Link>
+      <Link href="/rules" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Rules</Link>
+      <Link href="/teams" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Teams</Link>
+      <Link href="/settings" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Settings</Link>
     </>
   );
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:py-4">
+    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <span className="inline-block h-8 w-8 rounded-xl bg-black text-white grid place-items-center">ƒ</span>
+          <span className="inline-block h-8 w-8 rounded-xl bg-primary text-primary-foreground grid place-items-center font-bold">ƒ</span>
           <span className="text-lg">FlowBank</span>
-          <span className="ml-2 rounded-full bg-gray-900/5 px-2 py-0.5 text-xs text-gray-600">Dashboard</span>
+          <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">Dashboard</span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
@@ -37,15 +38,15 @@ export default function HeaderDashboard({
         <div className="hidden items-center gap-3 md:flex">
           <BillingPortalButton customerId={stripeCustomerId ?? null} />
           <form action="/api/sessionLogout" method="post">
-            <button className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50" formMethod="post">
+            <Button variant="outline" type="submit">
               Log out
-            </button>
+            </Button>
           </form>
         </div>
 
         {/* Mobile toggle */}
         <button
-          className="inline-flex items-center rounded-lg border px-3 py-2 md:hidden"
+          className="inline-flex items-center rounded-lg border p-2 md:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label="Toggle menu"
         >
@@ -55,15 +56,15 @@ export default function HeaderDashboard({
 
       {/* Mobile menu */}
       {open && (
-        <div className="border-t bg-white md:hidden">
-          <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-3">
+        <div className="border-t bg-background md:hidden">
+          <div className="container mx-auto flex flex-col gap-2 py-3">
             <NavLinks />
             <div className="mt-2 flex gap-2">
               <BillingPortalButton customerId={stripeCustomerId ?? null} className="w-full justify-center" />
               <form action="/api/sessionLogout" method="post" className="w-full">
-                <button className="w-full rounded-lg border px-3 py-2 text-sm" formMethod="post">
+                <Button variant="outline" type="submit" className="w-full">
                   Log out
-                </button>
+                </Button>
               </form>
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use server";
 
-import { analyzeTransactions, type AnalyzeTransactionsInput, type AnalyzeTransactionsOutput } from "@/ai/flows/analyze-transactions";
+import { suggestTaxOptimizations, type SuggestTaxOptimizationsInput, type SuggestTaxOptimizationsOutput } from "@/ai/flows/suggest-tax-optimizations";
 import { headers } from "next/headers";
 import { getAdminDb, getAdminAuth } from "@/firebase/server";
 
@@ -19,11 +19,11 @@ const getUserId = async () => {
     }
 };
 
-export async function getAIFinancialAnalysis(input: AnalyzeTransactionsInput): Promise<AnalyzeTransactionsOutput> {
+export async function getAIFinancialAnalysis(input: SuggestTaxOptimizationsInput): Promise<SuggestTaxOptimizationsOutput> {
     const userId = await getUserId();
     const db = getAdminDb();
     try {
-        const result = await analyzeTransactions(input);
+        const result = await suggestTaxOptimizations(input);
         await db.collection("users").doc(userId).collection("aiInsights").doc("latest").set({
             ...result,
             analyzedAt: new Date().toISOString(),

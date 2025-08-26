@@ -2,40 +2,41 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function HeaderPublic() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:py-4">
+    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 font-semibold">
-            <span className="inline-block h-8 w-8 rounded-xl bg-black text-white grid place-items-center">ƒ</span>
+            {/* You can use an SVG or an emoji for the logo */}
+            <span className="inline-block h-8 w-8 rounded-xl bg-primary text-primary-foreground grid place-items-center font-bold">ƒ</span>
             <span className="text-lg">FlowBank</span>
           </Link>
         </div>
 
         <nav className="hidden items-center gap-6 md:flex">
-          <Link href="/how-it-works" className="text-sm text-gray-700 hover:text-black">How it works</Link>
-          <Link href="/pricing" className="text-sm text-gray-700 hover:text-black">Pricing</Link>
-          <Link href="/blog" className="text-sm text-gray-700 hover:text-black">Blog</Link>
-          <Link href="/faq" className="text-sm text-gray-700 hover:text-black">FAQ</Link>
+          <Link href="/how-it-works" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">How it works</Link>
+          <Link href="/pricing" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Pricing</Link>
+          <Link href="/blog" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Blog</Link>
+          <Link href="/faq" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">FAQ</Link>
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Link href="/login" className="text-sm text-gray-700 hover:text-black">Log in</Link>
-          <Link
-            href="/signup"
-            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-900"
-          >
-            Get started
-          </Link>
+          <Button variant="ghost" asChild>
+            <Link href="/login">Log in</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/signup">Get started</Link>
+          </Button>
         </div>
 
         {/* Mobile toggle */}
         <button
-          className="inline-flex items-center rounded-lg border px-3 py-2 md:hidden"
+          className="inline-flex items-center rounded-lg border p-2 md:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label="Toggle menu"
         >
@@ -45,15 +46,19 @@ export default function HeaderPublic() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="border-t bg-white md:hidden">
-          <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-3">
-            <Link href="/how-it-works" className="py-1 text-sm">How it works</Link>
-            <Link href="/pricing" className="py-1 text-sm">Pricing</Link>
-            <Link href="/blog" className="py-1 text-sm">Blog</Link>
-            <Link href="/faq" className="py-1 text-sm">FAQ</Link>
+        <div className="border-t bg-background md:hidden">
+          <div className="container mx-auto flex flex-col gap-2 py-3">
+            <Link href="/how-it-works" className="py-1 text-sm font-medium text-muted-foreground">How it works</Link>
+            <Link href="/pricing" className="py-1 text-sm font-medium text-muted-foreground">Pricing</Link>
+            <Link href="/blog" className="py-1 text-sm font-medium text-muted-foreground">Blog</Link>
+            <Link href="/faq" className="py-1 text-sm font-medium text-muted-foreground">FAQ</Link>
             <div className="mt-2 flex gap-2">
-              <Link href="/login" className="rounded-lg border px-3 py-2 text-sm">Log in</Link>
-              <Link href="/signup" className="rounded-lg bg-black px-3 py-2 text-sm text-white">Get started</Link>
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/login">Log in</Link>
+              </Button>
+              <Button className="w-full" asChild>
+                <Link href="/signup">Get started</Link>
+              </Button>
             </div>
           </div>
         </div>

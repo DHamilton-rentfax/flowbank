@@ -1,11 +1,11 @@
-// src/ai/flows/analyze-transactions.ts
+// src/ai/flows/suggest-tax-optimizations.ts
 "use server";
 /**
  * @fileOverview This file defines a Genkit flow for an AI Financial Advisor that analyzes transactions to provide savings advice, identify spending patterns, and suggest tax optimizations.
  *
- * - analyzeTransactions - A function that analyzes transactions and provides comprehensive financial advice.
- * - AnalyzeTransactionsInput - The input type for the analyzeTransactions function.
- * - AnalyzeTransactionsOutput - The return type for the analyzeTransactions function.
+ * - suggestTaxOptimizations - A function that analyzes transactions and provides comprehensive financial advice.
+ * - SuggestTaxOptimizationsInput - The input type for the suggestTaxOptimizations function.
+ * - SuggestTaxOptimizationsOutput - The return type for the suggestTaxOptimizations function.
  */
 
 import { ai } from '@/ai/genkit';
@@ -17,11 +17,11 @@ const TransactionSchema = z.object({
   date: z.string().describe('The date of the transaction.'),
 });
 
-const AnalyzeTransactionsInputSchema = z.object({
+const SuggestTaxOptimizationsInputSchema = z.object({
   businessType: z.string().describe('The type of business (e.g., "Freelance Software Developer", "E-commerce Store").'),
   transactions: z.array(TransactionSchema).describe('An array of financial transactions from the user\'s connected bank account.'),
 });
-export type AnalyzeTransactionsInput = z.infer<typeof AnalyzeTransactionsInputSchema>;
+export type SuggestTaxOptimizationsInput = z.infer<typeof SuggestTaxOptimizationsInputSchema>;
 
 const DeductionSuggestionSchema = z.object({
     transactionName: z.string().describe('The name of the transaction that is a potential deduction.'),
@@ -37,24 +37,24 @@ const SavingsSuggestionSchema = z.object({
     relatedTransactions: z.array(z.string()).describe('A list of transaction names related to this suggestion.'),
 });
 
-const AnalyzeTransactionsOutputSchema = z.object({
+const SuggestTaxOptimizationsOutputSchema = z.object({
   potentialDeductions: z.array(DeductionSuggestionSchema).describe('A list of transactions identified as potential tax deductions.'),
   savingsSuggestions: z.array(SavingsSuggestionSchema).describe('A list of actionable savings suggestions based on spending patterns.'),
   spendingSummary: z.string().describe('A high-level summary of spending habits, identifying top categories or notable patterns.'),
   disclaimer: z.string().describe('A standard disclaimer that this is not legal or financial advice.'),
 });
-export type AnalyzeTransactionsOutput = z.infer<typeof AnalyzeTransactionsOutputSchema>;
+export type SuggestTaxOptimizationsOutput = z.infer<typeof SuggestTaxOptimizationsOutputSchema>;
 
-export async function analyzeTransactions(
-  input: AnalyzeTransactionsInput
-): Promise<AnalyzeTransactionsOutput> {
-  return analyzeTransactionsFlow(input);
+export async function suggestTaxOptimizations(
+  input: SuggestTaxOptimizationsInput
+): Promise<SuggestTaxOptimizationsOutput> {
+  return suggestTaxOptimizationsFlow(input);
 }
 
 const analyzeTransactionsPrompt = ai.definePrompt({
-  name: 'analyzeTransactionsPrompt',
-  input: { schema: AnalyzeTransactionsInputSchema },
-  output: { schema: AnalyzeTransactionsOutputSchema },
+  name: 'suggestTaxOptimizationsPrompt',
+  input: { schema: SuggestTaxOptimizationsInputSchema },
+  output: { schema: SuggestTaxOptimizationsOutputSchema },
   prompt: `You are an AI Financial Advisor for a financial app called FlowBank. Your expertise is in analyzing business transactions to provide actionable advice. You have deep knowledge of the U.S. IRS tax code and common small business financial patterns.
 
   Your goal is to help a user running a "{{businessType}}" to optimize their finances by analyzing their recent transactions.
@@ -74,11 +74,11 @@ const analyzeTransactionsPrompt = ai.definePrompt({
 `,
 });
 
-const analyzeTransactionsFlow = ai.defineFlow(
+const suggestTaxOptimizationsFlow = ai.defineFlow(
   {
-    name: 'analyzeTransactionsFlow',
-    inputSchema: AnalyzeTransactionsInputSchema,
-    outputSchema: AnalyzeTransactionsOutputSchema,
+    name: 'suggestTaxOptimizationsFlow',
+    inputSchema: SuggestTaxOptimizationsInputSchema,
+    outputSchema: SuggestTaxOptimizationsOutputSchema,
   },
   async (input) => {
     const { output } = await analyzeTransactionsPrompt(input);

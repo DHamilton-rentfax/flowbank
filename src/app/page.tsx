@@ -7,19 +7,19 @@ export default function HomePage() {
     <div className="relative">
       {/* subtle gradient backdrop */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 h-[35rem] w-[80rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-indigo-200 via-sky-200 to-teal-100 blur-3xl opacity-60" />
+        <div className="absolute -top-40 left-1/2 h-[35rem] w-[80rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-blue-200 via-sky-200 to-green-100 blur-3xl opacity-60" />
       </div>
 
       {/* HERO */}
       <section className="px-6 sm:px-8">
         <div className="mx-auto max-w-7xl pt-20 pb-16 sm:pt-28 sm:pb-24">
           <div className="mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium text-gray-600 bg-white/70 shadow-sm ring-1 ring-black/5">
-              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            <span className="inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-black/5">
+              <ShieldCheck className="h-4 w-4 text-accent" />
               Bank-grade security with Plaid
             </span>
 
-            <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl">
+            <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl text-primary">
               Automate Your Business Finances
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-7 text-gray-600">
@@ -30,14 +30,14 @@ export default function HomePage() {
             <div className="mt-8 flex items-center justify-center gap-3">
               <Link
                 href="/signup"
-                className="group inline-flex items-center rounded-xl bg-black px-5 py-3 text-white transition hover:opacity-90"
+                className="group inline-flex items-center rounded-xl bg-primary px-5 py-3 text-primary-foreground transition hover:opacity-90"
               >
                 Get started free
                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
                 href="/pricing"
-                className="inline-flex items-center rounded-xl border px-5 py-3 text-gray-900 bg-white hover:bg-gray-50"
+                className="inline-flex items-center rounded-xl border bg-background px-5 py-3 text-gray-900 hover:bg-muted"
               >
                 View pricing
               </Link>
@@ -57,7 +57,7 @@ export default function HomePage() {
       </section>
 
       {/* VALUE STRIP */}
-      <section className="border-y bg-white/60">
+      <section className="border-y bg-background/60">
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-10 sm:grid-cols-3 sm:px-8">
           <Benefit
             icon={<Banknote className="h-5 w-5" />}
@@ -82,7 +82,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl py-20 sm:py-24">
           <div className="grid items-center gap-10 md:grid-cols-2">
             <div>
-              <h2 className="text-3xl font-bold sm:text-4xl">Rules that match the way you run money</h2>
+              <h2 className="text-3xl font-bold sm:text-4xl text-primary">Rules that match the way you run money</h2>
               <p className="mt-4 text-gray-600">
                 Create categories for Taxes, Profit, and Operating Costs. Set targets once—FlowBank keeps you on track with
                 automatic allocations and guardrails.
@@ -94,27 +94,33 @@ export default function HomePage() {
                   "Real-time balances for each virtual account",
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-600" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-accent" />
                     <span className="text-gray-700">{t}</span>
                   </li>
                 ))}
               </ul>
               <div className="mt-6">
-                <Link href="/dashboard" className="inline-flex items-center rounded-xl border px-4 py-2 hover:bg-gray-50">
+                <Link href="/dashboard" className="inline-flex items-center rounded-xl border bg-background px-4 py-2 hover:bg-muted">
                   See it in action
                 </Link>
               </div>
             </div>
             <div className="relative">
-              <div className="rounded-2xl border bg-white p-4 shadow-lg ring-1 ring-black/5">
-                <div className="rounded-xl bg-gray-50 p-6">
-                  {/* screenshot placeholder; swap with an Image of your product */}
-                  <div className="aspect-[16/10] w-full rounded-lg bg-gradient-to-br from-gray-200 to-gray-100" />
+              <div className="rounded-2xl border bg-background p-4 shadow-lg ring-1 ring-black/5">
+                <div className="rounded-xl bg-muted p-6">
+                  <Image
+                    src="https://picsum.photos/600/400"
+                    alt="FlowBank Dashboard Screenshot"
+                    width={600}
+                    height={400}
+                    className="rounded-lg"
+                    data-ai-hint="dashboard finances"
+                  />
                 </div>
               </div>
-              <div className="absolute -bottom-4 -right-4 hidden rounded-xl border bg-white px-4 py-3 text-sm shadow-md ring-1 ring-black/5 md:block">
+              <div className="absolute -bottom-4 -right-4 hidden rounded-xl border bg-background px-4 py-3 text-sm shadow-md ring-1 ring-black/5 md:block">
                 <div className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-indigo-600" />
+                  <Wallet className="h-4 w-4 text-primary" />
                   <span className="font-medium">Profit bucket topped up</span>
                 </div>
               </div>
@@ -124,7 +130,7 @@ export default function HomePage() {
       </section>
 
       {/* METRICS */}
-      <section className="bg-gray-50">
+      <section className="bg-muted">
         <div className="mx-auto max-w-7xl px-6 py-16 sm:px-8 sm:py-20">
           <div className="grid grid-cols-2 gap-6 text-center sm:grid-cols-4">
             <Metric kpi="$120k+" label="Funds auto-allocated" />
@@ -139,7 +145,7 @@ export default function HomePage() {
       <section className="px-6 sm:px-8">
         <div className="mx-auto max-w-7xl py-20 sm:py-24">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold sm:text-4xl">Teams keep cash under control</h2>
+            <h2 className="text-3xl font-bold sm:text-4xl text-primary">Teams keep cash under control</h2>
             <p className="mt-3 text-gray-600">
               From solo founders to finance teams, FlowBank gives instant clarity on where money goes.
             </p>
@@ -158,9 +164,9 @@ export default function HomePage() {
       </section>
 
       {/* FAQ */}
-      <section className="border-t bg-white">
+      <section className="border-t bg-background">
         <div className="mx-auto max-w-7xl px-6 py-16 sm:px-8 sm:py-20">
-          <h2 className="text-2xl font-bold sm:text-3xl">Frequently asked</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl text-primary">Frequently asked</h2>
           <dl className="mt-8 grid gap-6 md:grid-cols-2">
             <QA q="How does FlowBank connect to my bank?" a="We use Plaid to securely connect your accounts. You can remove access at any time." />
             <QA q="Can I change my percentages later?" a="Yes. Update rules anytime; new deposits follow the latest settings." />
@@ -173,14 +179,14 @@ export default function HomePage() {
       {/* FINAL CTA */}
       <section className="px-6 sm:px-8">
         <div className="mx-auto max-w-7xl py-16 sm:py-20 text-center">
-          <h2 className="text-3xl font-bold sm:text-4xl">Start in minutes</h2>
+          <h2 className="text-3xl font-bold sm:text-4xl text-primary">Start in minutes</h2>
           <p className="mx-auto mt-3 max-w-2xl text-gray-600">
             Connect your bank, set your percentages, and let FlowBank handle the rest.
           </p>
           <div className="mt-8">
             <Link
               href="/signup"
-              className="inline-flex items-center rounded-xl bg-black px-6 py-3 text-white transition hover:opacity-90"
+              className="inline-flex items-center rounded-xl bg-primary px-6 py-3 text-primary-foreground transition hover:opacity-90"
             >
               Create your account
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -196,9 +202,9 @@ export default function HomePage() {
 
 function Benefit({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <div className="rounded-2xl border bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border bg-background p-5 shadow-sm">
       <div className="flex items-center gap-2">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           {icon}
         </span>
         <h3 className="font-semibold">{title}</h3>
@@ -210,8 +216,8 @@ function Benefit({ icon, title, desc }: { icon: React.ReactNode; title: string; 
 
 function Metric({ kpi, label }: { kpi: string; label: string }) {
   return (
-    <div className="rounded-2xl border bg-white px-6 py-8 shadow-sm">
-      <div className="text-3xl font-bold">{kpi}</div>
+    <div className="rounded-2xl border bg-background px-6 py-8 shadow-sm">
+      <div className="text-3xl font-bold text-primary">{kpi}</div>
       <div className="mt-2 text-sm text-gray-600">{label}</div>
     </div>
   );
@@ -219,7 +225,7 @@ function Metric({ kpi, label }: { kpi: string; label: string }) {
 
 function Testimonial({ quote, author }: { quote: string; author: string }) {
   return (
-    <figure className="rounded-2xl border bg-white p-6 shadow-sm">
+    <figure className="rounded-2xl border bg-background p-6 shadow-sm">
       <blockquote className="text-gray-800">“{quote}”</blockquote>
       <figcaption className="mt-4 text-sm text-gray-600">— {author}</figcaption>
     </figure>
@@ -228,7 +234,7 @@ function Testimonial({ quote, author }: { quote: string; author: string }) {
 
 function QA({ q, a }: { q: string; a: string }) {
   return (
-    <div className="rounded-2xl border bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border bg-background p-5 shadow-sm">
       <dt className="font-semibold">{q}</dt>
       <dd className="mt-2 text-sm text-gray-600">{a}</dd>
     </div>

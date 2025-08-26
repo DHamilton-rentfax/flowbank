@@ -1,26 +1,34 @@
 import { ReactNode } from "react";
 import type { Metadata } from "next";
-import "../globals.css";
-import Providers from "../providers";
 import HeaderDashboard from "../components/HeaderDashboard";
+import { getSessionUser } from "@/lib/auth-server";
+import { getAdminDb } from "@/firebase/server";
+import { redirect } from "next/navigation";
 
-// If you store Stripe customer id in Firestore, you can fetch it in a server action.
-// For simplicity here, we'll pass null and you can thread the real id later.
 export const metadata: Metadata = {
   title: "FlowBank — Dashboard",
 };
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const stripeCustomerId = null; // TODO: thread from server action or RSC when ready
+  const user = await getSessionUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  let customerId: string | null = null;
+  try {
+    const customerDoc = await getAdminDb().collection("stripe_customers").doc(user.uid).get();
+    if (customerDoc.exists) {
+      customerId = customerDoc.data()?.customerId || null;
+    }
+  } catch (error) {
+    console.error("Failed to fetch Stripe customer ID:", error);
+  }
 
   return (
-    <html lang="en">
-      <body>
-        <Providers>
-          <HeaderDashboard stripeCustomerId={stripeCustomerId} />
-          <main className="min-h-screen bg-gray-50">{children}</main>
-        </Providers>
-      </body>
-    </html>
+    <>
+      <HeaderDashboard stripeCustomerId={customerId} />
+      <main className="bg-background min-h-screen">{children}</main>
+    </>
   );
 }
