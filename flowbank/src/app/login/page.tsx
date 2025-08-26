@@ -9,7 +9,7 @@ import {
 } from "firebase/auth";
 
 // If you don't use path alias "@/...", keep the relative path:
-import { auth, googleProvider } from "../../firebase/client"; // from src/app/login -> ../../firebase/client
+import { auth, googleProvider } from "@/firebase/client"; // from src/app/login -> @/firebase/client
 
 export default function LoginPage() {
   const router = useRouter();
