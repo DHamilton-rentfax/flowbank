@@ -1,71 +1,77 @@
+
 "use client";
 
-import { useState } from "react";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "firebase/auth";
-import { app } from "@/firebase/client"; // your client SDK init that calls initializeApp(...)
-                                          // make sure this file exists and exports `app`
+import { useEffect, useState } from "react";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { app } from "@/firebase/client";
 
-type Props = {
-  returnUrl?: string;
-  className?: string;
-  children?: React.ReactNode;
-};
-
-export default function LoginButton({ returnUrl = "/", className = "", children = "Continue with Google" }: Props) {
+export default function LoginButton({ returnUrl = "/", className = "", children = "Continue with Google" }:{
+  returnUrl?: string; className?: string; children?: React.ReactNode;
+}) {
   const [loading, setLoading] = useState(false);
+  const inIframe = typeof window !== "undefined" && window.top !== window.self;
+
+  useEffect(() => {
+    const auth = getAuth(app);
+    getRedirectResult(auth)
+      .then(async (cred) => {
+        if (!cred) return;
+        setLoading(true);
+        const idToken = await cred.user.getIdToken(true);
+        await fetch("/api/sessionLogin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+          body: JSON.stringify({ idToken, returnUrl }),
+        });
+        window.location.assign(returnUrl);
+      })
+      .catch((err) => {
+        console.error("Redirect result error:", err);
+      }).finally(() => setLoading(false));
+  }, [returnUrl]);
 
   const onClick = async () => {
-    console.log("[LoginButton] click fired");
     if (loading) return;
     setLoading(true);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
     try {
-      const auth = getAuth(app);
-      const provider = new GoogleAuthProvider();
-
-      // Try popup first; if blocked, fallback to redirect.
-      let cred;
+      if (inIframe) { 
+        await signInWithRedirect(auth, provider); 
+        // Redirect will happen, no further code in this block will execute.
+        return; 
+      }
+      // Try popup first for non-iframe environments
       try {
-        cred = await signInWithPopup(auth, provider);
-      } catch (e: any) {
-        console.warn("[LoginButton] popup failed, falling back to redirect:", e?.code || e?.message);
-        await signInWithRedirect(auth, provider);
-        return; // browser will navigate; no further code runs
+        const cred = await signInWithPopup(auth, provider);
+        const idToken = await cred.user.getIdToken(true);
+        const r = await fetch("/api/sessionLogin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+          body: JSON.stringify({ idToken, returnUrl }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || "Session login failed");
+        const dest = data.redirect || data.url || returnUrl || "/";
+        window.location.assign(dest);
+      } catch (err: any) {
+        // If popup fails (e.g., blocked), fall back to redirect.
+        if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+           // User closed popup, do nothing.
+           setLoading(false);
+           return;
+        }
+        console.warn("Popup sign-in failed, falling back to redirect:", err);
+        await signInWithRedirect(auth, provider); 
       }
-
-      const idToken = await cred.user.getIdToken(/* forceRefresh? */ true);
-      console.log("[LoginButton] got idToken length:", idToken?.length);
-
-      const res = await fetch("/api/sessionLogin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
-        body: JSON.stringify({ idToken, returnUrl }),
-      });
-
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        console.error("[LoginButton] sessionLogin failed", res.status, body);
-        alert(body?.error || "Session login failed");
-        return;
-      }
-
-      const dest = body?.redirect || returnUrl || "/";
-      console.log("[LoginButton] session cookie set, redirecting to:", dest);
-      window.location.assign(dest);
-    } catch (err: any) {
-      console.error("[LoginButton] error:", err);
-      alert(err?.message || "Login failed");
-    } finally {
-      setLoading(false);
+    } catch(err) {
+        console.error("Sign-in error", err);
+        setLoading(false);
     }
   };
 
   return (
-    <button
-      type="button"              // ⬅ prevent accidental <form> submit reset
-      onClick={onClick}
-      disabled={loading}
-      className={`px-3 py-2 border rounded-md ${className}`}
-    >
+    <button type="button" onClick={onClick} disabled={loading} className={className}>
       {loading ? "Signing in…" : children}
     </button>
   );
