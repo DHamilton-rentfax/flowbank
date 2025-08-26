@@ -12,16 +12,24 @@ function getAdminApp(): App {
   if (apps.length) return apps[0];
 
   const b64 = process.env.FIREBASE_ADMIN_CERT_B64;
-  if (!b64) {
-    throw new Error(
-      "FIREBASE_ADMIN_CERT_B64 is missing. Provide a base64-encoded Firebase service account JSON."
-    );
+  if (b64) {
+    const json = Buffer.from(b64, "base64").toString("utf8");
+    const credentials = JSON.parse(json);
+     return initializeApp({ credential: cert(credentials) });
   }
 
-  const credentialsJson = Buffer.from(b64, "base64").toString("utf8");
-  const credentials = JSON.parse(credentialsJson);
+  // Fallback for environments without the B64 var but with individual keys
+  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+  // Vercel/Next.js automatically handles multiline env vars, but other platforms might need `\n` replaced.
+  const privateKey = (process.env.FIREBASE_ADMIN_PRIVATE_KEY || "").replace(/\\n/g, '\n');
 
-  return initializeApp({ credential: cert(credentials) });
+  if (projectId && clientEmail && privateKey) {
+    return initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
+  }
+  
+  // If no credentials, fall back to Application Default Credentials (for App Hosting)
+  return initializeApp();
 }
 
 const app = getAdminApp();
@@ -35,8 +43,8 @@ export function getAdminDb(): Firestore {
 }
 
 // Compat named exports
-export const adminAuth = getAuth(app);
-export const db = getFirestore(app);
+export const adminAuth = getAdminAuth();
+export const db = getAdminDb();
 
 
 // Optional: tiny helper you can call in routes/actions to verify it's working
