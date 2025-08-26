@@ -27,7 +27,6 @@ export function PricingCard({
         <div className="text-4xl font-bold">{price}</div>
       </CardHeader>
 
-      {/* Let this section grow; pushes footer to the bottom */}
       <CardContent className="flex flex-1 flex-col gap-2">
         <ul className="space-y-1 text-sm">
           {features.map((f) => (
@@ -36,11 +35,9 @@ export function PricingCard({
             </li>
           ))}
         </ul>
-        {/* Spacer to push button down regardless of feature count */}
-        <div className="mt-auto" />
       </CardContent>
 
-      <CardFooter className="mt-auto flex flex-col gap-2">
+      <CardFooter className="mt-auto flex flex-col gap-2 pt-6">
         <Button onClick={onClick} className="h-11 w-full">{cta}</Button>
         {footnote && (
           <p className="text-center text-xs text-muted-foreground">{footnote}</p>
