@@ -19,7 +19,7 @@ export default function HomePage() {
               Bank-grade security with Plaid
             </span>
 
-            <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl text-primary">
+            <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl text-foreground">
               Automate Your Business Finances
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-7 text-gray-600">
