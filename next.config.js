@@ -15,7 +15,7 @@ const nextConfig = {
 
   // If you use external images like placehold.co or Unsplash:
   images: {
-    domains: ['placehold.co', 'images.unsplash.com'],
+    domains: ['placehold.co', 'images.unsplash.com', 'picsum.photos'],
   },
   experimental: {
     serverComponentsExternalPackages: [
