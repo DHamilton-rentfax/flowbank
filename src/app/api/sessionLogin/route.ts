@@ -1,7 +1,8 @@
-// src/app/api/sessionLogin/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+
+
 
 function getEnvOrThrow(name: string, ...fallbacks: string[]): string {
   const val = [process.env[name], ...fallbacks.map(f => process.env[f])].find(Boolean);
