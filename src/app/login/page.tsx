@@ -1,73 +1,85 @@
-'use client';
-import { useEffect, useRef, useState } from 'react';
-import { loginWithGoogle, resolvePendingRedirect } from './login-actions';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { useAuth } from '@/hooks/use-auth';
-import { useRouter, useSearchParams } from 'next/navigation';
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { auth } from "@/firebase/client";
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+} from "firebase/auth";
 
 export default function LoginPage() {
-  const { user, loading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(true);
-  const processing = useRef(false);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
+  // Handle redirect flow completion (iOS/Safari/in-app browsers)
   useEffect(() => {
-    // This handles the redirect result from Google
-    resolvePendingRedirect().finally(() => setIsProcessing(false));
-  }, []);
+    getRedirectResult(auth).then((cred) => {
+      if (cred?.user) router.replace("/dashboard");
+    });
+  }, [router]);
 
-  useEffect(() => {
-    // If user is logged in, redirect them away from the login page.
-    if (!loading && user) {
-      const nextUrl = searchParams.get('next') || '/dashboard';
-      router.push(nextUrl);
-    }
-  }, [user, loading, router, searchParams]);
-
-
-  const handleLogin = async () => {
-    if (processing.current) return;
-    processing.current = true;
-    setError(null);
-    try {
-      await loginWithGoogle();
-    } catch (err: any) {
-      setError(err.message || 'An unknown error occurred during sign-in.');
-    } finally {
-      processing.current = false;
-    }
+  // Basic UA sniff for problematic popup environments
+  const needsRedirect = () => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent.toLowerCase();
+    const inApp = /instagram|fbav|line|wechat|electron/.test(ua);
+    const iOS = /iphone|ipad|ipod/.test(ua);
+    const safari = /^((?!chrome|android).)*safari/.test(ua);
+    return inApp || iOS || safari;
   };
-  
-  if (loading || isProcessing || user) {
-    return (
-        <div className="flex justify-center items-center min-h-screen">
-            <p>Loading...</p>
-        </div>
-    );
+
+  async function loginWithGoogle() {
+    setErr(null);
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      if (needsRedirect()) {
+        await signInWithRedirect(auth, provider);
+        return; // page will reload; redirect result handled in useEffect
+      }
+
+      const cred = await signInWithPopup(auth, provider);
+      if (cred.user) router.replace("/dashboard");
+    } catch (e: any) {
+      // Friendly handling for common popup issues
+      const code = e?.code || "";
+      if (code === "auth/popup-closed-by-user") {
+        setErr("The sign-in window was closed before finishing. Please try again.");
+      } else if (code === "auth/cancelled-popup-request") {
+        setErr("Another sign-in attempt was started. Please try again.");
+      } else if (code === "auth/popup-blocked") {
+        setErr("Your browser blocked the popup. Allow popups or try again.");
+      } else {
+        setErr(e?.message || "Sign-in failed. Please try again.");
+      }
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-6 py-16">
+    <div className="mx-auto max-w-md p-6">
       <h1 className="text-2xl font-semibold">Welcome</h1>
-      <p className="mt-2 text-sm text-gray-600">
-        Sign in to continue to your dashboard.
-      </p>
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-      <div className="mt-6">
-        <Button onClick={handleLogin} className="w-full" disabled={processing.current}>
-          Continue with Google
-        </Button>
-      </div>
-      <p className="mt-4 text-center text-sm text-gray-600">
-        By signing in, you agree to our{' '}
-        <Link href="/terms" className="underline">
-          Terms of Service
-        </Link>
-        .
-      </p>
+      <p className="mt-1 text-sm text-gray-600">Sign in to continue to your dashboard.</p>
+
+      {err && (
+        <div className="mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+          {err}
+        </div>
+      )}
+
+      <button
+        onClick={loginWithGoogle}
+        disabled={loading}
+        className="mt-6 w-full rounded-lg border px-4 py-2 font-medium disabled:opacity-50"
+      >
+        {loading ? "Signing in…" : "Continue with Google"}
+      </button>
     </div>
   );
 }
