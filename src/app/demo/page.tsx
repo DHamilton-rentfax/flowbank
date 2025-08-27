@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Banknote, PieChart, Sparkles, AlertCircle, PlayCircle } from "lucide-react";
+import { ArrowRight, Banknote, PieChart, Sparkles, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -35,7 +35,7 @@ function StatCard({ title, value, icon, ctaLink, ctaLabel }: { title: string, va
 }
 
 export default function DemoDashboardPage() {
-    const { accounts, transactions, rules, runAllocation } = useDemo();
+    const { accounts, transactions, runAllocation } = useDemo();
 
     const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
     const recentTransactions = transactions.slice(0, 5);
@@ -67,7 +67,7 @@ export default function DemoDashboardPage() {
                 />
                 <StatCard 
                     title="Allocation Rules" 
-                    value={`${rules.length} Active`} 
+                    value="4 Active" 
                     icon={<PieChart className="h-4 w-4 text-muted-foreground" />}
                     ctaLink="/demo/rules"
                     ctaLabel="Manage Rules"
@@ -85,7 +85,7 @@ export default function DemoDashboardPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Recent Transactions</CardTitle>
-                    <CardDescription>Your last 5 recorded transactions. Click the play button on an income transaction to simulate an allocation.</CardDescription>
+                    <CardDescription>Click the <PlayCircle className="inline h-4 w-4 text-muted-foreground" /> button on an income transaction to simulate an allocation.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>

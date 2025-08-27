@@ -17,18 +17,18 @@ export default function DemoLayout({ children }: { children: ReactNode }) {
                     <span className="text-lg">FlowBank</span>
                 </Link>
                 <nav className="text-sm font-medium">
-                    You are in Demo Mode
+                    You are in an Interactive Demo
                 </nav>
             </div>
           </header>
           
           <Alert className="rounded-none border-x-0 border-t-0 bg-blue-50 border-blue-200 text-blue-800">
             <Sparkles className="h-4 w-4 !text-blue-600" />
-            <AlertTitle>You are viewing the FlowBank Pro Demo!</AlertTitle>
+            <AlertTitle>This is an Interactive Demo of FlowBank Pro!</AlertTitle>
             <AlertDescription>
-            This is a pre-populated, interactive demo. Feel free to click around! The data is for illustration only.
+            Explore the features below using sample data. Click the play button on a transaction to see automatic allocations in action.
             <Button asChild size="sm" className="ml-4 bg-blue-600 hover:bg-blue-700 text-white">
-                <Link href="/signup">Create Your Free Account</Link>
+                <Link href="/signup">Create a Free Account</Link>
             </Button>
             </AlertDescription>
         </Alert>

@@ -25,6 +25,8 @@ const initialDemoData = {
       { id: 'tx3', date: '2024-07-27', name: 'Notion Labs', amount: -12.00, isIncome: false },
       { id: 'tx4', date: '2024-07-26', name: 'Google Ads', amount: -150.00, isIncome: false },
       { id: 'tx5', date: '2024-07-25', name: 'Shopify Payout', amount: 4300.00, isIncome: true },
+      { id: 'tx6', date: '2024-07-24', name: 'Gusto Payroll', amount: -3200.00, isIncome: false },
+      { id: 'tx7', date: '2024-07-22', name: 'Stripe Payout', amount: 6100.00, isIncome: true },
     ] as Transaction[],
     userPlan: { id: 'pro', name: 'Pro' } as UserPlan,
     subscriptionStatus: 'active',
@@ -39,9 +41,6 @@ interface DemoContextType {
   setRules: React.Dispatch<React.SetStateAction<AllocationRule[]>>;
   transactions: Transaction[];
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
-  userPlan: UserPlan | null;
-  subscriptionStatus: string | null;
-  features: { [key: string]: boolean };
   runAllocation: (txId: string) => void;
 }
 
@@ -58,10 +57,6 @@ export function DemoProvider({ children }: DemoProviderProps) {
   const [rules, setRules] = useState<AllocationRule[]>(initialDemoData.rules);
   const [transactions, setTransactions] = useState<Transaction[]>(initialDemoData.transactions);
   
-  const userPlan = initialDemoData.userPlan;
-  const subscriptionStatus = initialDemoData.subscriptionStatus;
-  const features = initialDemoData.features;
-
   const runAllocation = (txId: string) => {
     const tx = transactions.find(t => t.id === txId);
     if (!tx || !tx.isIncome) return;
@@ -86,9 +81,6 @@ export function DemoProvider({ children }: DemoProviderProps) {
     setRules,
     transactions,
     setTransactions,
-    userPlan,
-    subscriptionStatus,
-    features,
     runAllocation,
   };
 
