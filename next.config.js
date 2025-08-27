@@ -1,32 +1,31 @@
-
 /** @type {import('next').NextConfig} */
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const nextConfig = {
-  reactStrictMode: true,
-
-  // Optional: avoid flaky FS cache warnings in dev
-  webpack: (config, { dev }) => {
-    if (dev) {
-      // Avoid filesystem cache in flaky dev environments
-      config.cache = { type: 'memory' };
-    }
-    return config;
-  },
-  reactStrictMode: true,
-
-  // If you use external images like placehold.co or Unsplash:
-  images: {
-    domains: ['placehold.co', 'images.unsplash.com', 'picsum.photos'],
-  },
+  typescript: { ignoreBuildErrors: true },
   experimental: {
-    serverComponentsExternalPackages: [
-      "handlebars",
-      "dotprompt",
-      "@genkit-ai/core",
-      "genkit",
-      "@opentelemetry/instrumentation",
-      "@opentelemetry/sdk-node",
+    // OK to keep on Next 15; remove if you're on 14.
+    // Add your Cloud Workstations origins if you want to silence the warning proactively.
+    // allowedDevOrigins: [
+    //   'https://3000-firebase-flow-bank-app-1754572016440.cluster-joak5ukfbnbyqspg4tewa33d24.cloudworkstations.dev',
+    //   'https://6000-firebase-flow-bank-app-1754572016440.cluster-joak5ukfbnbyqspg4tewa33d24.cloudworkstations.dev',
+    //   'http://localhost:3000',
+    //   'http://127.0.0.1:3000',
+    // ],
+  },
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'placehold.co', pathname: '/**' },
+      { protocol: 'https', hostname: 'api.qrserver.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'picsum.photos', pathname: '/**' },   // <-- required
+      // Uncomment if you actually load from these:
+      // { protocol: 'https', hostname: 'firebasestorage.googleapis.com', pathname: '/**' },
+      // { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
+      // { protocol: 'https', hostname: 'res.cloudinary.com', pathname: '/**' },
     ],
   },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);
