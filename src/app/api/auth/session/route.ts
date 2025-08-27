@@ -1,25 +1,39 @@
+
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
-
-
 import { cookies } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
-// ---------------- minimal Firebase Admin helper ----------------
 function adminApp() {
-  if (getApps().length === 0) {
-    const credentialsJson = process.env.FIREBASE_ADMIN_CERT_B64
-      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
-      : "{}";
-
-    const credentials = JSON.parse(credentialsJson);
-    initializeApp({ credential: cert(credentials) });
+  if (getApps().length > 0) {
+    return getApps()[0];
   }
-  return getApps()[0];
+
+  const credentialsB64 = process.env.FIREBASE_ADMIN_CERT_B64;
+  if (!credentialsB64) {
+    throw new Error("FIREBASE_ADMIN_CERT_B64 environment variable is not set. Cannot initialize Firebase Admin SDK.");
+  }
+
+  try {
+    const credentialsJson = Buffer.from(credentialsB64, "base64").toString("utf8");
+    const credentials = JSON.parse(credentialsJson);
+    return initializeApp({ credential: cert(credentials) });
+  } catch (e: any) {
+    throw new Error(`Failed to parse or initialize Firebase Admin credentials: ${e.message}`);
+  }
 }
 
-function serverAuth() { return getAuth(adminApp()); }
+function serverAuth() { 
+  try {
+    const app = adminApp();
+    return getAuth(app);
+  } catch (e: any) {
+    console.error("Firebase Admin Initialization Error:", e.stack);
+    // Re-throw the error to be caught by the route handler's catch block
+    throw e;
+  }
+}
+
 // 5 days
 const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
@@ -30,10 +44,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'ID token is required.' }, { status: 400 });
     }
     
-    const sessionCookie = await serverAuth().createSessionCookie(idToken, { expiresIn });
+    const auth = serverAuth();
+    const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn });
     
     cookies().set('__session', sessionCookie, {
-        maxAge: expiresIn,
+        maxAge: expiresIn / 1000, // maxAge is in seconds
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         path: '/',
@@ -41,9 +56,14 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Session Login Error:', error);
-    return NextResponse.json({ error: 'Failed to create session.' }, { status: 500 });
+    // Provide a more specific error message if it's an initialization issue
+    const errorMessage = error.message.includes("FIREBASE_ADMIN_CERT_B64")
+      ? error.message
+      : 'Failed to create session due to an internal server error.';
+      
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
