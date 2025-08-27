@@ -1,75 +1,81 @@
+
 "use client";
 
 import Link from "next/link";
 import { useState } from "react";
-import BillingPortalButton from "./BillingPortalButton";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { PanelLeft, LogOut, Settings, LayoutDashboard, Sparkles, PieChart, Users } from "lucide-react";
+import { BillingPortalButton } from "@/components/BillingPortalButton";
 
-export default function HeaderDashboard({
-  stripeCustomerId,
-}: {
-  stripeCustomerId?: string | null;
-}) {
+export default function HeaderDashboard() {
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  }
 
   const NavLinks = () => (
     <>
-      <Link href="/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Overview</Link>
-      <Link href="/reporting" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Reporting</Link>
-      <Link href="/rules" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Rules</Link>
-      <Link href="/teams" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Teams</Link>
-      <Link href="/settings" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Settings</Link>
+      <Link href="/dashboard" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+          <LayoutDashboard className="h-4 w-4" />
+          Overview
+      </Link>
+      <Link href="/dashboard/ai-advisor" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+          <Sparkles className="h-4 w-4" />
+          AI Advisor
+      </Link>
+      <Link href="/rules" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+          <PieChart className="h-4 w-4" />
+          Allocation Rules
+      </Link>
+      <Link href="/reporting" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+          <LayoutDashboard className="h-4 w-4" />
+          Reporting
+      </Link>
+      <Link href="/teams" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+          <Users className="h-4 w-4" />
+          Team
+      </Link>
+      <Link href="/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+          <Settings className="h-4 w-4" />
+          Settings
+      </Link>
     </>
   );
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <span className="inline-block h-8 w-8 rounded-xl bg-primary text-primary-foreground grid place-items-center font-bold">ƒ</span>
-          <span className="text-lg">FlowBank</span>
-          <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">Dashboard</span>
-        </Link>
-
-        <nav className="hidden items-center gap-6 md:flex">
-          <NavLinks />
-        </nav>
-
-        <div className="hidden items-center gap-3 md:flex">
-          <BillingPortalButton customerId={stripeCustomerId ?? null} />
-          <form action="/api/sessionLogout" method="post">
-            <Button variant="outline" type="submit">
-              Log out
-            </Button>
-          </form>
-        </div>
-
-        {/* Mobile toggle */}
-        <button
-          className="inline-flex items-center rounded-lg border p-2 md:hidden"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
-        >
-          ☰
-        </button>
-      </div>
-
-      {/* Mobile menu */}
-      {open && (
-        <div className="border-t bg-background md:hidden">
-          <div className="container mx-auto flex flex-col gap-2 py-3">
-            <NavLinks />
-            <div className="mt-2 flex gap-2">
-              <BillingPortalButton customerId={stripeCustomerId ?? null} className="w-full justify-center" />
-              <form action="/api/sessionLogout" method="post" className="w-full">
-                <Button variant="outline" type="submit" className="w-full">
-                  Log out
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+       <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+                 <Button size="icon" variant="outline" className="sm:hidden">
+                    <PanelLeft className="h-5 w-5" />
+                    <span className="sr-only">Toggle Menu</span>
                 </Button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+            </SheetTrigger>
+            <SheetContent side="left" className="sm:max-w-xs">
+                <nav className="grid gap-6 text-lg font-medium">
+                    <Link href="/dashboard" className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base">
+                       <span className="font-bold">ƒ</span>
+                       <span className="sr-only">FlowBank</span>
+                    </Link>
+                    <NavLinks />
+                </nav>
+            </SheetContent>
+        </Sheet>
+      <div className="relative ml-auto flex-1 md:grow-0">
+        {/* Placeholder for a search bar if needed */}
+      </div>
+      <BillingPortalButton />
+      <Button variant="outline" size="icon" onClick={handleLogout}>
+          <LogOut className="h-5 w-5" />
+          <span className="sr-only">Log out</span>
+      </Button>
     </header>
   );
 }
