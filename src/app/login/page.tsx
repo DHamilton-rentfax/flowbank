@@ -4,11 +4,12 @@ import { loginWithGoogle, resolvePendingRedirect } from './login-actions';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(true);
   const processing = useRef(false);
@@ -21,9 +22,10 @@ export default function LoginPage() {
   useEffect(() => {
     // If user is logged in, redirect them away from the login page.
     if (!loading && user) {
-      router.push('/dashboard');
+      const nextUrl = searchParams.get('next') || '/dashboard';
+      router.push(nextUrl);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, searchParams]);
 
 
   const handleLogin = async () => {

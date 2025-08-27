@@ -20,9 +20,7 @@ async function handleSuccessfulLogin(credential: UserCredential) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Session login failed');
     }
-    const data = await res.json().catch(() => ({}));
-    const destination = data.redirect || data.url || '/dashboard';
-    window.location.assign(destination);
+    // The redirect is now handled by the page component after auth state changes
 }
 
 
