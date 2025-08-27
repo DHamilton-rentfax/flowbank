@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { PanelLeft, LogOut, Settings, LayoutDashboard, Sparkles, PieChart, Users } from "lucide-react";
-import { BillingPortalButton } from "@/components/BillingPortalButton";
+import { PanelLeft, LogOut, Settings, LayoutDashboard, Sparkles, PieChart, Users, LineChart, Banknote } from "lucide-react";
+import { createPortalSession } from "@/app/actions/create-portal-session";
+import { toast } from "react-hot-toast";
 
 export default function HeaderDashboard() {
   const { user, logout } = useAuth();
@@ -18,6 +19,17 @@ export default function HeaderDashboard() {
   const handleLogout = async () => {
     await logout();
     router.push('/login');
+  }
+
+  const handleManageBilling = async () => {
+    try {
+        const { url } = await createPortalSession();
+        router.push(url);
+    } catch (error) {
+        const err = error as Error;
+        toast.error(err.message || "Failed to open billing portal.");
+        console.error("Billing portal error:", err);
+    }
   }
 
   const NavLinks = () => (
@@ -35,7 +47,7 @@ export default function HeaderDashboard() {
           Allocation Rules
       </Link>
       <Link href="/reporting" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
-          <LayoutDashboard className="h-4 w-4" />
+          <LineChart className="h-4 w-4" />
           Reporting
       </Link>
       <Link href="/teams" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
@@ -61,7 +73,7 @@ export default function HeaderDashboard() {
             <SheetContent side="left" className="sm:max-w-xs">
                 <nav className="grid gap-6 text-lg font-medium">
                     <Link href="/dashboard" className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base">
-                       <span className="font-bold">ƒ</span>
+                       <Banknote className="h-5 w-5 transition-all group-hover:scale-110" />
                        <span className="sr-only">FlowBank</span>
                     </Link>
                     <NavLinks />
@@ -71,7 +83,7 @@ export default function HeaderDashboard() {
       <div className="relative ml-auto flex-1 md:grow-0">
         {/* Placeholder for a search bar if needed */}
       </div>
-      <BillingPortalButton />
+      <Button variant="outline" onClick={handleManageBilling}>Manage Billing</Button>
       <Button variant="outline" size="icon" onClick={handleLogout}>
           <LogOut className="h-5 w-5" />
           <span className="sr-only">Log out</span>

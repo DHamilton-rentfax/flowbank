@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Banknote, PieChart, Sparkles, AlertCircle } from "lucide-react";
+import { ArrowRight, Banknote, PieChart, Sparkles, AlertCircle, LineChart } from "lucide-react";
 import Link from "next/link";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -72,20 +72,14 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="container mx-auto p-4 sm:p-6 md:p-8 space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
-                <p className="text-muted-foreground">Your financial command center.</p>
-            </div>
-
-            {/* Key Metrics */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard 
                     title="Total Balance" 
                     value={formatCurrency(totalBalance)} 
                     icon={<Banknote className="h-4 w-4 text-muted-foreground" />} 
                 />
-                <StatCard 
+                 <StatCard 
                     title="Allocation Rules" 
                     value={`${rules.length} Active`} 
                     icon={<PieChart className="h-4 w-4 text-muted-foreground" />}
@@ -99,9 +93,15 @@ export default function DashboardPage() {
                     ctaLink="/dashboard/ai-advisor"
                     ctaLabel="Get Insights"
                 />
+                <StatCard 
+                    title="Reporting" 
+                    value="View Trends" 
+                    icon={<LineChart className="h-4 w-4 text-muted-foreground" />}
+                    ctaLink="/reporting"
+                    ctaLabel="View Reports"
+                />
             </div>
             
-            {/* Recent Transactions */}
             <Card>
                 <CardHeader>
                     <CardTitle>Recent Transactions</CardTitle>
@@ -120,10 +120,10 @@ export default function DashboardPage() {
                             {recentTransactions.length > 0 ? (
                                 recentTransactions.map(tx => (
                                     <TableRow key={tx.id}>
-                                        <TableCell>{tx.date}</TableCell>
+                                        <TableCell>{new Date(tx.date).toLocaleDateString()}</TableCell>
                                         <TableCell className="font-medium">{tx.name}</TableCell>
                                         <TableCell className="text-right">
-                                            <Badge variant={tx.isIncome ? "default" : "secondary"} className={tx.isIncome ? "bg-green-600/20 text-green-700" : ""}>
+                                            <Badge variant={tx.amount > 0 ? "default" : "secondary"} className={tx.amount > 0 ? "bg-green-600/20 text-green-700" : ""}>
                                                 {formatCurrency(tx.amount)}
                                             </Badge>
                                         </TableCell>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
                     </Button>
                 </CardFooter>
             </Card>
-
         </div>
     );
 }
+

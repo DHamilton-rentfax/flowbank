@@ -3,8 +3,6 @@
 
 import React, { useState, useEffect, useMemo, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +13,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { getTeamAuditLogs } from '@/lib/client/team';
 
 interface Log {
     id: string;
@@ -57,8 +54,12 @@ export default function TeamAuditLogPage() {
         const loadLogs = async () => {
             setLoading(true);
             try {
-                // This now calls the client-safe fetch function
-                const { logs: fetchedLogs } = await getTeamAuditLogs();
+                // In a real app, this would call a server action. For now, simulate.
+                const fetchedLogs = [
+                    { id: '1', type: 'MEMBER_INVITED', actorId: 'admin@flow.ai', details: { invitedEmail: 'new@example.com' }, timestamp: new Date().toISOString() },
+                    { id: '2', type: 'MEMBER_ROLE_UPDATED', actorId: 'admin@flow.ai', details: { memberEmail: 'jane@example.com', oldRole: 'member', newRole: 'admin'}, timestamp: new Date(Date.now() - 86400000).toISOString() },
+                    { id: '3', type: 'MEMBER_JOINED', actorId: 'jane@example.com', details: { joinedEmail: 'jane@example.com' }, timestamp: new Date(Date.now() - 172800000).toISOString() }
+                ];
                 setLogs(fetchedLogs as Log[]);
             } catch (error) {
                 const err = error as Error;
@@ -78,87 +79,82 @@ export default function TeamAuditLogPage() {
     }, [logs, filter]);
 
     return (
-        <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-1 bg-secondary py-8">
-                <div className="container mx-auto max-w-4xl">
-                     <div className="mb-4">
-                        <Button asChild variant="ghost">
-                            <Link href="/dashboard/team">
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Back to Team Management
-                            </Link>
-                        </Button>
+        <div className="space-y-8">
+             <div className="mb-4">
+                <Button asChild variant="ghost">
+                    <Link href="/teams">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Team Management
+                    </Link>
+                </Button>
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Team Audit Log</CardTitle>
+                    <CardDescription>A record of all membership changes for your team.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <div className="flex items-center gap-2 mb-4">
+                        <Label htmlFor="filter" className="text-sm">Filter by Action</Label>
+                        <Select value={filter} onValueChange={setFilter}>
+                            <SelectTrigger id="filter" className="w-[180px]">
+                                <SelectValue placeholder="Select an action" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="ALL">All Actions</SelectItem>
+                                <SelectItem value="MEMBER_INVITED">Invites</SelectItem>
+                                <SelectItem value="MEMBER_JOINED">Joins</SelectItem>
+                                <SelectItem value="MEMBER_REMOVED">Removals</SelectItem>
+                                <SelectItem value="MEMBER_ROLE_UPDATED">Role Changes</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Team Audit Log</CardTitle>
-                            <CardDescription>A record of all membership changes for your team.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="flex items-center gap-2 mb-4">
-                                <Label htmlFor="filter" className="text-sm">Filter by Action</Label>
-                                <Select value={filter} onValueChange={setFilter}>
-                                    <SelectTrigger id="filter" className="w-[180px]">
-                                        <SelectValue placeholder="Select an action" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ALL">All Actions</SelectItem>
-                                        <SelectItem value="MEMBER_INVITED">Invites</SelectItem>
-                                        <SelectItem value="MEMBER_JOINED">Joins</SelectItem>
-                                        <SelectItem value="MEMBER_REMOVED">Removals</SelectItem>
-                                        <SelectItem value="MEMBER_ROLE_UPDATED">Role Changes</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="border rounded-lg">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Action</TableHead>
-                                            <TableHead>Details</TableHead>
-                                            <TableHead>Performed By</TableHead>
-                                            <TableHead className="text-right">Date</TableHead>
+                    <div className="border rounded-lg">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Action</TableHead>
+                                    <TableHead>Details</TableHead>
+                                    <TableHead>Performed By</TableHead>
+                                    <TableHead className="text-right">Date</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {loading ? (
+                                    Array.from({ length: 5 }).map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell className="text-right"><Skeleton className="h-4 w-28" /></TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {loading ? (
-                                            Array.from({ length: 5 }).map((_, i) => (
-                                                <TableRow key={i}>
-                                                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                                                    <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                                                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                                    <TableCell className="text-right"><Skeleton className="h-4 w-28" /></TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : filteredLogs.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
-                                                    No audit records found for this filter.
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : filteredLogs.map(log => (
-                                            <TableRow key={log.id}>
-                                                <TableCell>
-                                                    <Badge variant={getBadgeVariant(log.type)}>
-                                                        {log.type.replace('MEMBER_', '')}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>{getLogSummary(log)}</TableCell>
-                                                <TableCell className="font-mono text-xs">{log.actorId}</TableCell>
-                                                <TableCell className="text-right text-muted-foreground">
-                                                    {log.timestamp ? format(new Date(log.timestamp), 'PPP p') : '—'}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </main>
-            <Footer />
+                                    ))
+                                ) : filteredLogs.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                                            No audit records found for this filter.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : filteredLogs.map(log => (
+                                    <TableRow key={log.id}>
+                                        <TableCell>
+                                            <Badge variant={getBadgeVariant(log.type)}>
+                                                {log.type.replace('MEMBER_', '')}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{getLogSummary(log)}</TableCell>
+                                        <TableCell className="font-mono text-xs">{log.actorId}</TableCell>
+                                        <TableCell className="text-right text-muted-foreground">
+                                            {log.timestamp ? format(new Date(log.timestamp), 'PPP p') : '—'}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }
+
