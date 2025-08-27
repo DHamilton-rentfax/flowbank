@@ -1,85 +1,119 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { auth } from "@/firebase/client";
-import {
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-} from "firebase/auth";
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const { loginWithGoogle, loginWithEmail } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState<null | 'google' | 'email'>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle redirect flow completion (iOS/Safari/in-app browsers)
-  useEffect(() => {
-    getRedirectResult(auth).then((cred) => {
-      if (cred?.user) router.replace("/dashboard");
-    });
-  }, [router]);
-
-  // Basic UA sniff for problematic popup environments
-  const needsRedirect = () => {
-    if (typeof navigator === "undefined") return false;
-    const ua = navigator.userAgent.toLowerCase();
-    const inApp = /instagram|fbav|line|wechat|electron/.test(ua);
-    const iOS = /iphone|ipad|ipod/.test(ua);
-    const safari = /^((?!chrome|android).)*safari/.test(ua);
-    return inApp || iOS || safari;
+  const handleGoogleLogin = async () => {
+    setError(null);
+    setLoading('google');
+    try {
+      await loginWithGoogle();
+      const next = searchParams.get('next') || '/dashboard';
+      router.push(next);
+    } catch (e: any) {
+      setError(e.message || 'An error occurred during Google sign-in.');
+    } finally {
+      setLoading(null);
+    }
   };
 
-  async function loginWithGoogle() {
-    setErr(null);
-    setLoading(true);
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading('email');
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: "select_account" });
-
-      if (needsRedirect()) {
-        await signInWithRedirect(auth, provider);
-        return; // page will reload; redirect result handled in useEffect
-      }
-
-      const cred = await signInWithPopup(auth, provider);
-      if (cred.user) router.replace("/dashboard");
+      await loginWithEmail(email, password);
+      const next = searchParams.get('next') || '/dashboard';
+      router.push(next);
     } catch (e: any) {
-      // Friendly handling for common popup issues
-      const code = e?.code || "";
-      if (code === "auth/popup-closed-by-user") {
-        setErr("The sign-in window was closed before finishing. Please try again.");
-      } else if (code === "auth/cancelled-popup-request") {
-        setErr("Another sign-in attempt was started. Please try again.");
-      } else if (code === "auth/popup-blocked") {
-        setErr("Your browser blocked the popup. Allow popups or try again.");
-      } else {
-        setErr(e?.message || "Sign-in failed. Please try again.");
-      }
-      setLoading(false);
+      setError(e.message || 'Invalid email or password.');
+    } finally {
+      setLoading('email');
     }
-  }
+  };
 
   return (
-    <div className="mx-auto max-w-md p-6">
-      <h1 className="text-2xl font-semibold">Welcome</h1>
-      <p className="mt-1 text-sm text-gray-600">Sign in to continue to your dashboard.</p>
-
-      {err && (
-        <div className="mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
-          {err}
+    <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold">Sign In</h1>
+          <p className="text-muted-foreground">Welcome back to FlowBank.</p>
         </div>
-      )}
 
-      <button
-        onClick={loginWithGoogle}
-        disabled={loading}
-        className="mt-6 w-full rounded-lg border px-4 py-2 font-medium disabled:opacity-50"
-      >
-        {loading ? "Signing in…" : "Continue with Google"}
-      </button>
+        {error && (
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-4 border border-destructive/20">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleEmailLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={!!loading}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={!!loading}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={!!loading}>
+            {loading === 'email' ? 'Signing In...' : 'Sign In'}
+          </Button>
+        </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={!!loading}>
+          {loading === 'google' ? 'Signing In...' : 'Google'}
+        </Button>
+        
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="font-medium text-primary hover:underline">
+            Sign up
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
