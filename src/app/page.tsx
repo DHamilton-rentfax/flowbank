@@ -15,7 +15,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl pt-20 pb-16 sm:pt-28 sm:pb-24">
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-black/5">
-              <ShieldCheck className="h-4 w-4 text-accent" />
+              <ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" />
               Bank-grade security with Plaid
             </span>
 
@@ -33,7 +33,7 @@ export default function HomePage() {
                 className="group inline-flex items-center rounded-xl bg-primary px-5 py-3 text-primary-foreground transition hover:opacity-90"
               >
                 Get started free
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </Link>
               <Link
                 href="/pricing"
@@ -60,17 +60,17 @@ export default function HomePage() {
       <section className="border-y bg-background/60">
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-10 sm:grid-cols-3 sm:px-8">
           <Benefit
-            icon={<Banknote className="h-5 w-5" />}
+            icon={<Banknote className="h-5 w-5" aria-hidden="true" />}
             title="Connect your bank"
             desc="Securely link accounts with Plaid. We detect income automatically."
           />
           <Benefit
-            icon={<Zap className="h-5 w-5" />}
+            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
             title="Set your rules"
             desc="Choose percentages for Taxes, Profit, and Operating Costs."
           />
           <Benefit
-            icon={<BarChart3 className="h-5 w-5" />}
+            icon={<BarChart3 className="h-5 w-5" aria-hidden="true" />}
             title="Money allocates itself"
             desc="Every deposit is auto-routed into the right buckets in real time."
           />
@@ -94,7 +94,7 @@ export default function HomePage() {
                   "Real-time balances for each virtual account",
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-accent" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-accent" aria-hidden="true" />
                     <span className="text-gray-700">{t}</span>
                   </li>
                 ))}
@@ -110,9 +110,10 @@ export default function HomePage() {
                 <div className="rounded-xl bg-muted p-6">
                   <Image
                     src="https://picsum.photos/600/400"
-                    alt="FlowBank Dashboard Screenshot"
+                    alt="FlowBank dashboard preview"
                     width={600}
                     height={400}
+                    sizes="(min-width: 768px) 600px, 100vw"
                     className="rounded-lg"
                     data-ai-hint="dashboard finances"
                   />
@@ -120,7 +121,7 @@ export default function HomePage() {
               </div>
               <div className="absolute -bottom-4 -right-4 hidden rounded-xl border bg-background px-4 py-3 text-sm shadow-md ring-1 ring-black/5 md:block">
                 <div className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-primary" />
+                  <Wallet className="h-4 w-4 text-primary" aria-hidden="true" />
                   <span className="font-medium">Profit bucket topped up</span>
                 </div>
               </div>
@@ -189,7 +190,7 @@ export default function HomePage() {
               className="inline-flex items-center rounded-xl bg-primary px-6 py-3 text-primary-foreground transition hover:opacity-90"
             >
               Create your account
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
             </Link>
           </div>
         </div>
@@ -197,8 +198,6 @@ export default function HomePage() {
     </div>
   );
 }
-
-/* --- small presentational pieces --- */
 
 function Benefit({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (

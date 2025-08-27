@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "preinstall": "node -e \"const v=process.versions.node.split('.')[0]; if(+v<20||+v>=21){console.error('❌ Node 20.x required. Current:',process.version); process.exit(1)}\"",
-    "dev": "NEXT_DISABLE_SOURCEMAPS=1 next dev",
     "predev": "node -e \"require('fs').existsSync('node_modules/.bin/next')||process.exit(1)\" || npm ci",
+    "dev": "NEXT_DISABLE_SOURCEMAPS=1 next dev",
     "build": "NEXT_DISABLE_SOURCEMAPS=1 next build",
     "start": "next start -p 8080",
     "gcp-build": "next build",
@@ -13,6 +13,8 @@
     "typecheck": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true next build",
     "stripe:catalog": "node scripts/stripe/create-catalog.mjs",
+    "emulators": "firebase emulators:start",
+    "emulators:only": "firebase emulators:start --only firestore,hosting,functions",
     "postinstall": "next telemetry disable || true"
   },
   "dependencies": {
@@ -98,8 +100,8 @@
   "overrides": {
     "lodash": "^4.17.21",
     "react": "18.2.0",
-    "undici": "^6.0.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "undici": "^6.0.0"
   },
   "engines": {
     "node": "20.x"

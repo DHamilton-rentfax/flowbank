@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { getClientAuth } from '@/firebase/client';
+import { auth } from '@/firebase/client'; // Changed import
 import {
   onAuthStateChanged,
   signOut,
@@ -47,7 +47,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const auth = getClientAuth();
+    // Direct use of the imported 'auth' instance
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -56,19 +56,16 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signupWithEmail = useCallback(async (email: string, pass: string) => {
-    const auth = getClientAuth();
     return createUserWithEmailAndPassword(auth, email, pass);
   }, []);
 
   const loginWithEmail = useCallback(async (email: string, pass: string) => {
-    const auth = getClientAuth();
     const credential = await signInWithEmailAndPassword(auth, email, pass);
     await handleSuccessfulLogin(credential);
     return credential;
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
-    const auth = getClientAuth();
     const provider = new GoogleAuthProvider();
     const credential = await signInWithPopup(auth, provider);
     await handleSuccessfulLogin(credential);
@@ -78,7 +75,6 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      const auth = getClientAuth();
       await fetch('/api/auth/session', { method: 'DELETE' });
       await signOut(auth);
       router.push('/login');
