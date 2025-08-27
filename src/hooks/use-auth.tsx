@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { auth } from '@/firebase/client'; // Changed import
+import { auth } from '@/firebase/client';
 import {
   onAuthStateChanged,
   signOut,
@@ -27,8 +27,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-async function handleSuccessfulLogin(credential: any) {
-    const idToken = await credential.user.getIdToken(true);
+async function createSession(idToken: string) {
     const res = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -36,7 +35,7 @@ async function handleSuccessfulLogin(credential: any) {
     });
     if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Session login failed');
+        throw new Error(errData.error || 'Session creation failed');
     }
 }
 
@@ -47,7 +46,6 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Direct use of the imported 'auth' instance
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -61,14 +59,16 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
 
   const loginWithEmail = useCallback(async (email: string, pass: string) => {
     const credential = await signInWithEmailAndPassword(auth, email, pass);
-    await handleSuccessfulLogin(credential);
+    const idToken = await credential.user.getIdToken();
+    await createSession(idToken);
     return credential;
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
     const provider = new GoogleAuthProvider();
     const credential = await signInWithPopup(auth, provider);
-    await handleSuccessfulLogin(credential);
+    const idToken = await credential.user.getIdToken();
+    await createSession(idToken);
     return credential;
   }, []);
 
