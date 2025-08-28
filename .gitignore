@@ -32,3 +32,6 @@ yarn-error.log*
 
 # tgzip archives
 *.tgz
+
+# Service account files
+service-account.json
