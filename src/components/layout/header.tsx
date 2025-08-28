@@ -1,135 +1,121 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-const NAV = [
-  { href: "/pricing", label: "Pricing" },
-  { href: "/blog", label: "Blog" },
-  { href: "/faq", label: "FAQ" },
-];
-
-export function Header() {
-  const pathname = usePathname();
+export default function HeaderPublic() {
   const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const pathname = usePathname();
 
-  // Lock page scroll when menu is open
+  // Close menu when navigating to a new route
   useEffect(() => {
-    const root = document.documentElement;
-    if (open) root.classList.add("overflow-hidden");
-    else root.classList.remove("overflow-hidden");
-    return () => root.classList.remove("overflow-hidden");
+    setOpen(false);
+  }, [pathname]);
+
+  // Close on outside click & Esc
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (!open) return;
+      const t = e.target as Node;
+      if (menuRef.current?.contains(t)) return;
+      if (btnRef.current?.contains(t)) return;
+      setOpen(false);
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   return (
-    <div className="fixed inset-x-0 top-0 z-50">
-      <div className="border-b border-black/5 bg-white/60 backdrop-blur supports-[backdrop-filter]:bg-white/55">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <img src="/logo.svg" alt="FlowBank" width={28} height={28} />
-            <span className="text-lg font-semibold tracking-tight">FlowBank</span>
+    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2 font-semibold">
+            <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-primary-foreground font-bold">
+              ƒ
+            </span>
+            <span className="text-lg">FlowBank</span>
           </Link>
-
-          {/* Desktop nav */}
-          <nav className="hidden items-center gap-6 md:flex">
-            {NAV.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className={
-                  "text-sm transition-colors " +
-                  (pathname === href ? "text-gray-900 font-medium" : "text-gray-600 hover:text-gray-900")
-                }
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Desktop CTAs */}
-          <div className="hidden items-center gap-2 md:flex">
-            <Link
-              href="/login"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-100"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-            >
-              Get started
-            </Link>
-          </div>
-
-          {/* Mobile hamburger */}
-          <button
-            aria-label="Open navigation"
-            onClick={() => setOpen(true)}
-            className="rounded-lg p-2 text-gray-700 hover:bg-gray-100 md:hidden"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
         </div>
+
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-6 md:flex">
+          <Link href="/how-it-works" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+            How it works
+          </Link>
+          <Link href="/pricing" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+            Pricing
+          </Link>
+          <Link href="/blog" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+            Blog
+          </Link>
+          <Link href="/faq" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+            FAQ
+          </Link>
+        </nav>
+
+        {/* Desktop CTAs */}
+        <div className="hidden items-center gap-3 md:flex">
+          <Button variant="ghost" asChild>
+            <Link href="/login">Log in</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/signup">Get started</Link>
+          </Button>
+        </div>
+
+        {/* Mobile toggle */}
+        <button
+          ref={btnRef}
+          type="button"
+          className="inline-flex items-center rounded-lg border p-2 md:hidden"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Toggle menu"
+          aria-expanded={open}
+          aria-controls="mobile-menu"
+        >
+          ☰
+        </button>
       </div>
 
-      {/* Full-screen mobile menu */}
+      {/* Mobile menu */}
       {open && (
-        <div className="fixed inset-0 z-[60] bg-white/95 backdrop-blur-md">
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between border-b px-4 sm:px-6">
-            <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-2">
-              <img src="/logo.svg" alt="FlowBank" width={24} height={24} />
-              <span className="text-base font-semibold">FlowBank</span>
+        <div id="mobile-menu" ref={menuRef} className="border-t bg-white md:hidden">
+          <div className="container mx-auto flex flex-col gap-2 py-3">
+            <Link href="/how-it-works" className="py-1 text-sm font-medium text-foreground">
+              How it works
             </Link>
-            <button
-              aria-label="Close navigation"
-              onClick={() => setOpen(false)}
-              className="rounded-lg p-2 hover:bg-gray-100"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <nav className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-            <ul className="space-y-2">
-              {NAV.map(({ href, label }) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    onClick={() => setOpen(false)}
-                    className={
-                      "block rounded-lg px-3 py-2 text-lg " +
-                      (pathname === href ? "bg-gray-100 text-gray-900" : "text-gray-800 hover:bg-gray-50")
-                    }
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-6 grid gap-2">
-              <Link
-                href="/login"
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2 text-center text-sm font-medium text-gray-800 ring-1 ring-gray-200 hover:bg-gray-50"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/signup"
-                onClick={() => setOpen(false)}
-                className="rounded-lg bg-black px-3 py-2 text-center text-sm font-medium text-white hover:opacity-90"
-              >
-                Get started
-              </Link>
+            <Link href="/pricing" className="py-1 text-sm font-medium text-foreground">
+              Pricing
+            </Link>
+            <Link href="/blog" className="py-1 text-sm font-medium text-foreground">
+              Blog
+            </Link>
+            <Link href="/faq" className="py-1 text-sm font-medium text-foreground">
+              FAQ
+            </Link>
+            <div className="mt-2 flex gap-2">
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/login">Log in</Link>
+              </Button>
+              <Button className="w-full" asChild>
+                <Link href="/signup">Get started</Link>
+              </Button>
             </div>
-          </nav>
+          </div>
         </div>
       )}
-    </div>
+    </header>
   );
 }

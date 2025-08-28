@@ -1,14 +1,10 @@
 "use server";
 
-import { db } from '@/firebase/server';
-import { getUserSession } from '@/lib/auth'
+import { adminApp } from "@/firebase/server"; // server-only file
+import { getFirestore } from "firebase-admin/firestore";
 
 export async function getAnalyticsSnapshot() {
-  const user = await getUserSession()
-  if (!user) return null
-
-  const docRef = db.collection('analytics').doc(user.uid)
-  const snapshot = await docRef.get()
-
-  return snapshot.exists ? snapshot.data() : null
+  const db = getFirestore(adminApp);
+  // ...query Firestore...
+  return { activeUsers: 0, paidUsers: 0 }; // real data here
 }

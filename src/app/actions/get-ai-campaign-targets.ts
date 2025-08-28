@@ -1,4 +1,4 @@
-"use server";
+ "use server";
 
 /**
  * src/app/actions/get-ai-campaign-targets.ts
@@ -10,23 +10,8 @@
  * - trialUsers / paidUsers (from billing_status mapping)
  */
 
-import { cert, getApps, initializeApp } from "firebase-admin/app";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
-
-// -------- Minimal Firebase Admin helper ----------
-function adminApp() {
-  if (getApps().length === 0) {
-    const json = process.env.FIREBASE_ADMIN_CERT_B64
-      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
-      : "{}";
-    initializeApp({ credential: cert(JSON.parse(json)) });
-  }
-  return getApps()[0];
-}
-function db() {
-  return getFirestore(adminApp());
-}
-// ------------------------------------------------
+import { getDb } from "@/lib/firebase-admin";
+import { Timestamp } from "firebase-admin/firestore";
 
 type SegmentInput = {
   activeWindowDays?: number; // default 30
@@ -35,6 +20,7 @@ type SegmentInput = {
 };
 
 export async function getAICampaignTargets(input: SegmentInput = {}) {
+  const db = await getDb();
   const activeWindowDays = input.activeWindowDays ?? 30;
   const dormantWindowDays = input.dormantWindowDays ?? 90;
   const highValueThreshold = input.highValueThreshold ?? 500;
@@ -44,11 +30,11 @@ export async function getAICampaignTargets(input: SegmentInput = {}) {
   const dormantCutoff = Timestamp.fromMillis(now - dormantWindowDays * 86400000);
 
   // Pull contacts (or users) — adapt to your schema
-  const contactsSnap = await db().collection("contacts").get().catch(() => null);
+  const contactsSnap = await db.collection("contacts").get().catch(() => null);
   const contacts = contactsSnap?.docs.map((d) => ({ id: d.id, ...d.data() })) || [];
 
   // Map billing status by uid if available
-  const billingSnap = await db().collection("billing_status").get().catch(() => null);
+  const billingSnap = await db.collection("billing_status").get().catch(() => null);
   const billingByUid = new Map<string, any>();
   if (billingSnap) billingSnap.forEach((d) => billingByUid.set(d.id, d.data()));
 

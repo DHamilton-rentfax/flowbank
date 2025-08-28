@@ -1,42 +1,3 @@
-export default function FreeDash() {
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Free Plan</h1>
-      <p>Welcome! Connect a bank account and set up your first income split.</p>
-      <div className="rounded-lg border p-4 bg-white">
-        <h2 className="font-medium mb-2">What you can do</h2>
-        <ul className="list-disc ml-5">
-          <li>Connect one bank account</li>
-          <li>Create split rules (no external accounts)</li>
-          <li>Preview AI insights (limited)</li>
-        </ul>
-      </div>
-      <a href="/checkout/plan?upgrade=starter" className="inline-block px-4 py-2 border rounded-md">
-        Upgrade to Starter
-      </a>
-    </div>
-  );
-}
-
-export default function FreeDash() {
- return (
- <div className="space-y-4">
- <h1 className="text-2xl font-semibold">Free Plan</h1>
- <p>Welcome! Connect a bank account and set up your first income split.</p>
- <div className="rounded-lg border p-4 bg-white">
- <h2 className="font-medium mb-2">What you can do</h2>
- <ul className="list-disc ml-5">
- <li>Connect one bank account</li>
- <li>Create split rules (no external accounts)</li>
- <li>Preview AI insights (limited)</li>
- </ul>
- </div>
- <a href="/checkout/plan?upgrade=starter" className="inline-block px-4 py-2 border rounded-md">
- Upgrade to Starter
- </a>
- </div>
- );
-}
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -44,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PieChart, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
-import app from "@/firebase/client";
+import {app} from "@/firebase/client";
 import { useAuth } from "@/hooks/use-auth";
 
 type Rule = {

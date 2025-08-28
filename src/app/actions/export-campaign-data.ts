@@ -7,23 +7,7 @@
  * No imports from local libs — uses an inline Firebase Admin helper.
  */
 
-import { cert, getApps, initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
-
-// ---------- Minimal Firebase Admin helper ----------
-function adminApp() {
-  if (getApps().length === 0) {
-    const json = process.env.FIREBASE_ADMIN_CERT_B64
-      ? Buffer.from(process.env.FIREBASE_ADMIN_CERT_B64, "base64").toString("utf8")
-      : "{}";
-    initializeApp({ credential: cert(JSON.parse(json)) });
-  }
-  return getApps()[0];
-}
-function db() {
-  return getFirestore(adminApp());
-}
-// ---------------------------------------------------
+import { getDb } from "@/lib/firebase-admin";
 
 export type ExportCampaignOptions = {
   /** Only include campaigns created in the last N days (default 90) */
@@ -54,6 +38,7 @@ export type ExportCampaignResult = {
 export async function exportCampaignData(
   opts: ExportCampaignOptions = {}
 ): Promise<ExportCampaignResult> {
+  const db = await getDb();
   const sinceDays = Number.isFinite(opts.sinceDays) ? Number(opts.sinceDays) : 90;
   const includeSends = opts.includeSends !== false; // default true
   const sendsLimit = Math.max(1, Math.min(2000, Number(opts.sendsLimitPerCampaign ?? 200)));
@@ -63,14 +48,14 @@ export async function exportCampaignData(
   // 1) Try to query with an index; if it fails (missing index), fall back to client-side filter.
   let campaignDocs: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>[];
   try {
-    const snap = await db()
+    const snap = await db
       .collection("campaigns")
       .where("createdAt", ">=", sinceDate)
       .orderBy("createdAt", "desc")
       .get();
     campaignDocs = snap.docs;
   } catch {
-    const all = await db().collection("campaigns").orderBy("createdAt", "desc").get();
+    const all = await db.collection("campaigns").orderBy("createdAt", "desc").get();
     campaignDocs = all.docs.filter((d) => {
       const dt = d.data()?.createdAt;
       const t =
@@ -103,7 +88,7 @@ export async function exportCampaignData(
 
     if (includeSends) {
       // Pull recent sends from a flat collection "campaign_sends"
-      const sendsSnap = await db()
+      const sendsSnap = await db
         .collection("campaign_sends")
         .where("campaignId", "==", d.id)
         .orderBy("createdAt", "desc")

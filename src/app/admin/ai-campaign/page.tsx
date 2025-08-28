@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Send, Download } from 'lucide-react';
-import { getAiCampaignTargets } from '@/app/actions/get-ai-campaign-targets';
+import { getAICampaignTargets } from '@/app/actions/get-ai-campaign-targets';
 import { sendAiTrialInvite } from '@/app/admin/actions';
 // import { exportCampaignData } from '@/app/actions/export-campaign-data';
 
@@ -30,7 +30,7 @@ export default function AiCampaignPage() {
         const fetchTargets = async () => {
             setLoading(true);
             try {
-                const { targets: fetchedTargets } = await getAiCampaignTargets();
+                const { targets: fetchedTargets } = await getAICampaignTargets();
                 setTargets(fetchedTargets);
             } catch (error) {
                 const err = error as Error;
@@ -44,7 +44,7 @@ export default function AiCampaignPage() {
             }
         };
         fetchTargets();
-    }, [toast]);
+    }, []);
 
     const handleSendInvite = (email: string) => {
         startTransition(async () => {
@@ -177,5 +177,3 @@ export default function AiCampaignPage() {
         </div>
     );
 }
-
-    

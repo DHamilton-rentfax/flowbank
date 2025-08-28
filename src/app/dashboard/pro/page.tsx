@@ -1,55 +1,50 @@
-import dynamic from "next/dynamic";
-const BillingPortalButton = dynamic(() => import("../../components/BillingPortalButton").catch(() => Promise.resolve(() => null)), { ssr: false });
-
-export default function ProDash() {
- return (
- <div className="space-y-4">
- <h1 className="text-2xl font-semibold">Pro Plan</h1>
- <p>Full AI engine + priority support + analytics.</p>
- <div className="grid md:grid-cols-2 gap-4">
- <div className="rounded-lg border p-4 bg-white">
- <h2 className="font-medium mb-2">AI Financial Advisor</h2>
- <p>Run analysis on recent transactions and view suggestions.</p>
- <a href="/reporting" className="text-blue-600 underline">Open Analytics</a>
- </div>
- <div className="rounded-lg border p-4 bg-white">
- <h2 className="font-medium mb-2">Splits</h2>
- <p>Create & manage up to 5 external accounts.</p>
- <a href="/splits" className="text-blue-600 underline">Manage Splits</a>
- </div>
- </div>
- <BillingPortalButton />
- </div>
- );
-}
 "use client";
 
-import { useEffect } from "react";
-import { redirect } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
+import { useEffect, useState } from "react";
 
-export default function ProDashboard() {
-  const { user, loading, plan } = useAuth();
+type AnalyticsSnapshot = {
+  activeUsers: number;
+  paidUsers: number;
+  // add fields you actually render
+};
+
+export default function ProDashboardPage() {
+  const [data, setData] = useState<AnalyticsSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) redirect("/login");
-  }, [loading, user]);
+    let alive = true;
+    (async () => {
+      // ✅ dynamic import so firebase-admin never hits the client bundle
+      const { getAnalyticsSnapshot } = await import("@/app/actions/get-analytics");
+      const res = await getAnalyticsSnapshot(); // this runs on the server
+      if (alive) {
+        setData(res);
+        setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
-  if (loading || !user) return <div className="p-4">Loading...</div>;
-  if (plan !== "pro") return <div className="p-4">Access restricted to Pro users.</div>;
+  if (loading) return <div className="p-6">Loading…</div>;
 
   return (
-    <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">Pro Dashboard</h1>
-      <p className="text-muted-foreground">Welcome, {user.email}. You are on the <strong>Pro</strong> plan.</p>
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold">Pro Dashboard</h1>
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <Card title="Active Users" value={data?.activeUsers ?? 0} />
+        <Card title="Paid Users" value={data?.paidUsers ?? 0} />
+        {/* render the rest */}
+      </div>
+    </div>
+  );
+}
 
-      <ul className="list-disc list-inside space-y-2">
-        <li>All Starter features</li>
-        <li>Full AI Financial Advisor access</li>
-        <li>Priority email support</li>
-        <li>Dashboard analytics & reporting</li>
-        <li>Feature updates and beta access</li>
-      </ul>
+function Card({ title, value }: { title: string; value: number | string }) {
+  return (
+    <div className="rounded-2xl p-4 shadow">
+      <div className="text-sm text-gray-500">{title}</div>
+      <div className="text-3xl font-medium">{value}</div>
     </div>
   );
 }

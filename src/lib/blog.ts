@@ -1,5 +1,6 @@
 
 import type { Post } from './types';
+export type { Post };
 
 // In a real app, this would come from a CMS or database
 export const allPosts: Post[] = [
@@ -14,12 +15,12 @@ export const allPosts: Post[] = [
         readTime: 5,
         published: true,
         content: `
-            <p>The Profit First methodology, created by Mike Michalowicz, is a revolutionary way to manage your business's cash flow. Instead of the traditional formula of Sales - Expenses = Profit, Profit First flips it to Sales - Profit = Expenses.</p>
+            <p>The Profit First methodology, created by Mike Michalowicz, is a revolutionary way to manage your business\'s cash flow. Instead of the traditional formula of Sales - Expenses = Profit, Profit First flips it to Sales - Profit = Expenses.</p>
             <p>This simple change ensures you prioritize profitability. By taking a predetermined percentage of your revenue as profit first, you force yourself to run your business on the remaining amount. This encourages frugality, innovation, and efficiency.</p>
             <h2>How to Implement Profit First</h2>
             <ol>
-                <li><strong>Set up separate bank accounts:</strong> Create accounts for Income, Profit, Owner's Pay, Taxes, and Operating Expenses.</li>
-                <li><strong>Determine your percentages:</strong> Based on your business's current state, decide on allocation percentages for each account.</li>
+                <li><strong>Set up separate bank accounts:</strong> Create accounts for Income, Profit, Owner\'s Pay, Taxes, and Operating Expenses.</li>
+                <li><strong>Determine your percentages:</strong> Based on your business\'s current state, decide on allocation percentages for each account.</li>
                 <li><strong>Transfer funds regularly:</strong> On a set schedule (e.g., twice a month), transfer funds from your Income account to the others based on your percentages.</li>
             </ol>
             <p>FlowBank is built on this principle, automating the transfers and making it easy to adopt Profit First without the manual hassle.</p>
@@ -59,7 +60,7 @@ export const allPosts: Post[] = [
         published: true,
         content: `
             <p>For many small business owners, tax time is a stressful scramble. A surprise tax bill can be devastating to your cash flow. The solution is simple: a dedicated bank account for taxes.</p>
-            <p>By regularly setting aside a percentage of every single deposit into this account, you ensure the funds are there when the tax authorities come calling. You're not "losing" this money; you're simply quarantining it for its intended purpose.</p>
+            <p>By regularly setting aside a percentage of every single deposit into this account, you ensure the funds are there when the tax authorities come calling. You\'re not "losing" this money; you\'re simply quarantining it for its intended purpose.</p>
             <p>This single habit transforms tax time from a moment of panic into a simple, predictable business expense.</p>
         `
     },
