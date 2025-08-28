@@ -1,0 +1,30 @@
+# Handle line endings consistently
+* text=auto eol=lf
+
+# Ensure shell scripts have LF endings
+*.sh text eol=lf
+
+# Ensure batch scripts keep CRLF endings
+*.bat text eol=crlf
+
+# Force JSON, JS, TS, and config files to use LF
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Mark images and binaries as binary (no diffing)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
